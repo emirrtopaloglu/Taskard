@@ -31,6 +31,12 @@ Akışın ağırlığı işin ağırlığına uyar; şüphede ağır olanı seç
 4. Başarı beyanı değil kanıt raporlanır ("left per YAGNI" de bir claim'dir).
 5. Riskli işlemler (config `risky_operations`) kullanıcı onayısız yapılmaz.
 
+## Okuma yetkileri
+
+- **Ana döngü:** karar verisi olan ucuz, hedefli komutlar (git status/log/diff, grep, config okuma) + ön kabul doğrulaması için minimal dosya kontrolü. Bu yetki devredilemez — brief'i ve kullanıcı raporunu yazan odur.
+- **Reviewer:** kodun kalite okuması (diff'i satır satır değerlendirmek, standartlara göre yargılamak). Ana döngü kalite yargısı için kod okumaz.
+- **Ağır keşif / geniş arama:** explore-research delegate'i. Bulk içerik ana döngü penceresini yakmaz.
+
 ## Kurulum tarifi (proje başına bir kez)
 
 `.taskard/` yoksa kur:
