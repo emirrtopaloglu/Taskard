@@ -2,7 +2,7 @@
 title: Headless Dispatch Envanteri (Harness Karşılaştırması)
 type: wayfinder-ticket
 label: wayfinder:research
-status: open
+status: closed
 assignee: research-subagent
 blocked_by: []
 created: 2026-08-23
@@ -26,3 +26,9 @@ Her biri için cevaplanacaklar:
 Antigravity özelinde: headless CLI var mı yok mu netleştirilsin.
 
 Çıktı: karşılaştırma matrisi + her harness için minimal çalışan dispatch komutu örneği + boşluklar/riskler listesi.
+
+## Resolution (2026-08-23)
+
+Altı harness'ta da headless mümkün — fikir tümünde uygulanabilir. Bulgular: `.scratch/taskard/research/r1-headless-dispatch-envanteri.md`
+
+Kilit noktalar: Gemini CLI tüketicide EOL (18.06.2026) → halefi Antigravity CLI (`agy -p`, json/stream-json çıktı). Ortak kalıp: `-p`/`exec`/`run` + JSON çıktı + model bayrağı + permission bayrağı. En riskli adapter Cursor (`-p` askıda kalma raporları, dosya yazmak için `--force`). Bilinen tuzaklar: Claude Code stream-json donması (#33949 → `--output-format json` + watchdog), OpenCode env kalıntısı "Session not found" (spawn'da temizlenmeli), Antigravity #76 pipe'ta sessiz exit 0. Timeout ve eş zamanlılık standardı hiçbir harness'ta yok → watchdog Taskard'ın sorumluluğu.

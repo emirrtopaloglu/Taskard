@@ -2,7 +2,7 @@
 title: Dosya-Tabanlı Hafıza Formatları ve Taşıma Protokolü
 type: wayfinder-ticket
 label: wayfinder:research
-status: open
+status: closed
 assignee: research-subagent
 blocked_by: []
 created: 2026-08-23
@@ -25,3 +25,9 @@ Araştırılacak mevcut desenler:
 Yerel kaynaklar (okunabilir): EmirOS vault · `/Users/emir/Library/Mobile Documents/iCloud~md~obsidian/Documents/EmirOS/🧠 500-Knowledge/Raporlar/` altındaki HTML raporlar ve `MattPocock-AI-Coding-Workflow-Video-Notu.md`.
 
 Çıktı: `.taskard/` şeması için 2-3 alternatif format tasarımı + her katmanın okuma/yazma protokolü taslağı.
+
+## Resolution (2026-08-23)
+
+Alanın ortak sonucu: paylaşılan dosya sistemi = agent'ların ortak beyni. Bulgular: `.scratch/taskard/research/r3-hafiza-formatlari.md`
+
+Kilit noktalar: ~50x damıtma formülü (subagent 75–132K → 1.4–1.5K özet) + bounded index (200 satır / 25KB sert cap). Çakışmasız paralellik reçetesi: append-only + content-hash ID + agent başına özel yazma namespace'i + TTL'li claim/lease. Tek HANDOFF.md paralel oturumda sessizce kaybeder → timestamp'li dizin + oku-tüket protokolü. Devir belgesinde en değerli alan `rejected` (elenen yaklaşımlar). CONTEXT.md+ADR katman (i) için kazanan — ama üç kapı eşiği olmadan doc-rot olur. Sentez önerisi: ledger.jsonl hakikati (B omurga) + task/agent dosyası ergonomisi (A) + INDEX/tiering ekonomisi (C).
