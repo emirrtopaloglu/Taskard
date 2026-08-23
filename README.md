@@ -41,6 +41,8 @@ Senin karar noktaların:
 - **Canlı doğrulama** — merge öncesi uygulamayı sen test edersin; merge kararı senin
 - **Riskli işlemler** — config'deki listeyle eşleşen her adım onay ister
 
+**Ölçek merdiveni:** mikro işler (tek adım, ~10 dk) tek brief ile koşar — spec/tasks dosyası yazılmaz, yeni kod üretilmiyorsa reviewer gate yerine bağımsız kanıt kontrolü yapılır. Tam seremoni standart işler içindir.
+
 ## Config
 
 `config.toml` kod tarafından DEĞİL, agent tarafından okunan veridir:

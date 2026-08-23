@@ -15,6 +15,14 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 - **Brief** — delegate'e verilen spec; lane'in kalitesi brief'in kalitesiyle sınırlıdır; token'ı brief'e yatır.
 - **Report** — delegate'in bitişte yazdığı ≤15 satır: DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT + kanıt.
 
+## Ölçek merdiveni
+
+Akışın ağırlığı işin ağırlığına uyar; şüphede ağır olanı seç (ratchet aşağı inmez).
+
+- **Mikro iş:** tek adım, tek alan, ~10 dk (review+commit, tek dosya düzeltme, küçük düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcının isteği + kabul kriterleri doğrudan tek bir brief.md'e işlenir, delegate açılır, kanıt kontrolü, durum satırı. `.taskard/`'a dokunan tek dosya brief'tir.
+- **Standart iş:** ≥2 lane veya mimari karar veya belirsiz kapsam → tam seremoni (grilling → spec → tasks → lane'ler → gate'ler).
+- Brief kullanıcının görev metnini birebir KOPYALAMAZ — delegate'in çalışması için gereken kesin talimatı taşır; bağlam zaten diskteyse referans verir.
+
 ## Iron Laws
 
 1. Config dosyaları çalışma anında ASLA değiştirilmez/değiştirtilmez.
@@ -60,10 +68,12 @@ Her task için:
 
 ## 4. Gate'ler
 
-Lane bitince iki kapı, ikisi de TAZE reviewer subagent'ta (implementer'la aynı context'te asla):
+Yeni kod üreten lane'lerde iki kapı, ikisi de TAZE reviewer subagent'ta (implementer'la aynı context'te asla):
 1. Code review (standartlar + spec uyumu)
 2. Merge öncesi son kontrol
 Bulgu varsa düzeltme yeni implementer delegate'iyle, aynı lane'de.
+
+Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate atlanır — yerine ana döngünün bağımsız kanıt kontrolü geçer (git log/diff/status ile delegate iddiasının doğrulanması). Bu istisna raporda belirtilir.
 
 ## 5. Canlı doğrulama + kapanış
 
