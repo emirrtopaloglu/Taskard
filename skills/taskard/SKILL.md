@@ -17,7 +17,7 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 
 ## Ölçek merdiveni
 
-Akışın ağırlığı işin ağırlığına uyar; şüphede ağır olanı seç (ratchet aşağı inmez).
+Akışın ağırlığı işin ağırlığına uyar; şüphede ağır olanı seç (ratchet aşağı inmez). Kapsam yürütme sırasında genişlerse (chore → geliştirme gibi) tier'ı yeniden değerlendir ve gerekirse yükselt.
 
 - **Mikro iş:** tek adım, tek alan, ~10 dk (review+commit, tek dosya düzeltme, küçük düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcının isteği + kabul kriterleri doğrudan tek bir brief.md'e işlenir, delegate açılır, kanıt kontrolü, durum satırı. `.taskard/`'a dokunan tek dosya brief'tir.
 - **Standart iş:** ≥2 lane veya mimari karar veya belirsiz kapsam → tam seremoni (grilling → spec → tasks → lane'ler → gate'ler).
