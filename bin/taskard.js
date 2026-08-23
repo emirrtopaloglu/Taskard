@@ -7,9 +7,11 @@ import { appendEvent, readEvents } from "../src/events.js"
 const [, , command, ...rest] = process.argv
 
 async function main() {
+  if (rest.includes("--help") || rest.includes("-h")) return usage()
   const flags = parseFlags(rest)
   if (command === "dispatch") return cmdDispatch(flags)
   if (command === "lane") return cmdLane(flags, rest)
+  if (command === "init") return cmdInit(flags)
   if (command === "status") return cmdStatus(flags)
   usage()
 }
@@ -31,10 +33,11 @@ function parseFlags(args) {
 }
 
 async function cmdDispatch(f) {
-  if (!f.lane) throw new Error("--lane gerekli")
+  const laneArg = f.lane || f._[0]
+  if (!laneArg) throw new Error("--lane gerekli (veya lane dizinini ilk argüman olarak ver)")
   if (!f.harness) throw new Error(`--harness gerekli (${availableHarnesses().join(", ")})`)
   const result = await dispatch({
-    laneDir: path.resolve(f.lane),
+    laneDir: path.resolve(laneArg),
     harness: f.harness,
     model: f.model,
     briefPath: f.brief ? path.resolve(f.brief) : undefined,
@@ -59,6 +62,22 @@ function cmdLane(f, rest) {
   fs.writeFileSync(path.join(laneDir, "report.md"), "")
   appendEvent(laneDir, "created", { slug, base: f.base || null })
   console.log(laneDir)
+}
+
+function cmdInit(f) {
+  const projectDir = path.resolve(f.project || process.cwd())
+  const root = path.join(projectDir, ".taskard")
+  for (const dir of ["context/specs", "context/decisions", "tasks", "handoff", "memory", "tmp"]) {
+    fs.mkdirSync(path.join(root, dir), { recursive: true })
+  }
+  const writeIfMissing = (rel, content) => {
+    const p = path.join(root, rel)
+    if (!fs.existsSync(p)) fs.writeFileSync(p, content)
+  }
+  writeIfMissing("INDEX.md", "# INDEX\n\n(≤200 satır — oturum açılışında okunan tek dosya)\n")
+  writeIfMissing("context/CONTEXT.md", "# CONTEXT\n\n(domain terimleri — her terim 1-2 cümle IS-tanımı)\n")
+  writeIfMissing("memory/personal.md", "# Personal\n\n(kullanıcı tercihleri)\n")
+  console.log(`Taskard başlatıldı: ${root}`)
 }
 
 function cmdStatus(f) {
@@ -86,9 +105,12 @@ function usage() {
   console.log(`taskard — çoklu-harness agent orchestration
 
 Komutlar:
+  init [--project dir]
   dispatch --lane <dir> --harness <claude|codex|opencode> [--model m] [--brief p] [--project dir] [--timeout sn]
   lane new <slug> [--base branch] [--project dir]
-  status [--project dir]`)
+  status [--project dir]
+
+Not: delegate varsayılan olarak --project ile verilen dizinde çalışır.`)
 }
 
 main().catch((err) => {

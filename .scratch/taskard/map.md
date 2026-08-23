@@ -41,6 +41,7 @@ Taskard v0: "Taskard'ı yükle" deyince `install.sh` ile kurulan, üç harness't
 
 ## Not yet specified
 
+- **Worktree-per-lane izolasyonu:** `lane new` şu an yalnızca metadata açıyor; gerçek `git worktree` bağlaması yok. Tek lane'de sorun yok, paralel lane'lerde şart — dogfooding geri bildirimiyle keskinleşecek.
 - **Limit-farkındalıklı yönlendirme:** abonelik/limit durumuna göre işi harness'lar arasında paslama — dispatch çekirdeği netleşmeden keskinleştirilemez.
 - **GUI'nin mimari etkileri:** protokolün/iş mantığının arayüzden bağımsızlaşması gereği — v0 sonrası effort.
 - **Eval seti:** Taskard'ın kendi kalitesini ölçen ev-eval paneli (aynı görev seti, farklı modeller/harness'lar) — çekirdek tasarım kararlarından sonra keskinleşir.

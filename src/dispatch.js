@@ -26,13 +26,15 @@ export async function dispatch({ laneDir, harness, model, briefPath, projectDir,
 
   const config = loadConfig(projectDir || laneDir)
   const timeout = (timeoutSeconds || config.defaults.timeout_seconds) * 1000
+  const spawnCwd =
+    projectDir && fs.existsSync(projectDir) ? projectDir : laneDir
   const { cmd, args } = adapter.command({ brief, model, config })
   const env = adapter.env(process.env)
 
   appendEvent(laneDir, "dispatch", { harness, model })
 
   return new Promise((resolve) => {
-    const child = spawn(cmd, args, { cwd: laneDir, env })
+    const child = spawn(cmd, args, { cwd: spawnCwd, env })
     let stdout = ""
     let stderr = ""
     let timedOut = false

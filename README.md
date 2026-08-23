@@ -67,15 +67,19 @@ Miras zinciri: global default ← proje override ← session talimatı.
 ### CLI Referansı
 
 ```bash
-node ~/.taskard/bin/taskard.js dispatch --lane <dir> \
+node ~/.taskard/bin/taskard.js init [--project dir]
+
+node ~/.taskard/bin/taskard.js dispatch <lane-dir> \
   --harness <claude|codex|opencode> \
   [--model m] [--brief p] [--project dir] [--timeout sn]
+# ya da: dispatch --lane <dir> ...
 
 node ~/.taskard/bin/taskard.js lane new <slug> [--base branch] [--project dir]
 node ~/.taskard/bin/taskard.js status [--project dir]
 ```
 
-`dispatch`: brief'i okur → worktree'de headless spawn eder → env temizler → watchdog başlatır → JSON çıktıyı parse eder → `events.jsonl`'a yazar → report döndürür. İstenen model hedef harness'ta yoksa **fail-fast**: sessiz fallback yok, mevcut modeller listelenir.
+`init`: projede `.taskard/` ağacını kurar (INDEX, context, tasks, handoff, memory).
+`dispatch`: brief'i okur → delegate'i **proje kökünde** headless spawn eder (`--project`) → env temizler → watchdog başlatır → JSON çıktıyı parse eder → `events.jsonl`'a yazar → report döndürür. İstenen model hedef harness'ta yoksa **fail-fast**: sessiz fallback yok, mevcut modeller listelenir.
 
 ### `.taskard/` klasörü (projenizde otomatik oluşur)
 

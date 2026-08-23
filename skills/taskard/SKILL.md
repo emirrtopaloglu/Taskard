@@ -24,6 +24,8 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış, görev bite
 
 ## 1. Spec
 
+Proje kökünde `.taskard/` yoksa önce bir kez: `node ~/.taskard/bin/taskard.js init --project <proje-kökü>`
+
 Görev küçük ve iyi tanımlıysa doğrudan kompakt spec yaz; büyük veya riskliyse grilling yap (design tree, frontier tur tur, önerilen cevaplı sorular). Spec'i `.taskard/context/specs/` altına yaz.
 
 ## 2. Task listesi
@@ -47,7 +49,7 @@ node ~/.taskard/bin/taskard.js dispatch <lane-dir> \
   --project <proje-kökü>
 ```
 
-Dönen JSON'daki `report` alanını oku. BLOCKED ise aynı lane'de en fazla 1-2 deneme daha yap; üçüncüde teşhisi toplayıp kullanıcıya raporla. Geçerli blocker yoksa bağımsız sonraki lane'e geç, takılanı sonra dön.
+Dönen JSON'daki `report` alanını oku. Delegate `--project` ile verilen dizinde çalışır — brief'e cd talimatı eklemene gerek yok. BLOCKED ise aynı lane'de en fazla 1-2 deneme daha yap; üçüncüde teşhisi toplayıp kullanıcıya raporla. Geçerli blocker yoksa bağımsız sonraki lane'e geç, takılanı sonra dön.
 
 ## 4. Gate'ler
 
