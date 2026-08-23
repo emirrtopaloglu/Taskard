@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taskard — Koşu Deneyimi Prototipi</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --ink:#e6edf3; --dim:#7d8590;
+    --green:#3fb950; --red:#f85149; --amber:#d29922; --blue:#58a6ff; --mono:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.6 var(--mono); padding:24px; }
+  header { display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0; color:var(--dim); font-weight:normal; }
+  .vbtn { background:var(--panel); border:1px solid var(--line); color:var(--ink);
+    padding:6px 14px; border-radius:6px; cursor:pointer; font-family:var(--mono); }
+  .vbtn.active { border-color:var(--blue); color:var(--blue); }
+  .ctl { margin-left:auto; display:flex; gap:8px; }
+  main { max-width:900px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px; min-height:420px; }
+  /* V1 telegraf */
+  .tele p { margin:2px 0; white-space:pre-wrap; }
+  .ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--amber)} .info{color:var(--blue)} .dim{color:var(--dim)}
+  /* V2 pano */
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--dim); font-weight:normal; }
+  .pill { border-radius:999px; padding:1px 10px; font-size:12px; border:1px solid var(--line); }
+  .run{color:var(--blue);border-color:var(--blue)} .done{color:var(--green);border-color:var(--green)}
+  .blocked{color:var(--red);border-color:var(--red)} .queued{color:var(--dim)}
+  /* V3 karar odaklı */
+  .decision { border:1px solid var(--amber); border-left-width:4px; border-radius:8px;
+    padding:12px 16px; margin:10px 0; }
+  .decision h3 { margin:0 0 6px; font-size:13px; color:var(--amber); }
+  .btnrow button { background:none; border:1px solid var(--line); color:var(--ink);
+    border-radius:6px; padding:5px 12px; cursor:pointer; margin-right:8px; font-family:var(--mono); }
+  .muted-count { color:var(--dim); margin-top:14px; }
+  .final { border-color:var(--green); } .final h3{color:var(--green)}
+</style>
+</head>
+<body>
+<header>
+  <h1>taskard koşu deneyimi · varyant:</h1>
+  <button class="vbtn" data-v="1">1 Telegraf</button>
+  <button class="vbtn" data-v="2">2 Lane Panosu</button>
+  <button class="vbtn" data-v="3">3 Sadece Kararlar</button>
+  <div class="ctl">
+    <button class="vbtn" id="step">adım →</button>
+    <button class="vbtn" id="play">▶ oynat</button>
+    <button class="vbtn" id="reset">sıfırla</button>
+  </div>
+</header>
+<main><div class="card" id="stage"></div></main>
+<script>
+const EV = [
+  {t:"plan",   m:"Spec onayın bekliyor — 'Dil seçeneği' spec'i hazır"},
+  {t:"plan-ok",m:"Plan onaylandı"},
+  {t:"lane",   m:"T-001 auth-refactor → implementer@sonnet lane açıldı", lane:"T-001"},
+  {t:"lane",   m:"T-002 settings-dil → frontend-developer@sonnet lane açıldı", lane:"T-002"},
+  {t:"lane",   m:"T-003 storage-migration → implementer@sonnet lane açıldı", lane:"T-003"},
+  {t:"ev",     m:"T-001 implementer çalışıyor (worktree: wt/auth)", lane:"T-001"},
+  {t:"ev",     m:"T-002 frontend-developer çalışıyor (worktree: wt/settings-dil)", lane:"T-002"},
+  {t:"gate",   m:"T-001 reviewer gate: PASS_WITH_NOTES (2 minor)", lane:"T-001", s:"ok"},
+  {t:"done",   m:"T-001 tamam — merge öncesi canlı doğrulama sende", lane:"T-001", s:"ok"},
+  {t:"ev",     m:"T-003 implementer BLOCKED: migration çakışması, 2 deneme yapıldı", lane:"T-003", s:"err"},
+  {t:"ev",     m:"T-002 ekranlar: TR/EN toggle + persistence testi geçti", lane:"T-002"},
+  {t:"gate",   m:"T-002 reviewer gate: PASS", lane:"T-002", s:"ok"},
+  {t:"done",   m:"T-002 tamam — canlı doğrulama sende", lane:"T-002", s:"ok"},
+  {t:"ask",    m:"Karar: T-003 migration çakışması — manuel çöz ya da task'ı böl", lane:"T-003", s:"warn"},
+  {t:"ev",     m:"T-003 bölündü → T-004 schema-fix sıraya alındı", lane:"T-003"},
+  {t:"ev",     m:"T-004 implementer çalışıyor", lane:"T-004"},
+  {t:"gate",   m:"T-004 reviewer gate: PASS", lane:"T-004", s:"ok"},
+  {t:"final",  m:"KAPANIŞ: T-001/T-002/T-004 merge'e hazır · push kararı senin", s:"ok"}
+];
+let i=0, timer=null, variant="1";
+const stage=document.getElementById("stage");
+const lines=[];
+function cls(e){return e.s==="ok"?"ok":e.s==="err"?"err":e.s==="warn"?"warn":e.t==="plan"||e.t==="ask"?"warn":"info"}
+function render(){
+  if(variant==="1"){
+    stage.innerHTML="<div class='tele'>"+lines.map(l=>"<p class='"+cls(l.e)+"'>"+l.e.m+"</p>").join("")+(i<EV.length?"<p class='dim'>▍</p>":"")+"</div>";
+  } else if(variant==="2"){
+    const lanes={};
+    lines.forEach(l=>{ if(!l.e.lane)return; lanes[l.e.lane]=l.e; });
+    const order=[...new Set(lines.filter(l=>l.e.lane).map(l=>l.e.lane))];
+    const st=e=>!e?"queued":e.s==="err"?"blocked":e.t==="done"?"done":"run";
+    const lbl={run:"● koşuyor",done:"✓ bitti",blocked:"✕ engelli",queued:"○ sırada"};
+    let done=lines.filter(l=>l.e.t==="done").length;
+    stage.innerHTML=
+      "<p class='dim'>İlerleme: "+done+"/3 lane bitti · aktif roller: implementer, frontend-developer, reviewer</p>"+
+      "<table><tr><th>lane</th><th>durum</th><th>son olay</th></tr>"+
+      order.map(id=>{const e=lanes[id];const s=st(e);
+        return "<tr><td>"+id+"</td><td><span class='pill "+s+"'>"+lbl[s]+"</span></td><td>"+(e?e.m:"—")+"</td></tr>";}).join("")+
+      "</table>"+last();
+  } else {
+    const decisions=lines.filter(l=>["plan","ask","final"].includes(l.e.t)||l.e.s==="err");
+    const silent=lines.length-decisions.length;
+    stage.innerHTML=(decisions.length?"":"<p class='dim'>sessiz… delegate'ler çalışıyor ("+silent+" olay arka planda)</p>")+
+      decisions.map(d=>{
+        if(d.e.t==="final") return "<div class='decision final'><h3>KAPANIŞ</h3>"+d.e.m+"</div>";
+        return "<div class='decision'><h3>"+(d.e.t==="plan"?"PLAN ONAYI":d.e.t==="ask"?"KARAR GEREKLİ":"BLOKER")+"</h3>"+d.e.m+
+          (d.e.t==="plan"?"<div class='btnrow' style='margin-top:8px'><button>onayla</button><button>değiştir</button></div>":"")+"</div>";
+      }).join("")+
+      "<p class='muted-count dim'>"+silent+" sessiz olay gizlendi (istekle detay verilir)</p>"+last();
+  }
+}
+function last(){ return i>=EV.length ? "<p class='ok' style='margin-top:14px'>koşu tamamlandı.</p>" : ""; }
+function step(){
+  if(i>=EV.length){stop();return;}
+  lines.push({e:EV[i]}); i++; render();
+}
+function stop(){ if(timer){clearInterval(timer);timer=null;} }
+document.querySelectorAll(".vbtn[data-v]").forEach(b=>b.onclick=()=>{
+  variant=b.dataset.v;
+  document.querySelectorAll(".vbtn[data-v]").forEach(x=>x.classList.toggle("active",x===b));
+  render();
+});
+document.getElementById("step").onclick=step;
+document.getElementById("play").onclick=()=>{ if(timer)return stop(); timer=setInterval(step,1100); };
+document.getElementById("reset").onclick=()=>{ stop(); i=0; lines.length=0; render(); };
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"){ const vs=["1","2","3"]; variant=vs[(vs.indexOf(variant)+1)%3]; syncBtns(); render(); }
+});
+function syncBtns(){ document.querySelectorAll(".vbtn[data-v]").forEach(x=>x.classList.toggle("active",x.dataset.v===variant)); }
+document.querySelector('.vbtn[data-v="1"]').classList.add("active");
+render();
+</script>
+</body>
+</html>

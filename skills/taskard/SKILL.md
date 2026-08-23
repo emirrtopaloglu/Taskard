@@ -64,6 +64,12 @@ Görev küçük ve iyi tanımlıysa kompakt spec yaz; büyük/riskliyse grilling
 
 Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/blocked_by/assignee). Bağımsızlar paralel, bağımlılar sıralı.
 
+**Workload panosu:** `.taskard/INDEX.md`'de aktif lane tablosu tutulur (lane · rol · model · durum); her lane açılışında ve kapanışında güncellenir. Kapanış raporu bu tablodan doğar.
+
+## 2b. Paralel lane disiplini
+
+İki veya daha fazla bağımsız lane AYNI ANDA koşacaksa her lane kendi **git worktree**'inde çalışır (`using-git-worktrees` deseni): worktree başına tek delegate, alan bazlı commit. Tek lane ise ana checkout yeterli. Paralel biten lane'ler merge edilmeden önce ana döngü çakışma kontrolü yapar; merge sırası ve kararı kullanıcıdadır.
+
 ## 3. Lane + delegate
 
 Her task için:
@@ -99,3 +105,5 @@ Native subagent her harness'ta birincil tercihtir. Başka model ailesi gerektiğ
 - **Antigravity:** `agy -p "<prompt>" --output-format json` — pipe'ta sessiz exit 0 olabilir, çıktıyı doğrula
 
 Headless worker'a git write gibi onay gerektiren işlem VERİLMEZ — o adım ana akışta kullanıcıya sorulur.
+
+**Limit yönlendirmesi:** abonelik/limit durumu kullanıcı tarafından bildirilir; config.toml'da `[harness_preferences]` altında tercih sırası tutulabilir (örn. limit dolunca implementer işlerini önce Codex'e pasla). Ana döngü seçimi buna göre yapar ve hangi kuralı uyguladığını raporda söyler.

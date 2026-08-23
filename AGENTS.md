@@ -7,6 +7,7 @@
 3. Config dosyaları agent-okur veridir; hiçbir mekanizma çalışma anında config mutasyonu yapmaz.
 4. Wayfinder haritası (`.scratch/taskard/map.md`) kararların tek kaynağıdır — mimari kararı haritaya işlemeden değişiklik yapma.
 5. Yeni agent tanımı eklerken frontmatter'da `name` zorunludur; isimsiz rol tanımlanmaz.
+6. **Test projeleri ürün kimliğine yazılmaz:** dogfooding yapılan projelerin adları README, SKILL.md, map veya örneklerde geçmez; gerekirse "test projesi" denir.
 
 ## Hızlı doğrulama
 

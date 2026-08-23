@@ -36,6 +36,7 @@ Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya y
 - [Model Yönlendirme Config'i](issues/07-model-config.md) — config.toml agent-okur veridir (kod parse etmez); rol→model tablosu + doğal dil session override; permission_mode default bypassPermissions.
 - [Onay Kanalı Tasarımı](issues/08-onay-kanali.md) — üç kapı iş akışı düzeyinde kalır (plan onayı, merge öncesi doğrulama, riskli işlem listesi); tool izni varsayılan açıktır; config çalışma anında asla değiştirilmez (iron law).
 - [Kurulum ve Dağıtım](issues/09-kurulum-dagitim.md) — install.sh: skill+agent symlink + global config şablonu + CLAUDE.md'e statik direktif bloğu; proje kurulum tarifleri skill içinde; proje bazlı esneklik CLAUDE.md/AGENTS.md direktifleriyle.
+- **Sis çözüldü (2026-08-23):** worktree-per-lane → §2b Paralel lane disiplini · workload panosu → INDEX.md tablo bakımı · limit yönlendirmesi → Ek A + `[harness_preferences]` · eval seti → `evals/` (3 senaryo). Okuma yetkileri doktrine girdi (ana döngü=karar verisi, kalite=reviewer, keşif=delegate).
 
 - [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md) — v0'ın teslimatı sistemin kendisi; üç harness dispatch (CC+Codex+OpenCode); dört katman tam şema; üç onay kapısı; install.sh; kabul testi Emir'in dogfooding'i.
 - [Dispatch Soyutlaması Tasarımı](issues/05-dispatch-soyutlamasi.md) — düz JS ESM sıfır bağımlılık; adapter-per-harness; fail-fast model hatası; watchdog 20dk + max 2 deneme (config.toml'dan); ≤15 satır damıtma sözleşmesi.
@@ -46,14 +47,15 @@ Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya y
 
 ## Not yet specified
 
-- **Worktree-per-lane izolasyonu:** `lane new` şu an yalnızca metadata açıyor; gerçek `git worktree` bağlaması yok. Tek lane'de sorun yok, paralel lane'lerde şart — dogfooding geri bildirimiyle keskinleşecek.
-- **Limit-farkındalıklı yönlendirme:** abonelik/limit durumuna göre işi harness'lar arasında paslama — dispatch çekirdeği netleşmeden keskinleştirilemez.
-- **GUI'nin mimari etkileri:** protokolün/iş mantığının arayüzden bağımsızlaşması gereği — v0 sonrası effort.
-- **Eval seti:** Taskard'ın kendi kalitesini ölçen ev-eval paneli (aynı görev seti, farklı modeller/harness'lar) — çekirdek tasarım kararlarından sonra keskinleşir.
-- **Workload panosu:** agent doluluk/kapasite görünümünün detayı — hafıza şemasıyla olgunlaşır.
+<!-- boş — tüm sis öğeleri çözüldü:
+- worktree-per-lane → SKILL.md §2b Paralel lane disiplini (2026-08-23)
+- workload panosu → SKILL.md §2 INDEX.md tablo bakımı (2026-08-23)
+- limit yönlendirmesi → SKILL.md Ek A + config [harness_preferences] (2026-08-23)
+- eval seti → evals/ (3 senaryo, 2026-08-23) -->
 
 ## Out of scope
 
-- **GitHub Issues senkronu / GUI zemini** — Emir kararı: şimdilik `.taskard/` local markdown; ileride ayrı effort.
+- **GitHub Issues senkronu / GUI zemini** — Emir kararı: şimdilik `.taskard/` local markdown; ileride ayrı effort (GUI'nin mimariye etkisi de buraya dahil).
 - **Mem0 / harici memory servisi bağımlılığı** — Emir kararı: v0 dosya-tabanlı genel yapı; Mem0 unutuldu.
-- **Superfast legacy parity** — Taskard Superfast'in evrimidir; birebir geriye dönük uyumluluk yükü taşımaz. Proje bazlı esneklik (CLAUDE.md/AGENTS.md direktifleriyle ek agent/skill tanımı) kapsam İÇİNDE — kurulum ticket'ında ele alınır.
+- **Superfast legacy parity** — Taskard Superfast'in evrimidir; birebir geriye dönük uyumluluk yükü taşımaz. Proje bazlı esneklik (CLAUDE.md/AGENTS.md direktifleriyle ek agent/skill tanımı) kapsam İÇİNDE.
+- **Test projeleri ürün kimliğine yazılmaz** — Emir kuralı: dogfooding yapılan projelerin adları README/map/skill'de geçmez (2026-08-23).

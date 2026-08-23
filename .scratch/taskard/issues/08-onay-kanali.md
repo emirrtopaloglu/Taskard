@@ -25,4 +25,4 @@ created: 2026-08-23
 
 ## Resolution (2026-08-23, pivot sonrası)
 
-İzin katmanı ile iş akışı katmanı ayrıldı: tool izinleri varsayılan açık (bypassPermissions), insan onayı üç iş akışı kapısında yaşar (plan onayı, merge öncesi canlı doğrulama, risky_operations listesi). Config çalışma anında ASLA değiştirilmez — StudyPal koşusundaki geçici bypassPermissions config hack'i iron law ile yasaklandı.
+İzin katmanı ile iş akışı katmanı ayrıldı: tool izinleri varsayılan açık (bypassPermissions), insan onayı üç iş akışı kapısında yaşar (plan onayı, merge öncesi canlı doğrulama, risky_operations listesi). Config çalışma anında ASLA değiştirilmez — ilk dogfooding koşusundaki geçici bypassPermissions config hack'i iron law ile yasaklandı.

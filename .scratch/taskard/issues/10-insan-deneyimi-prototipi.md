@@ -3,7 +3,7 @@ title: Koşu Sırasında İnsan Deneyimi (Prototype)
 type: wayfinder-ticket
 label: wayfinder:prototype
 status: open
-assignee:
+assignee: emir+jarvis (2026-08-23 oturumu — prototip sunuldu, varyant seçimi bekleniyor)
 blocked_by: []
 created: 2026-08-23
 ---
