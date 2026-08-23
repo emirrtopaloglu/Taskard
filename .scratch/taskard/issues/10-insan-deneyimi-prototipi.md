@@ -1,0 +1,22 @@
+---
+title: Koşu Sırasında İnsan Deneyimi (Prototype)
+type: wayfinder-ticket
+label: wayfinder:prototype
+status: open
+assignee:
+blocked_by: []
+created: 2026-08-23
+---
+
+## Question
+
+Bir koşu sırasında (5+ lane paralel, sub-agent'lar çalışıyor) insan terminal penceresinde NE GÖRMELİ? "Uzman proje yönetimini terminale sığdırmak" hedefinin görünür yüzü bu.
+
+Çözülecek kararlar:
+
+1. Durum bildirimi formatı: tek satır güncellemeler mi (`Yapıldı / Sonraki / Engel`), lane panosu mu, hem mi?
+2. Hangi bilgi asıl: ilerleme yüzdesi, token harcaması, model/harness dağılımı, blocker listesi, sonraki karar noktası?
+3. Ne sıklıkla güncellenir; insan rahatsız edilmeksizin nasıl akar?
+4. Kapanış raporu neye benzer (hangi lane merge'e hazır, hangileri açık)?
+
+Prototype: mock koşu transkripti + 2-3 radikal farklı durum gösterimi varyantı (tek HTML, ?variant= ile geçiş). Emir reaksiyon verir, seçim onundir.
