@@ -23,7 +23,11 @@ Main agent farklı bir harness'a iş nasıl gönderir? R1 envanteri geldiğinde 
 
 Referans doktrin: AvenoxAI orkestratör sözleşmesi + Claude Architect sahiplik hiyerarşisi (karar upstream'de, downstream aptal uygulayıcı).
 
-## Resolution (2026-08-23)
+## SUPERSEDED (2026-08-23 akşam — Emir kararı)
+
+İlk gerçek koşu (StudyPal) kararın gerekçesini üretti: main agent gate review'ı zaten native subagent'la yaptı; headless dispatch izin duvarına çarptı ve runtime config mutasyonuna yol açtı; verbose JSON context yaktı. **Pivot: Node runtime tamamen silindi.** Delegasyon = harness'ların kendi adlandırılmış subagent'ları; cross-harness = skill içinde bash tarifleri; config.toml = agent-okur veri (kod parse etmez). Bkz. harita Decisions.
+
+## Resolution (2026-08-23) — geçerliliğini yitirdi
 
 Emir kararları:
 

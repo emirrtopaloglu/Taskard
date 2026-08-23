@@ -2,7 +2,7 @@
 title: Model Yönlendirme Config'i
 type: wayfinder-ticket
 label: wayfinder:grilling
-status: open
+status: closed
 assignee:
 blocked_by: ["05-dispatch-soyutlamasi"]
 created: 2026-08-23
@@ -21,3 +21,7 @@ created: 2026-08-23
 5. Varsayılan tablo nedir (pahalı akıl = planner/spec/review, ucuz el = implement/test)?
 
 Emir tercihi hatırlatma: model seçimi HER ZAMAN kullanıcıda; main agent asla kendi kafasına göre seçmez.
+
+## Resolution (2026-08-23, pivot sonrası)
+
+Config.toml artık kod tarafından parse edilmeyen, AGENT tarafından okunan veridir. install.sh CLAUDE.md/AGENTS.md'e statik direktif yazar: "rol/model seçimi için global ve proje config.toml'ını oku". Session override doğal dilde. permission_mode default: bypassPermissions (Emir kararı).

@@ -11,7 +11,7 @@ tags: [wayfinder, taskard, orchestration]
 
 ## Destination
 
-Taskard v0: "Taskard'ı yükle" deyince `install.sh` ile kurulan, üç harness'ta (Claude Code, Codex, OpenCode) aynı şekilde çalışan skill/agent paketi — Superfast'in evrimi. Main agent (pahalı akıl) fikri grill'ler, spec yazar, lane'lere böler; sub-agent'lar (ucuz el) kendi worktree'lerinde TDD ile uygular; insan üç kapıda onay verir (plan onayı, merge öncesi canlı doğrulama, riskli işlem statik listesi). Ana döngü hiç kod yazmaz; model seçimi config tablosu + session override ile kullanıcıdadır; dört hafıza katmanı `.taskard/` içinde TAM şemayla taşınır. **Kabul:** Emir sistemi kendi gerçek işinde, kendi yöntemleriyle uçtan uca kullanır ve "bitti" der — pilot feature önceden sabitlenmez.
+Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya yerleştirme (skill + adlandırılmış agent tanımları + CLAUDE.md/AGENTS.md'e statik direktifler). Delegasyon harness'ların KENDİ subagent mekanizmasıyla; her delegate rol adıyla açılır (implementer, reviewer, frontend-developer...), isimsiz agent yasak. Main agent (pahalı akıl) grill'ler, spec yazar, lane'lere böler, yargı verir; eli işe sokulmaz. Dört hafıza katmanı `.taskard/` markdown konvansiyonunda taşınır. `config.toml` kod tarafından değil AGENT tarafından okunan veridir (roller, izin modu, riskli işlem listesi). Cross-harness ihtiyaçları skill içindeki bash tarifleriyle karşılanır. Worker varsayılan bypassPermissions başlar; insan onayı üç iş akışı kapısında (plan onayı, merge öncesi doğrulama, riskli işlem listesi). Kabul: Emir'in dogfooding'i — "bitti" der.
 
 ## Notes
 
@@ -31,6 +31,11 @@ Taskard v0: "Taskard'ı yükle" deyince `install.sh` ile kurulan, üç harness't
 - Tracker: local markdown (`.scratch/taskard/issues/`). Ticket claim = frontmatter'da `assignee` doldurmak.
 
 ## Decisions so far
+
+- **PIVOT (2026-08-23 akşam):** Node runtime kaldırıldı — saf konvansiyon paketi. Gerekçe: ilk gerçek koşu native subagent'ın üstünlüğü + runtime'ın ürettiği izin duvarı/config mutasyonu/verbose çıktı gösterdi. Ticket [Dispatch Soyutlaması](issues/05-dispatch-soyutlamasi.md) superseded.
+- [Model Yönlendirme Config'i](issues/07-model-config.md) — config.toml agent-okur veridir (kod parse etmez); rol→model tablosu + doğal dil session override; permission_mode default bypassPermissions.
+- [Onay Kanalı Tasarımı](issues/08-onay-kanali.md) — üç kapı iş akışı düzeyinde kalır (plan onayı, merge öncesi doğrulama, riskli işlem listesi); tool izni varsayılan açıktır; config çalışma anında asla değiştirilmez (iron law).
+- [Kurulum ve Dağıtım](issues/09-kurulum-dagitim.md) — install.sh: skill+agent symlink + global config şablonu + CLAUDE.md'e statik direktif bloğu; proje kurulum tarifleri skill içinde; proje bazlı esneklik CLAUDE.md/AGENTS.md direktifleriyle.
 
 - [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md) — v0'ın teslimatı sistemin kendisi; üç harness dispatch (CC+Codex+OpenCode); dört katman tam şema; üç onay kapısı; install.sh; kabul testi Emir'in dogfooding'i.
 - [Dispatch Soyutlaması Tasarımı](issues/05-dispatch-soyutlamasi.md) — düz JS ESM sıfır bağımlılık; adapter-per-harness; fail-fast model hatası; watchdog 20dk + max 2 deneme (config.toml'dan); ≤15 satır damıtma sözleşmesi.

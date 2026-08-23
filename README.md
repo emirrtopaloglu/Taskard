@@ -1,57 +1,53 @@
 # Taskard
 
-Çoklu-harness agent orchestration paketi: pahalı akıl planlar, ucuz el uygular, insan üç kapıda onay verir.
+Çoklu-harness agent orchestration **konvansiyon paketi** — çalışan kod içermez.
 
-- Claude Code, Codex, OpenCode üzerinde aynı şekilde çalışır
-- Main agent (orchestrator) asla kod yazmaz; spec yazar, lane böler, model seçer, dispatch eder
-- Delegate'ler headless çalışır, worktree'lerinde yalnız yaşar
-- Model seçimi her zaman kullanıcıdadır: config tablosu + session override, fail-fast
-- Dört hafıza katmanı `.taskard/` içinde dosya tabanlı taşınır
+Felsefe: her harness'ın (Claude Code, Codex, OpenCode...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, lane disiplini, brief kalitesi, rapor sözleşmesi, insan onay kapıları.
 
-**Durum:** v0 geliştirme aşamasında (yol haritası: [`.scratch/taskard/map.md`](.scratch/taskard/map.md))
+- Main agent (pahalı akıl) asla kod yazmaz: spec yazar, böler, delegate açar, yargı verir
+- Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, frontend-developer) — isimsiz agent yasak
+- Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil override
+- Dört hafıza katmanı `.taskard/` markdown konvansiyonunda taşınır
+- Cross-harness ihtiyaçlar skill içindeki headless bash tarifleriyle karşılanır
 
 ## Kurulum
-
-Gereksinim: Node.js (https://nodejs.org) ve kullanacağın harness CLI'ları (Claude Code / Codex / OpenCode) oturum açmış halde.
 
 ```bash
 git clone <repo-url> && cd taskard   # ya da mevcut klon
 ./install.sh
 ```
 
-`install.sh` ne yapar:
-1. Çalışma zamanını (`bin/`, `src/`) `~/.taskard/` altına kopyalar
-2. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
+`install.sh` ne yapar (kod yok, sadece dosya):
+1. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
+2. Adlandırılmış agent tanımlarını `~/.claude/agents/` ve `~/.opencode/agent/` altına symlink'ler
 3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)
+4. `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md`'e marker-wrapped statik direktif bloğu ekler (idempotent)
 
-Kodu güncelledikten sonra `./install.sh`'i tekrar çalıştır — config'in korunur.
+Güncelleme: `./install.sh`'i tekrar çalıştır — config'in korunur.
 
 ## Kullanım
 
-### Hızlı başlangıç
-
-Proje dizininde Claude Code'u aç ve de:
+Proje dizininde harness'ını aç ve de:
 
 ```
 Taskard akışıyla <görev>
 ```
 
-Main agent seni grill'ler (netleştirici sorular) → spec yazar (`.taskard/context/specs/`) → task'lara böler (`T-001-slug.md`) → her task için lane açar → delegate'leri dispatch eder → raporları sana aktarır.
+Main agent seni grill'ler → spec yazar (`.taskard/context/specs/`) → task'lara böler (`T-001-slug.md`) → her task için lane açar → adlandırılmış delegate'lerle çalıştırır → kısa raporlarla sana sunar.
 
 Senin karar noktaların:
-- **Model/harness seçimi** — her dispatch'te açıkça sorulur veya config'ten okunur. Canlı override: *"bu implement'te sonnet kullan"*
+- **Model/rol override** — *"bu implement'te opus kullan"* demen yeterli
 - **Plan onayı** — spec onaylanmadan implementasyon başlamaz
-- **Canlı doğrulama** — merge öncesi uygulamayı sen test edersin
+- **Canlı doğrulama** — merge öncesi uygulamayı sen test edersin; merge kararı senin
 - **Riskli işlemler** — config'deki listeyle eşleşen her adım onay ister
 
-### Config
+## Config
 
-Global: `~/.taskard/config.toml` · Proje bazlı override: `<proje>/.taskard/config.toml`
+`config.toml` kod tarafından DEĞİL, agent tarafından okunan veridir:
 
 ```toml
 [defaults]
-timeout_seconds = 1200      # dispatch başına watchdog
-max_attempts = 2            # lane başına en fazla deneme
+permission_mode = "bypassPermissions"
 
 [roles]
 planner = "opus"
@@ -62,55 +58,22 @@ reviewer = "opus"
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
-Miras zinciri: global default ← proje override ← session talimatı.
+Global: `~/.taskard/config.toml` · Proje bazlı: `<proje>/.taskard/config.toml` · Session: doğal dilin sözü en güçlüsü.
 
-### CLI Referansı
+## Proje kurulumu (proje başına bir kez)
 
-```bash
-node ~/.taskard/bin/taskard.js init [--project dir]
+Main agent skill'deki tarifi izler: `.taskard/` ağacını kurar, proje CLAUDE.md/AGENTS.md'ine direktif bloğunu ekler. Elle yapmak istersen skill'in "Kurulum tarifi" bölümüne bak.
 
-node ~/.taskard/bin/taskard.js dispatch <lane-dir> \
-  --harness <claude|codex|opencode> \
-  [--model m] [--brief p] [--project dir] [--timeout sn]
-# ya da: dispatch --lane <dir> ...
+## Yeni rol ekleme
 
-node ~/.taskard/bin/taskard.js lane new <slug> [--base branch] [--project dir]
-node ~/.taskard/bin/taskard.js status [--project dir]
-```
-
-`init`: projede `.taskard/` ağacını kurar (INDEX, context, tasks, handoff, memory).
-`dispatch`: brief'i okur → delegate'i **proje kökünde** headless spawn eder (`--project`) → env temizler → watchdog başlatır → JSON çıktıyı parse eder → `events.jsonl`'a yazar → report döndürür. İstenen model hedef harness'ta yoksa **fail-fast**: sessiz fallback yok, mevcut modeller listelenir.
-
-### `.taskard/` klasörü (projenizde otomatik oluşur)
-
-```
-.taskard/
-├── INDEX.md              # ≤200 satır — oturum açılışında okunan tek dosya
-├── config.toml           # proje bazlı override (opsiyonel)
-├── context/              # CONTEXT.md, ADR'ler, spec'ler
-├── tasks/T-NNN-slug.md   # task durumu (frontmatter)
-├── lanes/<ts>-<slug>/    # brief.md · events.jsonl · worklog.md · report.md
-├── handoff/              # oturumlar arası devir belgeleri
-├── memory/personal.md    # kullanıcı tercihleri
-└── tmp/
-```
-
-## Geliştirme
-
-```bash
-cd ~/www/Taskard
-node bin/taskard.js status          # doğrudan repodan koştur
-for f in src/**/*.js bin/*.js; do node --check $f; done   # sözdizimi kontrolü
-```
-
-Sıfır npm bağımlılığı — Node gömülü modülleri yeterli. TOML parser alt küme (`src/toml.js`); ihtiyaç büyürse standart parser'a geçilir.
+Domain uzmanı gerekiyorsa (örn. mobile-developer, data-engineer): `agents/` altına yeni `<rol>.md` tanımı ekle, `./install.sh` çalıştır — ya da sadece projeye `.claude/agents/<rol>.md` olarak koy.
 
 ## Mimari ilkeler (kısa)
 
 1. Ana döngü asla kod yazmaz — spec, dispatch, yargı; gerisi delegate
-2. Bir task = bir lane = bir worktree = tek delegate
-3. Damıtma sözleşmesi: delegate ≤15 satırla rapor verir (~50x sıkıştırma)
-4. Karar upstream'de verilir; downstream aptal uygulayıcıdır
-5. Evidence before claims — rapora değil üretime bakılır
+2. İsimsiz subagent yasak — her elin bir rolü ve adı var
+3. Damıtma sözleşmesi: delegate ≤15 satırla kanıtlı rapor verir
+4. Config çalışma anında asla değiştirilmez
+5. İnsan üç kapıda: plan onayı, merge öncesi doğrulama, riskli işlem listesi
 
-Detaylı doktrin ve açık kararlar: [wayfinder haritası](.scratch/taskard/map.md).
+Detaylı doktrin ve karar geçmişi: [wayfinder haritası](.scratch/taskard/map.md).

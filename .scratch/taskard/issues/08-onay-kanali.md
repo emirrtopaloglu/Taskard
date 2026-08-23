@@ -2,7 +2,7 @@
 title: Onay Kanalı Tasarımı (Üç Kapı)
 type: wayfinder-ticket
 label: wayfinder:grilling
-status: open
+status: closed
 assignee:
 blocked_by: ["05-dispatch-soyutlamasi"]
 created: 2026-08-23
@@ -22,3 +22,7 @@ created: 2026-08-23
 - Trivial/kritik ayrımı: main agent'ın özerk karar verme sınırının kriter listesi ne olmalı (task bölme trivial; ama ne zaman "kritik"e düşer)?
 - Onay beklerken sistem ne yapar: bloke mu, başka lane'lere mi devam eder?
 - Reddetme/revize akışı: onay gelmezse lane açık kalır mı (Superfast davranışı)?
+
+## Resolution (2026-08-23, pivot sonrası)
+
+İzin katmanı ile iş akışı katmanı ayrıldı: tool izinleri varsayılan açık (bypassPermissions), insan onayı üç iş akışı kapısında yaşar (plan onayı, merge öncesi canlı doğrulama, risky_operations listesi). Config çalışma anında ASLA değiştirilmez — StudyPal koşusundaki geçici bypassPermissions config hack'i iron law ile yasaklandı.
