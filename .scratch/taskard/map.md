@@ -11,7 +11,7 @@ tags: [wayfinder, taskard, orchestration]
 
 ## Destination
 
-Taskard v0: "Taskard'ı yükle" deyince kurulan, her harness'ta (Claude Code, Codex, OpenCode, Cursor vb.) aynı şekilde çalışan skill/agent paketi — Superfast'in evrimi. Başarı tanımı: **Virral projesinde** bir fikir uçtan uca akıyor. Main agent (pahalı akıl) fikri grill'ler, spec yazar, lane'lere böler; sub-agent'lar (ucuz el) kendi worktree'lerinde uygular; TDD + review gate'lerinden geçer; insan üç kapıda onay verir (plan onayı, merge öncesi canlı doğrulama, riskli işlem); merge edilir. Ana döngü hiç kod yazmaz; model seçimi config tablosu + session override ile kullanıcıdadır; dört hafıza katmanı `.taskard/` içinde dosya tabanlı taşınır.
+Taskard v0: "Taskard'ı yükle" deyince `install.sh` ile kurulan, üç harness'ta (Claude Code, Codex, OpenCode) aynı şekilde çalışan skill/agent paketi — Superfast'in evrimi. Main agent (pahalı akıl) fikri grill'ler, spec yazar, lane'lere böler; sub-agent'lar (ucuz el) kendi worktree'lerinde TDD ile uygular; insan üç kapıda onay verir (plan onayı, merge öncesi canlı doğrulama, riskli işlem statik listesi). Ana döngü hiç kod yazmaz; model seçimi config tablosu + session override ile kullanıcıdadır; dört hafıza katmanı `.taskard/` içinde TAM şemayla taşınır. **Kabul:** Emir sistemi kendi gerçek işinde, kendi yöntemleriyle uçtan uca kullanır ve "bitti" der — pilot feature önceden sabitlenmez.
 
 ## Notes
 
@@ -25,12 +25,14 @@ Taskard v0: "Taskard'ı yükle" deyince kurulan, her harness'ta (Claude Code, Co
   - `Claude-Architect-Multi-Agent-Orchestration-Raporu.html` — hub-and-spoke, sahiplik hiyerarşisi (karar upstream'de)
 - **Kullanıcı tercihleri:** Türkçe konuşma · model seçimi kullanıcıda (config tablosu + session-level override) · HITL her zaman devrede; main agent trivial kararlarda özerk (örn. task bölme), kritikte hemen sorar · iletişim tamamen merkezi (sub-agent'lar birbirine konuşmaz) · iş implementasyonda büyürse main agent yeni task açıp yönetir.
 - **Akış iskeleti (Superpowers'tan):** brainstorming → spec → worktree (lane) → decomposition → SDD → TDD + code review → canlı doğrulama → PR.
-- **Pilot:** Virral (`~/development/virral`) — v0 kabul testi burada koşar.
+- **Pilot/kabul:** Emir'in seçeceği gerçek işte dogfooding; kabul kararını Emir verir (bkz. Destination).
+- **v0 kapsam kararı (2026-08-23):** üç harness dispatch · dört katman tam şema · üç onay kapısı · install.sh — detay: [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md)
 - Bu haritada plan-don't-do override'ı YOK: ticket'lar karar çözer; harita bitince `/to-spec` ile collapse edilir.
 - Tracker: local markdown (`.scratch/taskard/issues/`). Ticket claim = frontmatter'da `assignee` doldurmak.
 
 ## Decisions so far
 
+- [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md) — v0'ın teslimatı sistemin kendisi; üç harness dispatch (CC+Codex+OpenCode); dört katman tam şema; üç onay kapısı; install.sh; kabul testi Emir'in dogfooding'i.
 - [Headless Dispatch Envanteri (Harness Karşılaştırması)](issues/02-r1-headless-dispatch-envanteri.md) — altı harness'ta headless mümkün; ortak `-p/exec/run + JSON + model bayrağı` kalbı kuruldu; Gemini CLI EOL → Antigravity (`agy`); Cursor en kırılgan adapter; timeout/watchdog Taskard'ın sorumluluğu.
 - [Cross-Harness Skill Portability Desenleri](issues/03-r2-skill-portability.md) — SKILL.md açık standart 5 harness'ta çalışıyor; `.agents/skills/` ortak dizin + Claude Code symlink; hibrit dağıtım: paralel manifestler (superpowers tarzı) + `npx taskard init`.
 - [Dosya-Tabanlı Hafıza Formatları ve Taşıma Protokolü](issues/04-r3-hafiza-formatlari.md) — paylaşılan dosya sistemi = ortak beyin; ~50x damıtma + bounded index; append-only + content-hash ID + TTL'li claim; sentez: ledger.jsonl omurga + task dosyası ergonomisi + INDEX ekonomisi.
