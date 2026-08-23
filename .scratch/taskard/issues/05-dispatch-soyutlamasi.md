@@ -2,8 +2,8 @@
 title: Dispatch Soyutlaması Tasarımı
 type: wayfinder-ticket
 label: wayfinder:grilling
-status: open
-assignee:
+status: closed
+assignee: emir+jarvis (2026-08-23 oturumu)
 blocked_by: ["02-r1-headless-dispatch-envanteri"]
 created: 2026-08-23
 ---
@@ -22,3 +22,13 @@ Main agent farklı bir harness'a iş nasıl gönderir? R1 envanteri geldiğinde 
 6. Worktree disiplini dispatch'in içinde mi (lane garantisi) yoksa çağıranın işi mi?
 
 Referans doktrin: AvenoxAI orkestratör sözleşmesi + Claude Architect sahiplik hiyerarşisi (karar upstream'de, downstream aptal uygulayıcı).
+
+## Resolution (2026-08-23)
+
+Emir kararları:
+
+1. **Dil: düz JavaScript (ESM), sıfır bağımlılık** — `node bin/taskard.js` ile koşar, build yok.
+2. **Arayüz onaylandı:** `dispatch <lane-dir> --harness X --model Y --brief p` → spawn + env temizliği + watchdog + JSON parse + events.jsonl + report.md. Adapter'lar harness-başına modül (claude/codex/opencode).
+3. **Model yoksa fail-fast:** hata + mevcut model listesi; sessiz fallback yasak.
+4. **Watchdog:** varsayılan 20 dk dispatch başına; **timeout ve max retry config.toml'dan düzenlenebilir** (Emir eki). Max 2 deneme sonra insan raporu.
+5. **Damıtma sözleşmesi:** delegate brief sonunda zorunlu — report.md'e ≤15 satır (DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT).

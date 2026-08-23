@@ -1,0 +1,14 @@
+[defaults]
+timeout_seconds = 1200
+max_attempts = 2
+
+[roles]
+planner = "opus"
+implementer = "sonnet"
+reviewer = "opus"
+
+[adapters.claude]
+permission_mode = "acceptEdits"
+
+[risky_operations]
+patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]

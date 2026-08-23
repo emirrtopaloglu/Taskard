@@ -33,6 +33,8 @@ Taskard v0: "Taskard'ı yükle" deyince `install.sh` ile kurulan, üç harness't
 ## Decisions so far
 
 - [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md) — v0'ın teslimatı sistemin kendisi; üç harness dispatch (CC+Codex+OpenCode); dört katman tam şema; üç onay kapısı; install.sh; kabul testi Emir'in dogfooding'i.
+- [Dispatch Soyutlaması Tasarımı](issues/05-dispatch-soyutlamasi.md) — düz JS ESM sıfır bağımlılık; adapter-per-harness; fail-fast model hatası; watchdog 20dk + max 2 deneme (config.toml'dan); ≤15 satır damıtma sözleşmesi.
+- [`.taskard/` Klasör Şeması](issues/06-taskard-semasi.md) — şema onaylandı; config **TOML** (mini gömülü parser); T-001-slug ID; tek bounded personal.md; global `~/.taskard/` + miras zinciri.
 - [Headless Dispatch Envanteri (Harness Karşılaştırması)](issues/02-r1-headless-dispatch-envanteri.md) — altı harness'ta headless mümkün; ortak `-p/exec/run + JSON + model bayrağı` kalbı kuruldu; Gemini CLI EOL → Antigravity (`agy`); Cursor en kırılgan adapter; timeout/watchdog Taskard'ın sorumluluğu.
 - [Cross-Harness Skill Portability Desenleri](issues/03-r2-skill-portability.md) — SKILL.md açık standart 5 harness'ta çalışıyor; `.agents/skills/` ortak dizin + Claude Code symlink; hibrit dağıtım: paralel manifestler (superpowers tarzı) + `npx taskard init`.
 - [Dosya-Tabanlı Hafıza Formatları ve Taşıma Protokolü](issues/04-r3-hafiza-formatlari.md) — paylaşılan dosya sistemi = ortak beyin; ~50x damıtma + bounded index; append-only + content-hash ID + TTL'li claim; sentez: ledger.jsonl omurga + task dosyası ergonomisi + INDEX ekonomisi.
