@@ -94,6 +94,8 @@ Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate
 
 Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
 
+**Koşu anlatımı (insan çıktısı):** Paralel koşularda iki katman — lane durumu değişince kısa **pano özeti** (tablo: lane · durum · son olay) ve önemli olaylarda **tek satır telegraf** (`T-002 reviewer gate: PASS` gibi). Mikro işlerde tek satır yeter. Kapanışta tam tablo + durum satırları.
+
 ## Ek A — Cross-harness tarifleri
 
 Native subagent her harness'ta birincil tercihtir. Başka model ailesi gerektiğinde (limit ekonomisi, model gücü) ana döngü Bash ile headless çağırır — uzun prompt dosyadan beslenir:

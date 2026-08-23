@@ -2,7 +2,7 @@
 title: Koşu Sırasında İnsan Deneyimi (Prototype)
 type: wayfinder-ticket
 label: wayfinder:prototype
-status: open
+status: closed
 assignee: emir+jarvis (2026-08-23 oturumu — prototip sunuldu, varyant seçimi bekleniyor)
 blocked_by: []
 created: 2026-08-23
@@ -20,3 +20,9 @@ Bir koşu sırasında (5+ lane paralel, sub-agent'lar çalışıyor) insan termi
 4. Kapanış raporu neye benzer (hangi lane merge'e hazır, hangileri açık)?
 
 Prototype: mock koşu transkripti + 2-3 radikal farklı durum gösterimi varyantı (tek HTML, ?variant= ile geçiş). Emir reaksiyon verir, seçim onundir.
+
+## Resolution (2026-08-23)
+
+Emir seçimi: **Melez** — lane panosu (üst) + telegraf akışı (alt) birlikte. Varyant prototipi: `.scratch/taskard/prototypes/insan-deneyimi.html` (★ Melez default; Telegraf/Pano/Sadece-Kararlar referansta durur).
+
+Doktrine işlendi: SKILL.md §5 "Koşu anlatımı" — paralel koşuda pano özeti + tek satır telegraf; mikro işte tek satır.

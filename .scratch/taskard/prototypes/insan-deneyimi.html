@@ -40,6 +40,7 @@
 <body>
 <header>
   <h1>taskard koşu deneyimi · varyant:</h1>
+  <button class="vbtn active" data-v="h">★ Melez (1+2)</button>
   <button class="vbtn" data-v="1">1 Telegraf</button>
   <button class="vbtn" data-v="2">2 Lane Panosu</button>
   <button class="vbtn" data-v="3">3 Sadece Kararlar</button>
@@ -71,26 +72,36 @@ const EV = [
   {t:"gate",   m:"T-004 reviewer gate: PASS", lane:"T-004", s:"ok"},
   {t:"final",  m:"KAPANIŞ: T-001/T-002/T-004 merge'e hazır · push kararı senin", s:"ok"}
 ];
-let i=0, timer=null, variant="1";
+let i=0, timer=null, variant="h";
 const stage=document.getElementById("stage");
 const lines=[];
 function cls(e){return e.s==="ok"?"ok":e.s==="err"?"err":e.s==="warn"?"warn":e.t==="plan"||e.t==="ask"?"warn":"info"}
+function board(){
+  const lanes={};
+  lines.forEach(l=>{ if(!l.e.lane)return; lanes[l.e.lane]=l.e; });
+  const order=[...new Set(lines.filter(l=>l.e.lane).map(l=>l.e.lane))];
+  const st=e=>!e?"queued":e.s==="err"?"blocked":e.t==="done"?"done":"run";
+  const lbl={run:"● koşuyor",done:"✓ bitti",blocked:"✕ engelli",queued:"○ sırada"};
+  const done=lines.filter(l=>l.e.t==="done").length;
+  return "<table><tr><th>lane</th><th>durum</th><th>son olay</th></tr>"+
+    order.map(id=>{const e=lanes[id];const s=st(e);
+      return "<tr><td>"+id+"</td><td><span class='pill "+s+"'>"+lbl[s]+"</span></td><td>"+(e?e.m:"—")+"</td></tr>";}).join("")+
+    "</table>";
+}
 function render(){
   if(variant==="1"){
-    stage.innerHTML="<div class='tele'>"+lines.map(l=>"<p class='"+cls(l.e)+"'>"+l.e.m+"</p>").join("")+(i<EV.length?"<p class='dim'>▍</p>":"")+"</div>";
+    stage.innerHTML="<div class='tele'>"+lines.map(l=>"<p class='"+cls(l.e)+"'>"+l.e.m+"</p>").join("")+(i<EV.length?"<p class='dim'>▍</p>":"")+"</div>"+last();
   } else if(variant==="2"){
-    const lanes={};
-    lines.forEach(l=>{ if(!l.e.lane)return; lanes[l.e.lane]=l.e; });
-    const order=[...new Set(lines.filter(l=>l.e.lane).map(l=>l.e.lane))];
-    const st=e=>!e?"queued":e.s==="err"?"blocked":e.t==="done"?"done":"run";
-    const lbl={run:"● koşuyor",done:"✓ bitti",blocked:"✕ engelli",queued:"○ sırada"};
-    let done=lines.filter(l=>l.e.t==="done").length;
+    const done=lines.filter(l=>l.e.t==="done").length;
+    stage.innerHTML="<p class='dim'>İlerleme: "+done+"/3 lane bitti · aktif roller: implementer, frontend-developer, reviewer</p>"+board()+last();
+  } else if(variant==="h"){
+    const done=lines.filter(l=>l.e.t==="done").length;
+    const tail=lines.slice(-8).map(l=>"<p class='"+cls(l.e)+"'>"+l.e.m+"</p>").join("");
     stage.innerHTML=
-      "<p class='dim'>İlerleme: "+done+"/3 lane bitti · aktif roller: implementer, frontend-developer, reviewer</p>"+
-      "<table><tr><th>lane</th><th>durum</th><th>son olay</th></tr>"+
-      order.map(id=>{const e=lanes[id];const s=st(e);
-        return "<tr><td>"+id+"</td><td><span class='pill "+s+"'>"+lbl[s]+"</span></td><td>"+(e?e.m:"—")+"</td></tr>";}).join("")+
-      "</table>"+last();
+      "<p class='dim'>İlerleme: "+done+"/3 lane bitti"+(i<EV.length?" · koşuyor ▍":"")+"</p>"+
+      board()+
+      "<p class='dim' style='margin:14px 0 4px'>── olay akışı ──</p>"+
+      "<div class='tele'>"+(tail||"<p class='dim'>bekleniyor…</p>")+"</div>"+last();
   } else {
     const decisions=lines.filter(l=>["plan","ask","final"].includes(l.e.t)||l.e.s==="err");
     const silent=lines.length-decisions.length;
@@ -118,10 +129,10 @@ document.getElementById("step").onclick=step;
 document.getElementById("play").onclick=()=>{ if(timer)return stop(); timer=setInterval(step,1100); };
 document.getElementById("reset").onclick=()=>{ stop(); i=0; lines.length=0; render(); };
 document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowRight"){ const vs=["1","2","3"]; variant=vs[(vs.indexOf(variant)+1)%3]; syncBtns(); render(); }
+  if(e.key==="ArrowRight"){ const vs=["h","1","2","3"]; variant=vs[(vs.indexOf(variant)+1)%4]; syncBtns(); render(); }
 });
 function syncBtns(){ document.querySelectorAll(".vbtn[data-v]").forEach(x=>x.classList.toggle("active",x.dataset.v===variant)); }
-document.querySelector('.vbtn[data-v="1"]').classList.add("active");
+document.querySelector('.vbtn[data-v="h"]').classList.add("active");
 render();
 </script>
 </body>

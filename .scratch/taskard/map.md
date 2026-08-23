@@ -37,6 +37,7 @@ Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya y
 - [Onay Kanalı Tasarımı](issues/08-onay-kanali.md) — üç kapı iş akışı düzeyinde kalır (plan onayı, merge öncesi doğrulama, riskli işlem listesi); tool izni varsayılan açıktır; config çalışma anında asla değiştirilmez (iron law).
 - [Kurulum ve Dağıtım](issues/09-kurulum-dagitim.md) — install.sh: skill+agent symlink + global config şablonu + CLAUDE.md'e statik direktif bloğu; proje kurulum tarifleri skill içinde; proje bazlı esneklik CLAUDE.md/AGENTS.md direktifleriyle.
 - **Sis çözüldü (2026-08-23):** worktree-per-lane → §2b Paralel lane disiplini · workload panosu → INDEX.md tablo bakımı · limit yönlendirmesi → Ek A + `[harness_preferences]` · eval seti → `evals/` (3 senaryo). Okuma yetkileri doktrine girdi (ana döngü=karar verisi, kalite=reviewer, keşif=delegate).
+- [Koşu Sırasında İnsan Deneyimi](issues/10-insan-deneyimi-prototipi.md) — Emir seçimi: **melez** (lane panosu + telegraf akışı); SKILL.md §5 Koşu anlatımı'na işlendi. Prototip: `prototypes/insan-deneyimi.html`. **TÜM TICKET'LAR KAPALI.**
 
 - [v0 Kapsam Manifestosu](issues/01-v0-kapsam-manifestosu.md) — v0'ın teslimatı sistemin kendisi; üç harness dispatch (CC+Codex+OpenCode); dört katman tam şema; üç onay kapısı; install.sh; kabul testi Emir'in dogfooding'i.
 - [Dispatch Soyutlaması Tasarımı](issues/05-dispatch-soyutlamasi.md) — düz JS ESM sıfır bağımlılık; adapter-per-harness; fail-fast model hatası; watchdog 20dk + max 2 deneme (config.toml'dan); ≤15 satır damıtma sözleşmesi.
