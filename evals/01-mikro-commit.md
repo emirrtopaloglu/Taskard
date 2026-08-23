@@ -20,3 +20,4 @@ Kabul: tek dosya, tek commit, mesaj: "docs: node surum gereksinimi"
 - [ ] Delegate adlandırılmış rolle mi açıldı?
 - [ ] Kanıt kontrolü ana döngüde mi yapıldı?
 - [ ] Durum satırı formatında mı kapandı?
+- [ ] Over-fire: basit görevde gereksiz disiplin skill'i (grilling, wayfinder, brainstorming...) tetiklenmedi mi?

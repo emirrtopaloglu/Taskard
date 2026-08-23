@@ -8,6 +8,8 @@
 4. Wayfinder haritası (`.scratch/taskard/map.md`) kararların tek kaynağıdır — mimari kararı haritaya işlemeden değişiklik yapma.
 5. Yeni agent tanımı eklerken frontmatter'da `name` zorunludur; isimsiz rol tanımlanmaz.
 6. **Test projeleri ürün kimliğine yazılmaz:** dogfooding yapılan projelerin adları README, SKILL.md, map veya örneklerde geçmez; gerekirse "test projesi" denir.
+7. **Dış skill'ler vendor edilmez** — `docs/dependencies.md` manifest'i + install.sh'in npx kurulum adımı tek mekanizmadır; upstream güncellemesi otomatik akar. Vendoring OSS fazında ayrı karardır.
+8. **Mod seçimi akışın ilk hamlesidir:** basit iş loop, karmaşık iş graph modu — graph gereksiz yere başlanmaz, loop çalışırken kapsam genlerse yükseltilir.
 
 ## Hızlı doğrulama
 

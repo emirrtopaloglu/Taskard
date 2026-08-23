@@ -1,11 +1,17 @@
 [defaults]
 permission_mode = "bypassPermissions"
 report_max_lines = 15
+max_attempts = 2
+# budget_minutes = 30   # opsiyonel: lane başına zaman tavanı (graph modunda önerilir)
 
 [roles]
 planner = "opus"
 implementer = "sonnet"
 reviewer = "opus"
+
+[harness_preferences]
+# limit dolunca tercih sirasi (opsiyonel):
+# implementer = ["claude", "codex", "opencode"]
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]

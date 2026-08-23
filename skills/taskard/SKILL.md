@@ -15,13 +15,39 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 - **Brief** — delegate'e verilen spec; lane'in kalitesi brief'in kalitesiyle sınırlıdır; token'ı brief'e yatır.
 - **Report** — delegate'in bitişte yazdığı ≤15 satır: DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT + kanıt.
 
-## Ölçek merdiveni
+## Mod seçimi: önce Loop, gerektiğinde Graph
 
-Akışın ağırlığı işin ağırlığına uyar; şüphede ağır olanı seç (ratchet aşağı inmez). Kapsam yürütme sırasında genişlerse (chore → geliştirme gibi) tier'ı yeniden değerlendir ve gerekirse yükselt.
+Ana agent akışın BAŞINDA görevi sınıflandırır — bu sınıflandırma bedavadır ve hangi disiplinlerin yükleneceğini belirler. Seçilmeyen modun skill'i hiç yüklenmez.
 
-- **Mikro iş:** tek adım, tek alan, ~10 dk (review+commit, tek dosya düzeltme, küçük düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcının isteği + kabul kriterleri doğrudan tek bir brief.md'e işlenir, delegate açılır, kanıt kontrolü, durum satırı. `.taskard/`'a dokunan tek dosya brief'tir.
-- **Standart iş:** ≥2 lane veya mimari karar veya belirsiz kapsam → tam seremoni (grilling → spec → tasks → lane'ler → gate'ler).
-- Brief kullanıcının görev metnini birebir KOPYALAMAZ — delegate'in çalışması için gereken kesin talimatı taşır; bağlam zaten diskteyse referans verir.
+- 🔁 **LOOP MODU (varsayılan):** tek iş, net bitiş çizgisi, retry ucuz.
+  - *Mikro iş:* tek adım, ~10 dk (review+commit, tek dosya düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcı isteği + kabul kriterleri tek brief.md'e işlenir; `.taskard/`'a dokunan tek dosya brief'tir.
+  - *Standart iş:* sıralı lane'li tam seremoni (grilling → spec → tasks → lane'ler → gate'ler) ama paralellik ve çoklu kapı yokken hâlâ loop'tur.
+- 🕸️ **GRAPH MODU** — aşağıdaki koşullardan **≥2**'si varsa: gerçek paralellik (≥2 bağımsız lane aynı anda) · node başına farklı model/harness · çoklu insan onay kapısı · izole failure recovery ihtiyacı · iş >1 oturum (wayfinder). Graph modunda ek olarak: bağımlılık grafiği **mermaid olarak görünür kılınır** (kullanıcıya gösterilir veya specs klasörüne yazılır), worktree fan-out, node başına bütçe cap'i, canlı workload panosu.
+
+Kurallar: **ratchet yukarı** — loop çalışırken kapsam genleşirse (chore → geliştirme gibi) modu yeniden değerlendir, gerekirse graph'a çık; graph gereksiz yere BAŞLANMAZ; şüphede ağır olanı seç. Brief kullanıcının görev metnini birebir KOPYALAMAZ — delegate'in çalışması için gereken kesin talimatı taşır.
+
+## Disiplin router'ı (pull-based)
+
+Akışın başında `using-superpowers` yüklüyse onunla başla — skill seçimini o yönetir. Yüklü değilse bu tablo routing'in tek kaynağıdır. **Her satır bir TETİK KOŞULUDUR: koşul yoksa skill yüklenmez** (tam liste + yoksa-ne-olur: `docs/dependencies.md`). Skill makinende yoksa akış DURMAZ — karşılık gelen davranışı kendi metninden uygula.
+
+| Faz | Skill | Tetik |
+|---|---|---|
+| Akış başı | using-superpowers | her zaman (varsa) |
+| Spec öncesi | brainstorming | yaratıcı/işlev ekleme işi |
+| Hizalanma | grilling + domain-modeling | büyük/riskli görev |
+| Sisli kapsam | wayfinder | iş >1 oturum (tracker = `.taskard/tasks/`) |
+| Seam/mimari | codebase-design | arayüz şekli tartışmalıysa |
+| Plan | writing-plans | standart tier plan dokümanı |
+| Yürütme alt. | executing-plans | inline yürütme seçilirse |
+| Delegate döngüsü | subagent-driven-development | standart tier varsayılanı |
+| Paralel lane'ler | dispatching-parallel-agents + using-git-worktrees | ≥2 bağımsız lane |
+| Merge çakışması | resolving-merge-conflicts | worktree merge'inde çakışma |
+| Gate 1 | requesting-code-review | yeni kod üreten her lane |
+| Fix döngüsü | receiving-code-review | NEEDS_FIX sonrası fix delegate'inde |
+| Blocker teşhisi | systematic-debugging | 2. başarısız denemede |
+| Kanıt | verification-before-completion | her kapanışta |
+| Bitiş menüsü | finishing-a-development-branch | yeşil suite sonrası |
+| Bakım | improve-codebase-architecture | ayrı refactor-turu isteğinde |
 
 ## Iron Laws
 
@@ -74,7 +100,7 @@ Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/bl
 
 Her task için:
 1. **Ön kabul doğrulaması:** görevin dayandığı iddiaları brief yazmadan DOĞRULA (dosya gerçekten var mı, diff gerçekten var mı, kod gerçekten orada mı). İddia yanlışsa uydurma yoluna girme — kullanıcıya sun, kararı ondan al.
-2. `.taskard/lanes/<ts>-<slug>/` altında brief.md doldur (bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir).
+2. `.taskard/lanes/<ts>-<slug>/` altında brief.md doldur (bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir). Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı. Graph modunda DAG'i mermaid olarak ekle.
 3. Config'ten rol→model oku (`~/.taskard/config.toml`, proje override'u, sonra kullanıcının bu session'daki sözleri).
 4. **Native subagent** aç: rolün adlandırılmış tanımıyla, config'teki modelle. Claude Code'da Agent tool + agent adı; başka harness'taysan o harness'ın native mekanizması.
 5. Report'u oku. BLOCKED ise aynı lane'de en fazla 2 deneme; üçüncüsünde teşhis topla, kullanıcıya raporla, bağımsız sonraki lane'e geç.
@@ -94,7 +120,7 @@ Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate
 
 Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
 
-**Koşu anlatımı (insan çıktısı):** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE") olduğu gibi basma — cümleye çevir. Workload tablosu sohbete basılmaz, INDEX.md'de yaşar. Kapanışta özet tablo + `Yapıldı · Sonraki · Engel` satırı.
+**Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; workload tablosu INDEX.md'de yaşar. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı. Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
 
 ## Ek A — Cross-harness tarifleri
 
