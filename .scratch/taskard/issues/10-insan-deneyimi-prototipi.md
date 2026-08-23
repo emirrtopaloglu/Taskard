@@ -21,7 +21,11 @@ Bir koşu sırasında (5+ lane paralel, sub-agent'lar çalışıyor) insan termi
 
 Prototype: mock koşu transkripti + 2-3 radikal farklı durum gösterimi varyantı (tek HTML, ?variant= ile geçiş). Emir reaksiyon verir, seçim onundir.
 
-## Resolution (2026-08-23)
+## REVIZYON (2026-08-23, Emir geri bildirimi)
+
+Melez beğenilmedi, geri alındı. Final karar: **SADECE açıklayıcı telegraf** — ana agent'ın kullanıcıya konuştuğu gibi tek satırlık cümleler (ne yapıldı/neden/ne bekleniyor), durum token'ları cümleye çevrilir. Prototip yeniden yazıldı; SKILL.md §5 güncellendi.
+
+## Resolution (2026-08-23) — ilk karar (geçersiz)
 
 Emir seçimi: **Melez** — lane panosu (üst) + telegraf akışı (alt) birlikte. Varyant prototipi: `.scratch/taskard/prototypes/insan-deneyimi.html` (★ Melez default; Telegraf/Pano/Sadece-Kararlar referansta durur).
 
