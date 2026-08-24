@@ -148,7 +148,7 @@ Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcın�
 Native subagent her harness'ta birincil tercihtir. Başka model ailesi gerektiğinde (limit ekonomisi, model gücü) ana döngü Bash ile headless çağırır — uzun prompt dosyadan beslenir:
 
 - **Claude:** `claude -p "$(cat brief.md)" --model sonnet --permission-mode bypassPermissions --output-format json` → `.result`
-- **Codex:** `codex exec --json --skip-git-repo-check -m <model> "$(cat brief.md)"`
+- **Codex:** `codex exec -s danger-full-access --skip-git-repo-check "$(cat brief.md)"` — ⚠️ saha bulguları (v0.149.0): `--full-auto` YOK, karşılığı `-s workspace-write|danger-full-access`; **git commit gerektiren iş için danger-full-access şart** (workspace-write `.git/index.lock` yazamıyor). `--json` flag'i yok — çıktı düz metin, sonunda "tokens used" basılır (maliyet satırı kaynağı). Exit code her durumda 0 gelebilir → başarıyı ÇIKTIDAN doğrula. Brief'e report.md'in MUTLAK yolunu yaz — yoksa worker proje köküne yazar.
 - **OpenCode:** önce `OPENCODE_SERVER_PASSWORD/USERNAME` env'lerini temizle → `opencode run -m <provider/model> "$(cat brief.md)"`
 - **Cursor:** `cursor-agent -p "$(cat brief.md)" --force` — askıda kalma vakaları biliniyor, timeout sarmala
 - **Antigravity:** `agy -p "<prompt>" --output-format json` — pipe'ta sessiz exit 0 olabilir, çıktıyı doğrula
