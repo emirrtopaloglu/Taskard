@@ -30,6 +30,7 @@ tags: [wayfinder, taskard, hardening]
 - [Çoklu-Proje](issues/18-coklu-proje-analizi.md) — izolasyon sağlam; kanıtlı riskler: lane ID overwrite, maliyet agregasyon sıfır, onay metninde proje adı, ~/.taskard/src artığı.
 - **Karar turu 2026-08-24 (Q59-Q67):** güvenlik postürü AYNEN KALIR — deny çevirimi YOK, sandbox YOK, locked_files YOK ("agent ne derse o", Emir). Girenler: routing önceliği directive block'a (v2) · brief'e zorunlu Disiplinler satırı · lane ID rastgele suffix · onayda proje adı · runtime artıkları temizlendi. T-15 kapandı.
 - [Directive Block Versiyonlama](issues/15-directive-versiyonlama.md) — sürüm marker'lı block + install.sh replace-if-stale; ilk canlı geçiş (v1→v2) başarılı.
+- **INDEX.md kaldırıldı (2026-08-24, Emir kararı):** workload panosu doktrinden çıktı — canlı durum Humanish telegraf ile insana aktarılır; oturum oryantasyonu tasks/frontmatter + lane raporlarından yapılır. Veri kaybı yok (durum zaten task frontmatter + report.md'de yaşıyor).
 - [Remote Push](issues/11-remote-push.md) — `emirrtopaloglu/Taskard` private repo canlı; tam tarih yedeklendi.
 - [Eval Kalibrasyonu](issues/12-eval-kalibrasyonu.md) — senaryo 01 ilk kez koşuldu (9/10); 1 doktrin çelişkisi yakalanıp kapatıldı; evals/01 kalibre edildi. 02-04 doğal dogfooding koşularında takip edilecek.
 
