@@ -2,7 +2,7 @@
 title: using-superpowers ↔ Taskard Router Çakışma Analizi
 type: wayfinder-ticket
 label: wayfinder:research
-status: open
+status: closed
 assignee:
 blocked_by: []
 created: 2026-08-24
@@ -21,3 +21,7 @@ using-superpowers (her tura enjekte olur, skill seçimini yönetir) ile Taskard'
 Kaynaklar: `~/.agents/skills/using-superpowers/SKILL.md`, taskard SKILL.md, EmirOS AGENTS.md taskard block'u.
 
 Çıktı: çakışma matrisi + önerilen öncelik kural taslağı — KARAR YOK.
+
+## Resolution (2026-08-24)
+
+Sistemler rakip değil teslim ilişkisi: taskard mod seçer, using-superpowers aday gösterir, yükleme kararı tetik koşulda. En sert çelişki mikro görevde brainstorming dayatması. SUBAGENT-STOP pozitif sinerji ama disiplinleri brief taşıyıcılığına indirdi (brief'e disiplin satırı zorunlu olmalı). Announce × Humanish harmanlanabilir. Öncelik paragraf taslağı hazır. Rapor: `research/h2-router-cakismasi.md`.

@@ -2,7 +2,7 @@
 title: Güvenlik Postürü — bypassPermissions Gözden Geçirmesi
 type: wayfinder-ticket
 label: wayfinder:research
-status: open
+status: closed
 assignee:
 blocked_by: []
 created: 2026-08-24
@@ -21,3 +21,7 @@ Worker'lar varsayılan `bypassPermissions` ile çalışıyor (Emir kararı). Bu 
 Kaynaklar: R1 research (`.scratch/taskard/research/r1-*`), implementer/reviewer tanımları, SKILL.md iron laws, web'de güncel harness sandbox docs.
 
 Çıktı: risk tablosu (olasılık × etki) + azaltım seçenekleri menüsü — KARAR YOK.
+
+## Resolution (2026-08-24)
+
+Enforcement boşluğu ana risk: risky_operations'ın teknik uygulayıcısı tanımsız (tek savunma = model vicdanı); credential/exfiltration sınıfı listede hiç görünmüyor; üç-katman formülünde zayıf halka patlama yarıçapı (sandbox yokken disiplinler söz). Bedavaya yakın çözüm var: Claude Code deny kuralları bypassPermissions altında bile değerlendiriliyor → "%99 otonom / %1 sert duvar" kurulabilir. MCP kör noktası: pattern taraması tool çağrılarına bakmıyor. Rapor: `research/h1-guvenlik-posturu.md` — 5 karar sorusu Emir'de.
