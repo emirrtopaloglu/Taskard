@@ -84,7 +84,11 @@ Projenin CLAUDE.md / AGENTS.md'ine Taskard direktif bloğu yoksa ekle:
 
 ## 1. Spec
 
-Görev küçük ve iyi tanımlıysa kompakt spec yaz; büyük/riskliyse grilling yap. Spec → `.taskard/context/specs/<slug>.md`.
+Proje kökünde `.taskard/` yoksa önce kurulum tarifi (aşağıda) uygulanır.
+
+Görev küçük ve iyi tanımlıysa kompakt spec yaz; büyük/riskliyse grilling yap (design tree, frontier tur tur, önerilen cevaplı sorular). Spec'i `.taskard/context/specs/<slug>.md` altına yaz.
+
+**Ürün kararları turu (standart tier'da spec kilitlemeden önce ZORUNLU):** mevcut implementasyon ile hedef davranış arasındaki TÜM görünür farkları listele — eksik aksiyonlar, izin kontrolleri, legacy'de olup yenide olmayan davranışlar, edge case'ler — ve HER BİRİNİ kullanıcıya tek tek sor. Varsayılan parity varsayımı YASAKTIR: "legacy'de vardı, ben de ekledim" ya da "yok saydım" kararı kullanıcının oyu olmadan alınamaz. Bu turda soru cömerttir — **daha fazla soru = daha az halüsinasyon = daha tutarlı kod.**
 
 ## 2. Task listesi
 
@@ -119,9 +123,20 @@ Bulgu varsa düzeltme yeni implementer delegate'iyle, aynı lane'de.
 
 Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate atlanır — yerine ana döngünün bağımsız kanıt kontrolü geçer (git log/diff/status ile delegate iddiasının doğrulanması). Bu istisna raporda belirtilir.
 
-## 5. Canlı doğrulama + kapanış
+## 5. Final Review (merge öncesi son kapı)
+
+Standart ve graph tier'da, TÜM lane'ler kendi gate'lerinden geçtikten sonra merge öncesi **bir kez** final review yapılır:
+
+- Taze reviewer subagent + config'teki en yetkin model (reviewer rolü)
+- Kapsam: merge-base'den TÜM diff — lane lane değil, işin BÜTÜNÜ (lane'ler arası etkileşim, entegrasyon noktaları, kapsam dışı sızıntı)
+- Bulgu varsa TEK fix wave'i: bulgular tek implementer delegate'ine verilir; ikinci dalga yok — kalan bulgular kullanıcıya dürüstçe raporlanır
+- Mikro tier'da ayrı final review YOK (tek lane'in kendi gate'i yeterli)
+
+## 6. Canlı doğrulama + kapanış
 
 Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
+
+**Canlı doğrulama:** varsayılan olarak SUNULUR, yapılmaz — *"istersen tarayıcıda uçtan uca koşarım"* teklifi kapanışta yer alır. Kullanıcı isterse veya proje direktifi varsa (`canlı doğrulama: otomatik`), ana akış tarayıcı doğrulamasını kendisi çalıştırır ve sonucu rapora ekler. Neden önemli: statik gate'ler runtime görünürlüğünü yakalayamaz (i18n namespace, env farkları yalnızca canlı koşuda çıkar).
 
 **Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; workload tablosu INDEX.md'de yaşar. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı + **maliyet satırı** ("Bu lane toplam ~$X" — harness veriyorsa; vermiyorsa sessizce atla, uydurma). Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
 
