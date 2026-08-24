@@ -2,7 +2,7 @@
 title: Paralel Lane + Worktree Saha Koşusu
 type: wayfinder-ticket
 label: wayfinder:task
-status: open
+status: closed
 assignee:
 blocked_by: []
 created: 2026-08-24
@@ -17,3 +17,14 @@ created: 2026-08-24
 3. Bulgular §2b doktrinine geri işlenir
 
 Çıkış kriteri: paralel koşunun kaydı var; doktrin saha gerçeğiyle eşleşiyor.
+
+
+## Resolution (2026-08-24)
+
+İki bağımsız lane aynı anda iki worktree'de koştu (paralel spawn):
+
+- **İzolasyon ✓:** wt-a'da yalnız Lane A dosyası, wt-b'de yalnız Lane B — hiçbir çapraz dokunuş yok
+- **Merge ✓:** sıralı merge, sıfır çakışma, git grafiğinde temiz elmas (diamond) deseni
+- **Bulgu:** report dosyaları worktree-lokal `.taskard/` altında kaldı (commit edilmeyen dosyalar merge'e girmedi) — ana döngü mutlak yol ile okudu; sorun değil ama cross-worktree rapor toplama ana döngünün işi olduğu netleşti
+
+§2b disiplini saha gerçeğiyle doğrulandı; doktrin değişikliği gerekmedi.
