@@ -28,6 +28,8 @@ tags: [wayfinder, taskard, hardening]
 - [Güvenlik Postürü](issues/16-guvenlik-posturu.md) — enforcement boşluğu ana risk (risky_operations'ın teknik uygulayıcısı yok); credential/exfiltration listede görünmez; deny-çevirimiyle "%99 otonom / %1 sert duvar" mümkün. Azaltım menüsü hazır → karar Emir'de.
 - [Router Çakışması](issues/17-router-cakismasi.md) — rakip değil teslim ilişkisi: mod taskard'da, aday gösterme using-superpowers'ta, yükleme kararı tetikte; öncelik paragrafı taslağı hazır.
 - [Çoklu-Proje](issues/18-coklu-proje-analizi.md) — izolasyon sağlam; kanıtlı riskler: lane ID overwrite, maliyet agregasyon sıfır, onay metninde proje adı, ~/.taskard/src artığı.
+- **Karar turu 2026-08-24 (Q59-Q67):** güvenlik postürü AYNEN KALIR — deny çevirimi YOK, sandbox YOK, locked_files YOK ("agent ne derse o", Emir). Girenler: routing önceliği directive block'a (v2) · brief'e zorunlu Disiplinler satırı · lane ID rastgele suffix · onayda proje adı · runtime artıkları temizlendi. T-15 kapandı.
+- [Directive Block Versiyonlama](issues/15-directive-versiyonlama.md) — sürüm marker'lı block + install.sh replace-if-stale; ilk canlı geçiş (v1→v2) başarılı.
 
 ## Not yet specified
 

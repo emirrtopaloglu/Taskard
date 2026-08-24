@@ -47,13 +47,24 @@ ensure_external_skills
 
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 AGENTS_MD="$HOME/.claude/AGENTS.md"
-for target in "$CLAUDE_MD" "$AGENTS_MD"; do
+
+sync_block() {
+  local target="$1"
   mkdir -p "$(dirname "$target")"
   touch "$target"
-  if ! grep -q "$MARK" "$target"; then
-    cat "$SRC/templates/directive-block.md" >> "$target"
-    echo "Direktif bloğu eklendi → $target"
+  local block_ver
+  block_ver="$(grep -o 'taskard:v[0-9]*' "$SRC/templates/directive-block.md" | head -1)"
+  if grep -q "$block_ver" "$target"; then return 0; fi
+  if grep -q "$MARK" "$target"; then
+    awk -v s="$MARK" -v e="<!-- taskard:end -->" '$0~s{skip=1;next} $0~e{skip=0;next} !skip{print}' "$target" > "$target.tmp" && mv "$target.tmp" "$target"
+    echo "Eski direktif bloğu kaldırıldı → $target"
   fi
+  cat "$SRC/templates/directive-block.md" >> "$target"
+  echo "Direktif bloğu kuruldu ($block_ver) → $target"
+}
+
+for target in "$CLAUDE_MD" "$AGENTS_MD"; do
+  sync_block "$target"
 done
 
 echo "Taskard kuruldu → $DEST (kod yok, sadece konvansiyon)"

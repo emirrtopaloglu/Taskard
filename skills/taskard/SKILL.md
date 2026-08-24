@@ -107,7 +107,7 @@ Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/bl
 
 Her task için:
 1. **Ön kabul doğrulaması:** görevin dayandığı iddiaları brief yazmadan DOĞRULA (dosya gerçekten var mı, diff gerçekten var mı, kod gerçekten orada mı). İddia yanlışsa uydurma yoluna girme — kullanıcıya sun, kararı ondan al.
-2. `.taskard/lanes/<ts>-<slug>/` altında brief.md doldur (bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir). Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı. Graph modunda DAG'i mermaid olarak ekle. **Olumsuz iddia kuralı:** brief'e "X yok / Y yapılmadı" yazmadan önce TEK komutla doğrula (`ls`/`grep`); doğrulayamıyorsan koşullu yaz (*"test dosyası görünmüyorsa oluştur"*) — keşif özetindeki olumsuz iddialar ham halde brief'e taşınmaz.
+2. `.taskard/lanes/<ts>-<slug>-<suffix>/` altında brief.md doldur — **lane ID sonuna 4 karakterlik rastgele suffix ekle** (örn. `-a3f2`): aynı saniye+slug çakışması overwrite riskini keser (saha provasında kanıtlandı). Brief içeriği: bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir. Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı; **Disiplinler satırı ZORUNLU** (örn. "Disiplinler: TDD zorunlu · verification-before-completion kanıt kuralı") — sub-agent'lar using-superpowers'ı görmez, disiplinler ancak brief'ten taşınır. Graph modunda DAG'i mermaid olarak ekle. **Olumsuz iddia kuralı:** brief'e "X yok / Y yapılmadı" yazmadan önce TEK komutla doğrula (`ls`/`grep`); doğrulayamıyorsan koşullu yaz (*"test dosyası görünmüyorsa oluştur"*) — keşif özetindeki olumsuz iddialar ham halde brief'e taşınmaz.
 3. Config'ten rol→model oku (`~/.taskard/config.toml`, proje override'u, sonra kullanıcının bu session'daki sözleri).
 4. **Native subagent** aç: rolün adlandırılmış tanımıyla, config'teki modelle. Claude Code'da Agent tool + agent adı; başka harness'taysan o harness'ın native mekanizması.
 5. Report'u oku — **mesaj = pointer, dosya = payload:** dönüş mesajı yarım/eksik geldiyse önce `report.md`'i oku; doluysa ekstra bekleme turu AÇMA. BLOCKED ise aynı lane'de en fazla 2 deneme; üçüncüsünde teşhis topla, kullanıcıya raporla, bağımsız sonraki lane'e geç.
@@ -137,7 +137,7 @@ Standart ve graph tier'da, TÜM lane'ler kendi gate'lerinden geçtikten sonra me
 
 ## 6. Canlı doğrulama + kapanış
 
-Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
+Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. **Onay isteklerinde hangi proje olduğu her zaman belirtilir** (örn. "[spechy-lite-react] merge onayı bekliyor") — çoklu-proje koşuda karışmayı önler. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
 
 **Canlı doğrulama:** varsayılan olarak SUNULUR, yapılmaz — *"istersen tarayıcıda uçtan uca koşarım"* teklifi kapanışta yer alır. Kullanıcı isterse veya proje direktifi varsa (`canlı doğrulama: otomatik`), ana akış tarayıcı doğrulamasını kendisi çalıştırır ve sonucu rapora ekler. Neden önemli: statik gate'ler runtime görünürlüğünü yakalayamaz (i18n namespace, env farkları yalnızca canlı koşuda çıkar).
 
