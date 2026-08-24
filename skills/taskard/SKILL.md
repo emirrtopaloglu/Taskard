@@ -35,6 +35,7 @@ Akışın başında `using-superpowers` yüklüyse onunla başla — skill seçi
 | Akış başı | using-superpowers | her zaman (varsa) |
 | Spec öncesi | brainstorming | yaratıcı/işlev ekleme işi |
 | Hizalanma | grilling + domain-modeling | büyük/riskli görev |
+| Ürün kararları turu | grill-with-docs (proje-bağlamlı) / grill-me (kavramsal) | standart tier spec kilidi öncesi |
 | Sisli kapsam | wayfinder | iş >1 oturum (tracker = `.taskard/tasks/`) |
 | Seam/mimari | codebase-design | arayüz şekli tartışmalıysa |
 | Plan | writing-plans | standart tier plan dokümanı |
@@ -89,6 +90,8 @@ Proje kökünde `.taskard/` yoksa önce kurulum tarifi (aşağıda) uygulanır.
 Görev küçük ve iyi tanımlıysa kompakt spec yaz; büyük/riskliyse grilling yap (design tree, frontier tur tur, önerilen cevaplı sorular). Spec'i `.taskard/context/specs/<slug>.md` altına yaz.
 
 **Ürün kararları turu (standart tier'da spec kilitlemeden önce ZORUNLU):** mevcut implementasyon ile hedef davranış arasındaki TÜM görünür farkları listele — eksik aksiyonlar, izin kontrolleri, legacy'de olup yenide olmayan davranışlar, edge case'ler — ve HER BİRİNİ kullanıcıya tek tek sor. Varsayılan parity varsayımı YASAKTIR: "legacy'de vardı, ben de ekledim" ya da "yok saydım" kararı kullanıcının oyu olmadan alınamaz. Bu turda soru cömerttir — **daha fazla soru = daha az halüsinasyon = daha tutarlı kod.**
+
+Bu turu kendi başına değil, interview skill'iyle yürüt: proje-bağlamlı işte **`grill-with-docs`** (terimler `.taskard/context/CONTEXT.md`'e, geri dönülemez kararlarsa `.taskard/context/decisions/` altına ADR düşer); repo-dışı/kavramsal görevde **`grill-me`**. İkisi de yoksa `grilling` ile devam et — hiçbiri soru cömertliğini kısmaz.
 
 ## 2. Task listesi
 

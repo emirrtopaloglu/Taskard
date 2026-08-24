@@ -11,6 +11,8 @@ Kaynaklar: [obra/superpowers](https://github.com/obra/superpowers) · [mattpococ
 | using-superpowers | superpowers | Akış başı router | SKILL.md tablosu tek kaynak olur |
 | brainstorming | superpowers | Yaratıcı/işlev ekleme iş | Kompakt spec ile devam, riskli işte ekstra dikkat |
 | grilling | mattpocock | Büyük/riskli görevde hizalanma | Kendi soru disipliniyle hizalanma |
+| grill-with-docs | mattpocock | Ürün kararları turu (proje-bağlamlı; CONTEXT.md/ADR → `.taskard/context/`) | grilling ile devam |
+| grill-me | mattpocock | Ürün kararları turu (repo-dışı/kavramsal) | grilling ile devam |
 | domain-modeling | mattpocock | Grilling sırasında terim/ADR kağıt izi | Terimler CONTEXT.md'e elle |
 | wayfinder | mattpocock | İş >1 oturum, sisli kapsam | İş standart tier'a bölünür |
 | writing-plans | superpowers | Standart tier plan dokümanı | Spec doğrudan brief'lere bölünür |
