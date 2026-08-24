@@ -2,7 +2,7 @@
 title: Hafıza + Handoff Doktrini
 type: wayfinder-ticket
 label: wayfinder:grilling
-status: open
+status: closed
 assignee:
 blocked_by: []
 created: 2026-08-24
@@ -20,3 +20,8 @@ Kararlar:
 4. Kural setini SKILL.md'e ekle (kısa, 5-8 satır)
 
 Çıkış kriteri: pasif klasör kalmadı; her klasörün yazan/okuyan/tetik üçlüsü tanımlı.
+
+
+## Resolution (2026-08-24)
+
+Doktrin SKILL.md'e işlendi ("Hafıza + Handoff" bölümü): personal.md yalnızca kullanıcı beyanıyla yazar + açılışta okunur (≤100 satır); handoff iki tetikte yazılır, `rejected` alanı zorunlu, oku-tüket = `consumed-` prefix; oryantasyon zinciri pull-based (tasks → lane raporları → personal → handoff). Emir onayıyla kilitlendi.

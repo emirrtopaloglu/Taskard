@@ -83,6 +83,12 @@ Projenin CLAUDE.md / AGENTS.md'ine Taskard direktif bloğu yoksa ekle:
 <!-- taskard:end -->
 ```
 
+## Hafıza + Handoff
+
+- **`memory/personal.md`:** main agent YALNIZCA kullanıcı açıkça tercih/bilgi beyan ederse yazar ("bunu hatırla", "ben hep böyle yaparım") — kendi kafasından tercih uyduramaz. Oturum açılışında varsa okunur (≤100 satır). Silme/düzeltme yalnızca kullanıcı isterse.
+- **`handoff/`:** iki tetikte yazılır — (1) oturum kapanırken bekleyen iş/karar varsa, (2) uzun koşu öncesi kritik bağlam bırakılacaksa. Format `<ts>-<konu>.md`, içinde zorunlu **`rejected`** alanı: denenen ve ELENEN yaklaşımlar (halef elenen yolu yeniden teklif etmesin). Yeni oturum en yeni handoff'u okur; işlenen dosya `consumed-` prefix'i alır — birikmez.
+- **Oryantasyon zinciri:** `tasks/*.md` frontmatter → son lane raporları → personal.md → en yeni handoff (varsa). Hepsi pull-based — açılışta hepsi yüklenmez.
+
 ## 1. Spec
 
 Proje kökünde `.taskard/` yoksa önce kurulum tarifi (aşağıda) uygulanır.

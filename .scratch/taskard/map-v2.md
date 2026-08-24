@@ -3,7 +3,7 @@ title: Taskard Hardening — Wayfinder Haritası v2
 created: 2026-08-24
 modified: 2026-08-24
 type: wayfinder-map
-status: 🟢 active
+status: 🟢 complete — 9/9 ticket kapandı; eşik: Emir'in v0 kabul kararı
 tags: [wayfinder, taskard, hardening]
 ---
 
@@ -30,6 +30,7 @@ tags: [wayfinder, taskard, hardening]
 - [Çoklu-Proje](issues/18-coklu-proje-analizi.md) — izolasyon sağlam; kanıtlı riskler: lane ID overwrite, maliyet agregasyon sıfır, onay metninde proje adı, ~/.taskard/src artığı.
 - **Karar turu 2026-08-24 (Q59-Q67):** güvenlik postürü AYNEN KALIR — deny çevirimi YOK, sandbox YOK, locked_files YOK ("agent ne derse o", Emir). Girenler: routing önceliği directive block'a (v2) · brief'e zorunlu Disiplinler satırı · lane ID rastgele suffix · onayda proje adı · runtime artıkları temizlendi. T-15 kapandı.
 - [Directive Block Versiyonlama](issues/15-directive-versiyonlama.md) — sürüm marker'lı block + install.sh replace-if-stale; ilk canlı geçiş (v1→v2) başarılı.
+- [Hafıza + Handoff Doktrini](issues/19-hafiza-handoff-doktrini.md) — personal/handoff yazma-okuma-tüket kuralları SKILL.md'e girdi; oryantasyon zinciri tanımlı.
 - [Paralel Lane Saha Koşusu](issues/14-paralel-lane-saha-kosusu.md) — iki worktree, paralel delegate'ler, sıfır çakışma, temiz diamond merge; §2b doğrulandı.
 - [Cross-Harness Saha Testi](issues/13-codex-saha-testi.md) — Codex headless ilk gerçek koşu: sözleşme uyumu mükemmel (dürüst BLOCKED dahil); Ek A tarifi saha gerçekleriyle güncellendi (sandbox flag, tokens used, mutlak rapor yolu kuralı).
 - **INDEX.md kaldırıldı (2026-08-24, Emir kararı):** workload panosu doktrinden çıktı — canlı durum Humanish telegraf ile insana aktarılır; oturum oryantasyonu tasks/frontmatter + lane raporlarından yapılır. Veri kaybı yok (durum zaten task frontmatter + report.md'de yaşıyor).
