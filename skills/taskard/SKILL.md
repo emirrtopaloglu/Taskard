@@ -20,7 +20,7 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 Ana agent akışın BAŞINDA görevi sınıflandırır — bu sınıflandırma bedavadır ve hangi disiplinlerin yükleneceğini belirler. Seçilmeyen modun skill'i hiç yüklenmez.
 
 - 🔁 **LOOP MODU (varsayılan):** tek iş, net bitiş çizgisi, retry ucuz.
-  - *Mikro iş:* tek adım, ~10 dk (review+commit, tek dosya düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcı isteği + kabul kriterleri tek brief.md'e işlenir; `.taskard/`'a dokunan tek dosya brief'tir.
+  - *Mikro iş:* tek adım, ~10 dk (review+commit, tek dosya düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcı isteği + kabul kriterleri tek brief.md'e işlenir; `.taskard/`'a dokunan tek dosya brief'tir. **Tavanlar:** brief ≤20 satır · explore agent AÇILMAZ (ana döngü hedefli okuma yapar: grep / 2-3 read) · review = scoped mini-review (sadece diff + kabul kriterleri, bulgu ≤5 satır). >3 dosya veya yabancı alt sistem çıkarsa standart tier'a yüksel.
   - *Standart iş:* sıralı lane'li tam seremoni (grilling → spec → tasks → lane'ler → gate'ler) ama paralellik ve çoklu kapı yokken hâlâ loop'tur.
 - 🕸️ **GRAPH MODU** — aşağıdaki koşullardan **≥2**'si varsa: gerçek paralellik (≥2 bağımsız lane aynı anda) · node başına farklı model/harness · çoklu insan onay kapısı · izole failure recovery ihtiyacı · iş >1 oturum (wayfinder). Graph modunda ek olarak: bağımlılık grafiği **mermaid olarak görünür kılınır** (kullanıcıya gösterilir veya specs klasörüne yazılır), worktree fan-out, node başına bütçe cap'i, canlı workload panosu.
 
@@ -100,10 +100,10 @@ Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/bl
 
 Her task için:
 1. **Ön kabul doğrulaması:** görevin dayandığı iddiaları brief yazmadan DOĞRULA (dosya gerçekten var mı, diff gerçekten var mı, kod gerçekten orada mı). İddia yanlışsa uydurma yoluna girme — kullanıcıya sun, kararı ondan al.
-2. `.taskard/lanes/<ts>-<slug>/` altında brief.md doldur (bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir). Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı. Graph modunda DAG'i mermaid olarak ekle.
+2. `.taskard/lanes/<ts>-<slug>/` altında brief.md doldur (bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir). Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı. Graph modunda DAG'i mermaid olarak ekle. **Olumsuz iddia kuralı:** brief'e "X yok / Y yapılmadı" yazmadan önce TEK komutla doğrula (`ls`/`grep`); doğrulayamıyorsan koşullu yaz (*"test dosyası görünmüyorsa oluştur"*) — keşif özetindeki olumsuz iddialar ham halde brief'e taşınmaz.
 3. Config'ten rol→model oku (`~/.taskard/config.toml`, proje override'u, sonra kullanıcının bu session'daki sözleri).
 4. **Native subagent** aç: rolün adlandırılmış tanımıyla, config'teki modelle. Claude Code'da Agent tool + agent adı; başka harness'taysan o harness'ın native mekanizması.
-5. Report'u oku. BLOCKED ise aynı lane'de en fazla 2 deneme; üçüncüsünde teşhis topla, kullanıcıya raporla, bağımsız sonraki lane'e geç.
+5. Report'u oku — **mesaj = pointer, dosya = payload:** dönüş mesajı yarım/eksik geldiyse önce `report.md`'i oku; doluysa ekstra bekleme turu AÇMA. BLOCKED ise aynı lane'de en fazla 2 deneme; üçüncüsünde teşhis topla, kullanıcıya raporla, bağımsız sonraki lane'e geç.
 
 Fix protokolü: düzeltme HER ZAMAN yeni delegate ile. Sonrasında en az bağımsız kanıt kontrolü zorunlu (tsc/lint/test); Critical/Important bulgularda scoped re-review yapılır (yalnızca finding karşılandı mı bakılır). Push EDİLMEMİŞ lane commit'i amend edilebilir; push edilmiş commit'e asla dokunulmaz.
 
@@ -112,6 +112,9 @@ Fix protokolü: düzeltme HER ZAMAN yeni delegate ile. Sonrasında en az bağım
 Yeni kod üreten lane'lerde iki kapı, ikisi de TAZE reviewer subagent'ta (implementer'la aynı context'te asla):
 1. Code review (standartlar + spec uyumu)
 2. Merge öncesi son kontrol
+
+**Mikro lane istisnası:** küçük diff'li mikro işlerde iki gate yerine TEK scoped mini-review — reviewer sadece diff + kabul kriterlerine bakar, bulgusu ≤5 satır. Bağımsızlık korunur, gramaj düşer.
+
 Bulgu varsa düzeltme yeni implementer delegate'iyle, aynı lane'de.
 
 Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate atlanır — yerine ana döngünün bağımsız kanıt kontrolü geçer (git log/diff/status ile delegate iddiasının doğrulanması). Bu istisna raporda belirtilir.
@@ -120,7 +123,7 @@ Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate
 
 Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
 
-**Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; workload tablosu INDEX.md'de yaşar. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı. Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
+**Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; workload tablosu INDEX.md'de yaşar. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı + **maliyet satırı** ("Bu lane toplam ~$X" — harness veriyorsa; vermiyorsa sessizce atla, uydurma). Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
 
 ## Ek A — Cross-harness tarifleri
 

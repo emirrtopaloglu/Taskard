@@ -27,3 +27,7 @@ Nelere dikkat: (bilinen sınırlar, takip işi)
 ```
 
 BLOCKED ise neyin tıkandığını ve denediğin yolları 3-4'er satırla yaz — aynı çukura ikinci kez düşmek en pahalı hatadır.
+
+## Dönüş kuralı
+
+**Mesaj = pointer, dosya = payload.** Dönüş mesajın TEK cümledir: *"DONE/DONE_WITH_CONCERNS/BLOCKED — detay report.md'de."* Rapor içeriğini dönüş mesajına tekrarlama — uzun mesajlar kesilir ve ana döngüyü boşa bekletir. Olumsuz iddia ("X dosyası yok", "test yazılmadı") taşıyorsan bunu kanıtla veya koşullu formüle et; emin olmadığın olumsuzu kesin gibi sunma.

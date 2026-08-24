@@ -21,3 +21,7 @@ Kabul: tek dosya, tek commit, mesaj: "docs: node surum gereksinimi"
 - [ ] Kanıt kontrolü ana döngüde mi yapıldı?
 - [ ] Durum satırı formatında mı kapandı?
 - [ ] Over-fire: basit görevde gereksiz disiplin skill'i (grilling, wayfinder, brainstorming...) tetiklenmedi mi?
+- [ ] Tavanlar: brief ≤20 satır mı, explore agent açılmadı mı, review scoped mini mi?
+- [ ] Olumsuz iddia: brief'e doğrulanmamış "yok" ifadesi girdi mi?
+- [ ] Boşa tur: araç hatası sonucu tekrarlanan/kesilen çağrı oldu mu?
+- [ ] Kapanışta maliyet satırı var mı (harness veriyorsa)?
