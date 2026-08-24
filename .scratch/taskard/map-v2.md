@@ -31,6 +31,7 @@ tags: [wayfinder, taskard, hardening]
 - **Karar turu 2026-08-24 (Q59-Q67):** güvenlik postürü AYNEN KALIR — deny çevirimi YOK, sandbox YOK, locked_files YOK ("agent ne derse o", Emir). Girenler: routing önceliği directive block'a (v2) · brief'e zorunlu Disiplinler satırı · lane ID rastgele suffix · onayda proje adı · runtime artıkları temizlendi. T-15 kapandı.
 - [Directive Block Versiyonlama](issues/15-directive-versiyonlama.md) — sürüm marker'lı block + install.sh replace-if-stale; ilk canlı geçiş (v1→v2) başarılı.
 - [Remote Push](issues/11-remote-push.md) — `emirrtopaloglu/Taskard` private repo canlı; tam tarih yedeklendi.
+- [Eval Kalibrasyonu](issues/12-eval-kalibrasyonu.md) — senaryo 01 ilk kez koşuldu (9/10); 1 doktrin çelişkisi yakalanıp kapatıldı; evals/01 kalibre edildi. 02-04 doğal dogfooding koşularında takip edilecek.
 
 ## Not yet specified
 
