@@ -20,7 +20,7 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 Ana agent akışın BAŞINDA görevi sınıflandırır — bu sınıflandırma bedavadır ve hangi disiplinlerin yükleneceğini belirler. Seçilmeyen modun skill'i hiç yüklenmez.
 
 - 🔁 **LOOP MODU (varsayılan):** tek iş, net bitiş çizgisi, retry ucuz.
-  - *Mikro iş:* tek adım, ~10 dk (review+commit, tek dosya düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcı isteği + kabul kriterleri tek brief.md'e işlenir; `.taskard/`'a dokunan tek dosya brief'tir, **workload panosu (INDEX.md) mikro tier'da güncellenmez**. **Tavanlar:** brief ≤20 satır · explore agent AÇILMAZ (ana döngü hedefli okuma yapar: grep / 2-3 read) · review = scoped mini-review (sadece diff + kabul kriterleri, bulgu ≤5 satır). >3 dosya veya yabancı alt sistem çıkarsa standart tier'a yüksel.
+  - *Mikro iş:* tek adım, ~10 dk (review+commit, tek dosya düzeltme). Spec VE tasks dosyası YAZILMAZ — kullanıcı isteği + kabul kriterleri tek brief.md'e işlenir; `.taskard/`'a dokunan tek dosya brief'tir. **Tavanlar:** brief ≤20 satır · explore agent AÇILMAZ (ana döngü hedefli okuma yapar: grep / 2-3 read) · review = scoped mini-review (sadece diff + kabul kriterleri, bulgu ≤5 satır). >3 dosya veya yabancı alt sistem çıkarsa standart tier'a yüksel.
   - *Standart iş:* sıralı lane'li tam seremoni (grilling → spec → tasks → lane'ler → gate'ler) ama paralellik ve çoklu kapı yokken hâlâ loop'tur.
 - 🕸️ **GRAPH MODU** — aşağıdaki koşullardan **≥2**'si varsa: gerçek paralellik (≥2 bağımsız lane aynı anda) · node başına farklı model/harness · çoklu insan onay kapısı · izole failure recovery ihtiyacı · iş >1 oturum (wayfinder). Graph modunda ek olarak: bağımlılık grafiği **mermaid olarak görünür kılınır** (kullanıcıya gösterilir veya specs klasörüne yazılır), worktree fan-out, node başına bütçe cap'i, canlı workload panosu.
 
@@ -97,7 +97,7 @@ Bu turu kendi başına değil, interview skill'iyle yürüt: proje-bağlamlı i�
 
 Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/blocked_by/assignee). Bağımsızlar paralel, bağımlılar sıralı.
 
-**Workload panosu:** `.taskard/INDEX.md`'de aktif lane tablosu tutulur (lane · rol · model · durum); her lane açılışında ve kapanışında güncellenir. Kapanış raporu bu tablodan doğar.
+**Oryantasyon kuralı:** yeni oturumda yönlenme = `.taskard/tasks/*.md` frontmatter'ları + son lane raporları okunarak yapılır. Canlı durum bildirimi insan çıktısıdır (Humanish telegraf) — ayrıca dosyaya tablo tutulmaz.
 
 ## 2b. Paralel lane disiplini
 
@@ -141,7 +141,7 @@ Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcın�
 
 **Canlı doğrulama:** varsayılan olarak SUNULUR, yapılmaz — *"istersen tarayıcıda uçtan uca koşarım"* teklifi kapanışta yer alır. Kullanıcı isterse veya proje direktifi varsa (`canlı doğrulama: otomatik`), ana akış tarayıcı doğrulamasını kendisi çalıştırır ve sonucu rapora ekler. Neden önemli: statik gate'ler runtime görünürlüğünü yakalayamaz (i18n namespace, env farkları yalnızca canlı koşuda çıkar).
 
-**Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; workload tablosu INDEX.md'de yaşar. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı + **maliyet satırı** ("Bu lane toplam ~$X" — harness veriyorsa; vermiyorsa sessizce atla, uydurma). Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
+**Koşu anlatımı (insan çıktısı) — Claudish değil Humanish:** Tek format — **açıklayıcı telegraf**. Her önemli adımda kullanıcıya BİR CÜMLE yaz: ne yapıldı, neden, ne bekleniyor (örn. "Reviewer gate'i geçti; tek minor bulguyu yeni implementer'a verdim"). Durum token'larını ("PASS", "DONE", "NEEDS_FIX") asla çıktıya taşıma — cümleye çevir. Tablo/jargon sohbete girmez; canlı durum insan çıktısıdır, ayrıca dosyaya tablo tutulmaz. Kapanışta kısa özet + `Yapıldı · Sonraki · Engel` satırı + **maliyet satırı** ("Bu lane toplam ~$X" — harness veriyorsa; vermiyorsa sessizce atla, uydurma). Kısacası: mesajın bir insana okunuyorsa doğru, bir log satırına benziyorsa yanlış.
 
 ## Ek A — Cross-harness tarifleri
 

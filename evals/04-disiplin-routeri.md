@@ -41,4 +41,4 @@ Kontrol:
 - [ ] DAG mermaid olarak üretildi mi?
 - [ ] Lane'ler worktree izolasyonunda mı koştu?
 - [ ] Brief'lerde bütçe alanı (max_deneme) var mı?
-- [ ] INDEX.md workload panosu canlı tutuldu mu?
+- [ ] Canlı durum Humanish telegraf ile aktarıldı mı?

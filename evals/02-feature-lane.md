@@ -12,7 +12,7 @@ Kabul: seçim kalıcı saklanıyor, UI iki dili gösteriyor, tsc/eslint temiz.
 
 1. Standart tier: kompakt spec → tasks → lane → implementer → reviewer gate
 2. Reviewer gate gerçek çalışır; bulgu çıkarsa fix yeni implementer ile
-3. Workload panosu (INDEX.md) güncellenir
+3. Kapanış raporu task dosyalarından doğrulanır
 4. Kapanış raporu + durum satırları
 
 ## Değerlendirme kriterleri

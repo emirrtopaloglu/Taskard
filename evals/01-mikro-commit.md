@@ -22,7 +22,6 @@ Kabul: tek dosya, tek commit, mesaj: "docs: node surum gereksinimi"
 - [ ] Brief'te Disiplinler satırı var mı? (sub-agent using-superpowers görmez)
 - [ ] Dönüş mesajı pointer formatında mı? (tek cümle, payload report.md'de)
 - [ ] Kanıt kontrolü ana döngüde mi yapıldı?
-- [ ] INDEX.md güncellenMEDİ mi? (mikro tier tek-dosya kuralı)
 - [ ] Durum satırı formatında mı kapandı?
 - [ ] Over-fire: basit görevde gereksiz disiplin skill'i (grilling, wayfinder, brainstorming...) tetiklenmedi mi?
 - [ ] Tavanlar: brief ≤20 satır mı, explore agent açılmadı mı, review scoped mini mi?
