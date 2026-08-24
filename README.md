@@ -1,54 +1,56 @@
 # Taskard
 
-Çoklu-harness agent orchestration **konvansiyon paketi** — çalışan kod içermez.
+[🇹🇷 Türkçe](README.tr.md)
 
-Felsefe: her harness'ın (Claude Code, Codex, OpenCode...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, lane disiplini, brief kalitesi, rapor sözleşmesi, insan onay kapıları.
+A multi-harness agent orchestration **convention package** — contains no runtime code.
 
-- Main agent (pahalı akıl) asla kod yazmaz: spec yazar, böler, delegate açar, yargı verir
-- Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, frontend-developer) — isimsiz agent yasak
-- Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil override
-- Dört hafıza katmanı `.taskard/` markdown konvansiyonunda taşınır
-- Cross-harness ihtiyaçlar skill içindeki headless bash tarifleriyle karşılanır
+Philosophy: every harness (Claude Code, Codex, OpenCode...) already has its own subagent capability. Taskard layers **doctrine** on top of it: named roles, lane discipline, brief quality, report contracts, human approval gates.
 
-## Kurulum
+- The main agent (expensive brain) never writes code: it writes specs, splits work, spawns delegates, and judges results
+- Every delegate runs under a **named** role (implementer, reviewer, frontend-developer) — anonymous agents are forbidden
+- Model selection belongs to the user: a `config.toml` table + natural-language overrides
+- Four memory layers travel inside the `.taskard/` markdown convention
+- Cross-harness needs are covered by headless bash recipes inside the skill
+
+## Install
 
 ```bash
-git clone <repo-url> && cd taskard   # ya da mevcut klon
+git clone <repo-url> && cd taskard   # or your existing clone
 ./install.sh
 ```
 
-`install.sh` ne yapar (kod yok, sadece dosya):
-1. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
-2. Adlandırılmış agent tanımlarını `~/.claude/agents/` ve `~/.opencode/agent/` altına symlink'ler
-3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)
-4. `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md`'e marker-wrapped statik direktif bloğu ekler (idempotent)
-5. Dış disiplin skill'leri (superpowers + mattpocock) eksikse `npx skills` ile global kurar
+What `install.sh` does (no code, just files):
+1. Symlinks the skill to `~/.claude/skills/taskard` and `~/.agents/skills/taskard`
+2. Symlinks named agent definitions into `~/.claude/agents/` and `~/.opencode/agent/`
+3. Creates `~/.taskard/config.toml` on first run (never overwrites)
+4. Appends a marker-wrapped static directive block to `~/.claude/CLAUDE.md` and `~/.claude/AGENTS.md` (idempotent)
+5. Installs missing external discipline skills (superpowers + mattpocock) globally via `npx skills`
 
-Güncelleme: `./install.sh`'i tekrar çalıştır — config'in korunur.
+To update: re-run `./install.sh` — your config is preserved.
 
-Dış skill bağımlılıkları pakete GÖMÜLMEZ — kurulu olanlar referans edilir, upstream güncellemesi otomatik akar. Tam liste: [`docs/dependencies.md`](docs/dependencies.md).
+External skill dependencies are NOT vendored into the package — installed copies are referenced, so upstream updates flow through automatically. Full list: [`docs/dependencies.md`](docs/dependencies.md).
 
-## Kullanım
+## Usage
 
-Proje dizininde harness'ını aç ve de:
+Open your harness in the project directory and say:
 
 ```
-Taskard akışıyla <görev>
+Run this task through the Taskard workflow
 ```
 
-Main agent seni grill'ler → spec yazar (`.taskard/context/specs/`) → task'lara böler (`T-001-slug.md`) → her task için lane açar → adlandırılmış delegate'lerle çalıştırır → kısa raporlarla sana sunar.
+The main agent grills you → writes a spec (`.taskard/context/specs/`) → splits it into tasks (`T-001-slug.md`) → opens a lane per task → runs them through named delegates → reports back in short summaries.
 
-Senin karar noktaların:
-- **Model/rol override** — *"bu implement'te opus kullan"* demen yeterli
-- **Plan onayı** — spec onaylanmadan implementasyon başlamaz
-- **Canlı doğrulama** — merge öncesi uygulamayı sen test edersin; merge kararı senin
-- **Riskli işlemler** — config'deki listeyle eşleşen her adım onay ister
+Your decision points:
+- **Model/role override** — just say *"use opus for this implementation"*
+- **Plan approval** — no implementation starts before you approve the spec
+- **Live verification** — you test the app before merge; the merge call is yours
+- **Risky operations** — anything matching the config list asks for approval first
 
-**Ölçek merdiveni:** mikro işler (tek adım, ~10 dk) tek brief ile koşar — spec/tasks dosyası yazılmaz, yeni kod üretilmiyorsa reviewer gate yerine bağımsız kanıt kontrolü yapılır. Tam seremoni standart işler içindir.
+**Scale ladder:** micro tasks (single step, ~10 min) run on a single brief — no spec/tasks files, and if no new code is produced an independent evidence check replaces the reviewer gate. Full ceremony is for standard tasks.
 
 ## Config
 
-`config.toml` kod tarafından DEĞİL, agent tarafından okunan veridir:
+`config.toml` is data read by agents, not by code:
 
 ```toml
 [defaults]
@@ -63,22 +65,22 @@ reviewer = "opus"
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
-Global: `~/.taskard/config.toml` · Proje bazlı: `<proje>/.taskard/config.toml` · Session: doğal dilin sözü en güçlüsü.
+Global: `~/.taskard/config.toml` · Per-project: `<project>/.taskard/config.toml` · Session: whatever you say wins.
 
-## Proje kurulumu (proje başına bir kez)
+## Project setup (once per project)
 
-Main agent skill'deki tarifi izler: `.taskard/` ağacını kurar, proje CLAUDE.md/AGENTS.md'ine direktif bloğunu ekler. Elle yapmak istersen skill'in "Kurulum tarifi" bölümüne bak.
+The main agent follows the recipe in the skill: it creates the `.taskard/` tree and appends the directive block to the project's CLAUDE.md/AGENTS.md. To do it manually, see the "Setup recipe" section of the skill.
 
-## Yeni rol ekleme
+## Adding a new role
 
-Domain uzmanı gerekiyorsa (örn. mobile-developer, data-engineer): `agents/` altına yeni `<rol>.md` tanımı ekle, `./install.sh` çalıştır — ya da sadece projeye `.claude/agents/<rol>.md` olarak koy.
+Need a domain specialist (e.g. mobile-developer, data-engineer)? Add a `<role>.md` definition under `agents/`, run `./install.sh` — or simply drop `.claude/agents/<role>.md` into your project.
 
-## Mimari ilkeler (kısa)
+## Architectural principles (short)
 
-1. Ana döngü asla kod yazmaz — spec, dispatch, yargı; gerisi delegate
-2. İsimsiz subagent yasak — her elin bir rolü ve adı var
-3. Damıtma sözleşmesi: delegate ≤15 satırla kanıtlı rapor verir
-4. Config çalışma anında asla değiştirilmez
-5. İnsan üç kapıda: plan onayı, merge öncesi doğrulama, riskli işlem listesi
+1. The main loop never writes code — spec, dispatch, judgment; everything else goes to delegates
+2. Anonymous subagents are forbidden — every pair of hands has a role and a name
+3. Distillation contract: delegates return evidence-backed reports in ≤15 lines
+4. Config files are never mutated at runtime
+5. The human owns three gates: plan approval, pre-merge verification, risky-operation list
 
-Detaylı doktrin ve karar geçmişi: [wayfinder haritası](.scratch/taskard/map.md).
+Full doctrine and decision history: [wayfinder map](.scratch/taskard/map.md) (Turkish).
