@@ -25,7 +25,9 @@ tags: [wayfinder, taskard, hardening]
 
 ## Decisions so far
 
-<!-- ticket kapanınca tek satır gist + link -->
+- [Güvenlik Postürü](issues/16-guvenlik-posturu.md) — enforcement boşluğu ana risk (risky_operations'ın teknik uygulayıcısı yok); credential/exfiltration listede görünmez; deny-çevirimiyle "%99 otonom / %1 sert duvar" mümkün. Azaltım menüsü hazır → karar Emir'de.
+- [Router Çakışması](issues/17-router-cakismasi.md) — rakip değil teslim ilişkisi: mod taskard'da, aday gösterme using-superpowers'ta, yükleme kararı tetikte; öncelik paragrafı taslağı hazır.
+- [Çoklu-Proje](issues/18-coklu-proje-analizi.md) — izolasyon sağlam; kanıtlı riskler: lane ID overwrite, maliyet agregasyon sıfır, onay metninde proje adı, ~/.taskard/src artığı.
 
 ## Not yet specified
 
