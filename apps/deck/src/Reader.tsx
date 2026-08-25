@@ -108,9 +108,9 @@ export default function Reader({ path, mtime }: { path: string | null; mtime: nu
   if (!path) return null // App bu durumda Overview gösterir
 
   return (
-    <section className="panel reader-panel" aria-label="Dosya okuyucu">
-      <div className="panel-head">
-        <h2 className="panel-title reader-path" title={path}>{path}</h2>
+    <section className="reader" aria-label="Dosya okuyucu">
+      <header className="reader-head">
+        <h2 className="reader-path" title={path}>{path}</h2>
         {file && (
           <>
             {/* Görünür etiketli düz düğmeler — tablist yarımı yerine
@@ -124,7 +124,7 @@ export default function Reader({ path, mtime }: { path: string | null; mtime: nu
             </button>
           </>
         )}
-      </div>
+      </header>
 
       {loading && <div className="empty">Dosya açılıyor…</div>}
 
@@ -138,14 +138,18 @@ export default function Reader({ path, mtime }: { path: string | null; mtime: nu
       {!loading && !error && file && (
         <article className={`reader-body ${raw ? 'is-raw' : ''}`}>
           {meta.length > 0 && (
-            <table className="fm-table">
-              <caption className="visually-hidden">Dosya ön bilgisi</caption>
-              <tbody>
-                {meta.map(([k, v]) => (
-                  <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>
-                ))}
-              </tbody>
-            </table>
+            // Ön bilgi katlanabilir, varsayılan kapalı (sözleşme m6)
+            <details className="fm-details">
+              <summary>ön bilgi · {meta.length}</summary>
+              <table className="fm-table">
+                <caption className="visually-hidden">Dosya ön bilgisi</caption>
+                <tbody>
+                  {meta.map(([k, v]) => (
+                    <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
           )}
 
           {raw ? (

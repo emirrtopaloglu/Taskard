@@ -3,7 +3,6 @@ import { useDeck, rel } from './hooks'
 import Lamp from './Lamp'
 import TreePanel from './TreePanel'
 import Reader from './Reader'
-import FeedPanel from './FeedPanel'
 import Overview from './Overview'
 
 export default function App() {
@@ -13,7 +12,7 @@ export default function App() {
   if (!snap) {
     return (
       <div className="boot">
-        <Lamp tone="amber" label="BAĞLANIYOR" size="lg" />
+        <span className="dot amber pulse" aria-hidden="true" />
         <p>Deck köprüye çıkıyor — .taskard klasörü dinleniyor…</p>
       </div>
     )
@@ -30,27 +29,27 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="wordmark">TASKARD <b>DECK</b></span>
-        <span className="chip">{snap.project}</span>
+        <span className="project">{snap.project}</span>
         <Lamp tone={live ? 'amber' : 'off'} label={live ? 'CANLI' : 'BAĞLANIYOR'} size="sm" />
         <span className="updated">güncellendi · {rel(snap.updatedAt)}</span>
       </header>
 
+      {/* İki bölge: sol dar sabit liste + orta tek odak (sözleşme m1) */}
       <div className="bridge">
         <TreePanel tree={snap.tree} selected={selected} onSelect={setSelected} />
 
         {selected
           ? <Reader path={selected} mtime={selectedMtime} />
-          : <section className="panel reader-panel" aria-label="Genel bakış"><Overview snap={snap} /></section>}
-
-        <FeedPanel feed={snap.feed} lanes={snap.lanes} />
+          : <section className="center" aria-label="Genel bakış"><Overview snap={snap} /></section>}
       </div>
 
+      {/* Alt duyurucu şeridi — sessiz: nokta+sayı+etiket, çerçevesiz (sözleşme m5) */}
       <footer className="annunciator" aria-label="Koşu sayaçları">
-        <div className="ann-unit"><Lamp tone={running > 0 ? 'amber' : 'off'} label="" size="sm" /><b>{running}</b><span>koşan</span></div>
-        <div className="ann-unit"><Lamp tone={done > 0 ? 'green' : 'off'} label="" size="sm" /><b>{done}</b><span>tamam</span></div>
-        <div className="ann-unit"><Lamp tone={blocked > 0 ? 'red' : 'off'} label="" size="sm" /><b>{blocked}</b><span>engelli</span></div>
-        <div className="ann-unit"><Lamp tone={snap.tasks.length > 0 ? 'ice' : 'off'} label="" size="sm" /><b>{snap.tasks.length}</b><span>görev</span></div>
-        <div className="ann-unit"><Lamp tone={handoffs > 0 ? 'ice' : 'off'} label="" size="sm" /><b>{handoffs}</b><span>handoff</span></div>
+        <span className="ann-unit"><span className={`dot ${running > 0 ? 'amber' : ''}`} aria-hidden="true" /><b>{running}</b><span className="lbl">koşan</span></span>
+        <span className="ann-unit"><span className={`dot ${done > 0 ? 'green' : ''}`} aria-hidden="true" /><b>{done}</b><span className="lbl">tamam</span></span>
+        <span className="ann-unit"><span className={`dot ${blocked > 0 ? 'red' : ''}`} aria-hidden="true" /><b>{blocked}</b><span className="lbl">engelli</span></span>
+        <span className="ann-unit"><span className={`dot ${snap.tasks.length > 0 ? 'ice' : ''}`} aria-hidden="true" /><b>{snap.tasks.length}</b><span className="lbl">görev</span></span>
+        <span className="ann-unit"><span className={`dot ${handoffs > 0 ? 'ice' : ''}`} aria-hidden="true" /><b>{handoffs}</b><span className="lbl">handoff</span></span>
         <span className="ann-note">
           salt-okur izleyici · disk gerçeğini gösterir · protokole dokunmaz{snap.demo ? ' · DEMO VERİ' : ''}
         </span>
