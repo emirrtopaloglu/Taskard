@@ -71,4 +71,4 @@ for target in "$CLAUDE_MD" "$AGENTS_MD"; do
   sync_block "$target"
 done
 
-echo "Taskard kuruldu → $DEST (kod yok, sadece konvansiyon) · Deck izleyici: node ~/.taskard/deck/server.mjs"
+echo "Taskard kuruldu → $DEST · Deck izleyici: node ~/.taskard/deck/server.mjs"

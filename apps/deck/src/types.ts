@@ -9,7 +9,6 @@ export interface Lane {
   hasBrief: boolean
   briefMtime: number | null
   reportMtime: number | null
-  model: string | null
   files: LaneFile[]
 }
 

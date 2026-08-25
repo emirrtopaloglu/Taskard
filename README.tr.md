@@ -19,7 +19,7 @@ git clone <repo-url> && cd taskard   # ya da mevcut klon
 ./install.sh
 ```
 
-`install.sh` ne yapar (kod yok, sadece dosya):
+`install.sh` ne yapar (`apps/` dışında çalışan kod yok; Deck izleyicisi hazır gelir):
 1. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
 2. Adlandırılmış agent tanımlarını `~/.claude/agents/` ve `~/.opencode/agent/` altına symlink'ler
 3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)

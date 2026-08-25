@@ -19,7 +19,7 @@ git clone <repo-url> && cd taskard   # or your existing clone
 ./install.sh
 ```
 
-What `install.sh` does (no code, just files):
+What `install.sh` does (no runtime code outside `apps/`; the Deck viewer ships prebuilt):
 1. Symlinks the skill to `~/.claude/skills/taskard` and `~/.agents/skills/taskard`
 2. Symlinks named agent definitions into `~/.claude/agents/` and `~/.opencode/agent/`
 3. Creates `~/.taskard/config.toml` on first run (never overwrites)
