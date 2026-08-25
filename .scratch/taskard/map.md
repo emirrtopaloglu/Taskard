@@ -32,6 +32,7 @@ Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya y
 
 ## Decisions so far
 
+- **Deck istisnası (2026-08-25):** çalışma zamanı kodu yalnızca apps/ altında yaşar (deck: salt-okur .taskard web izleyicisi); konvansiyon çekirdeği (skills/, agents/, templates/) kod içermez kuralı korunur. Gerekçe: GUI zemini çabası başladı; izleyici protokole dokunmaz. Emir onayı.
 - **PIVOT (2026-08-23 akşam):** Node runtime kaldırıldı — saf konvansiyon paketi. Gerekçe: ilk gerçek koşu native subagent'ın üstünlüğü + runtime'ın ürettiği izin duvarı/config mutasyonu/verbose çıktı gösterdi. Ticket [Dispatch Soyutlaması](issues/05-dispatch-soyutlamasi.md) superseded.
 - [Model Yönlendirme Config'i](issues/07-model-config.md) — config.toml agent-okur veridir (kod parse etmez); rol→model tablosu + doğal dil session override; permission_mode default bypassPermissions.
 - [Onay Kanalı Tasarımı](issues/08-onay-kanali.md) — üç kapı iş akışı düzeyinde kalır (plan onayı, merge öncesi doğrulama, riskli işlem listesi); tool izni varsayılan açıktır; config çalışma anında asla değiştirilmez (iron law).
@@ -56,7 +57,7 @@ Taskard v0: **kod içermeyen konvansiyon paketi.** "Taskard'ı yükle" = dosya y
 
 ## Out of scope
 
-- **GitHub Issues senkronu / GUI zemini** — Emir kararı: şimdilik `.taskard/` local markdown; ileride ayrı effort (GUI'nin mimariye etkisi de buraya dahil).
+- **GitHub Issues senkronu / GUI zemini** — izleyici v1 `apps/deck` olarak bu hafta dogfood'a girdi (2026-08-25); kontrol modu / tam GUI ileride ayrı effort.
 - **Mem0 / harici memory servisi bağımlılığı** — Emir kararı: v0 dosya-tabanlı genel yapı; Mem0 unutuldu.
 - **Superfast legacy parity** — Taskard Superfast'in evrimidir; birebir geriye dönük uyumluluk yükü taşımaz. Proje bazlı esneklik (CLAUDE.md/AGENTS.md direktifleriyle ek agent/skill tanımı) kapsam İÇİNDE.
 - **Test projeleri ürün kimliğine yazılmaz** — Emir kuralı: dogfooding yapılan projelerin adları README/map/skill'de geçmez (2026-08-23).

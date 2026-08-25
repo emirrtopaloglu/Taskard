@@ -17,7 +17,7 @@ Dogfooding benchmark'ı: Reminder Tab A/B koşusu (2026-08-24) — Taskard $12.6
 
 ## Ufuk (v0 sonrası)
 
-- [ ] GUI zemini (protokol arayüzden bağımsız kalarak)
+- [ ] GUI zemini — izleyici: apps/deck v1 (2026-08-25, bu hafta dogfood'da); kontrol modu ileride
 - [ ] GitHub Issues senkron katmanı
 - [ ] Memory katmanının büyütülmesi (facts/, otomatik özetleme)
 - [ ] Limit-farkındalıklı yönlendirmenin otomatikleşmesi

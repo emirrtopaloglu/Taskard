@@ -2,7 +2,7 @@
 
 [🇹🇷 Türkçe](README.tr.md)
 
-A multi-harness agent orchestration **convention package** — contains no runtime code.
+A multi-harness agent orchestration **convention package** — no runtime code outside `apps/`.
 
 Philosophy: every harness (Claude Code, Codex, OpenCode...) already has its own subagent capability. Taskard layers **doctrine** on top of it: named roles, lane discipline, brief quality, report contracts, human approval gates.
 
@@ -29,6 +29,17 @@ What `install.sh` does (no code, just files):
 To update: re-run `./install.sh` — your config is preserved.
 
 External skill dependencies are NOT vendored into the package — installed copies are referenced, so upstream updates flow through automatically. Full list: [`docs/dependencies.md`](docs/dependencies.md).
+
+## Deck
+
+A read-only live monitor for `.taskard` lanes. Installed by `install.sh` under `~/.taskard/deck/`.
+
+```bash
+node ~/.taskard/deck/server.mjs          # → http://localhost:7420
+node ~/.taskard/deck/server.mjs --demo   # sample data
+```
+
+Writes to no files; purely observational.
 
 ## Usage
 
