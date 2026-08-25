@@ -10,6 +10,10 @@ cp -R "$SRC/skills" "$DEST/"
 rm -rf "$DEST/agents"
 cp -R "$SRC/agents" "$DEST/"
 cp -R "$SRC/templates" "$DEST/"
+rm -rf "$DEST/deck"
+mkdir -p "$DEST/deck"
+cp -R "$SRC/apps/deck/server" "$SRC/apps/deck/dist" "$SRC/apps/deck/README.md" "$DEST/deck/"
+ln -sfn server/server.mjs "$DEST/deck/server.mjs"
 
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.agents/skills" "$HOME/.opencode/agent"
 ln -sfn "$DEST/skills/taskard" "$HOME/.claude/skills/taskard"
@@ -67,4 +71,4 @@ for target in "$CLAUDE_MD" "$AGENTS_MD"; do
   sync_block "$target"
 done
 
-echo "Taskard kuruldu → $DEST (kod yok, sadece konvansiyon)"
+echo "Taskard kuruldu → $DEST (kod yok, sadece konvansiyon) · Deck izleyici: node ~/.taskard/deck/server.mjs"

@@ -272,7 +272,12 @@ http.createServer((req, res) => {
     req.on('close', () => clients.delete(res))
     return
   }
-  const safe = path.normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '')
+  let pathname
+  try { pathname = decodeURIComponent(url.pathname) } catch {
+    res.writeHead(400, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify({ error: 'Bozuk URL kodlaması' }))
+  }
+  const safe = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '')
   let fp = path.join(DIST, safe)
   if (!fp.startsWith(DIST)) fp = path.join(DIST, 'index.html')
   if (!fs.existsSync(fp) || fs.statSync(fp).isDirectory()) fp = path.join(DIST, 'index.html')

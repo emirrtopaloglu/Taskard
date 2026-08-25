@@ -25,6 +25,7 @@ What `install.sh` does (no code, just files):
 3. Creates `~/.taskard/config.toml` on first run (never overwrites)
 4. Appends a marker-wrapped static directive block to `~/.claude/CLAUDE.md` and `~/.claude/AGENTS.md` (idempotent)
 5. Installs missing external discipline skills (superpowers + mattpocock) globally via `npx skills`
+6. Copies the Deck viewer (read-only `.taskard` monitor) to `~/.taskard/deck/`
 
 To update: re-run `./install.sh` — your config is preserved.
 

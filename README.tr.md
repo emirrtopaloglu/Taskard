@@ -25,6 +25,7 @@ git clone <repo-url> && cd taskard   # ya da mevcut klon
 3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)
 4. `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md`'e marker-wrapped statik direktif bloğu ekler (idempotent)
 5. Dış disiplin skill'leri (superpowers + mattpocock) eksikse `npx skills` ile global kurar
+6. Deck izleyicisini (salt-okur `.taskard` monitörü) `~/.taskard/deck/` altına kopyalar
 
 Güncelleme: `./install.sh`'i tekrar çalıştır — config'in korunur.
 
