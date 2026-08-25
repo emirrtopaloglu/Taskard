@@ -1,23 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { TreeFile } from './types'
 
 interface TreeRow { name: string; path: string }
 
 /**
- * Sol ray — çıplak dosya listesi.
- * Dizin adları ince bölüm başlığı, satırda yalnızca dosya adı;
- * sayı rozeti, göreli zaman ve ikon yok (sadeleştirme sözleşmesi m2).
+ * Sol ray — dosya gezinme (fonksiyon aynen korunur).
+ * Filtre girdisi üst şeritteki aramadan gelir; ray yalnızca sessiz
+ * gruplu liste: dizin adları ince bölüm başlığı, satırda dosya adı.
  */
 export default function TreePanel({
   tree,
   selected,
-  onSelect
+  onSelect,
+  query
 }: {
   tree: TreeFile[]
   selected: string | null
   onSelect: (path: string) => void
+  query: string
 }) {
-  const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
 
   // Yola göre sıralı gruplar: { dir, rows[] } — kök dosyaları önce,
@@ -39,20 +40,13 @@ export default function TreePanel({
   }, [tree, q])
 
   return (
-    <section className="tree-rail" aria-label=".taskard dosya listesi">
-      <input
-        type="search"
-        className="tree-filter"
-        placeholder="yola göre süz…"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        aria-label="Dosya yoluna göre filtrele"
-      />
+    <aside className="rail" aria-label=".taskard dosya listesi">
+      <h2 className="rail-label">Dosyalar</h2>
 
       {tree.length === 0 ? (
         <div className="empty">Bu projede .taskard klasörü boş görünüyor. İlk koşu başladığında dosyalar burada belirir.</div>
       ) : groups.length === 0 ? (
-        <div className="empty">“{query}” ile eşleşen dosya yok. Aramayı kısaltmayı deneyebilirsin.</div>
+        <div className="empty">“{query.trim()}” ile eşleşen dosya yok. Aramayı kısaltmayı deneyebilirsin.</div>
       ) : (
         <nav className="tree-list">
           {groups.map(g => (
@@ -73,6 +67,6 @@ export default function TreePanel({
           ))}
         </nav>
       )}
-    </section>
+    </aside>
   )
 }
