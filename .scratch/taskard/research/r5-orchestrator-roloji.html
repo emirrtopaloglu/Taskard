@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taskard — Orchestrator Roloji Araştırması</title>
+<style>
+  :root {
+    --ink: #1a1a1e;
+    --muted: #6b6b76;
+    --line: #e4e4ea;
+    --accent: #b4552d;
+    --bg: #fbfbfa;
+    --card: #ffffff;
+    --code-bg: #f3f3f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.65; font-size: 16px;
+    padding: 48px 24px 96px;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+  .meta { margin-top: 12px; color: var(--muted); font-size: 13.5px; }
+  h2 {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.09em; color: var(--accent);
+    margin: 56px 0 20px;
+  }
+  p.lead { font-size: 18px; line-height: 1.7; max-width: 720px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 14px; }
+  th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); padding: 10px 14px; border-bottom: 2px solid var(--ink);
+  }
+  td { padding: 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.name { font-weight: 650; white-space: nowrap; }
+  td.name small { display: block; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .roles { color: var(--ink); }
+  .roles em { font-style: normal; color: var(--accent); }
+  a { color: inherit; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+  ul.plain { list-style: none; }
+  ul.plain li { padding: 10px 0 10px 26px; position: relative; border-bottom: 1px solid var(--line); }
+  ul.plain li:last-child { border-bottom: none; }
+  ul.plain li::before { content: "→"; position: absolute; left: 0; color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    padding: 22px 24px; border-radius: 6px;
+  }
+  .card h3 { font-size: 15px; margin-bottom: 10px; }
+  .card p, .card li { font-size: 14px; color: #333338; }
+  .card ul { padding-left: 18px; }
+  .card li { margin: 5px 0; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px;
+    padding: 18px 20px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.55; overflow-x: auto; white-space: pre;
+  }
+  code.inline {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px;
+    background: var(--code-bg); padding: 1.5px 6px; border-radius: 4px;
+  }
+  .srcs { font-size: 13.5px; color: var(--muted); }
+  .srcs li { margin: 6px 0 6px 18px; }
+  footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Orchestrator'lar Agentlarını Nasıl Tanımlıyor?</h1>
+  <div class="meta">Taskard roloji araştırması · 26 Ağustos 2026 · 9 orchestrator/framework · ~40 kaynak tarandı</div>
+</header>
+
+<p class="lead">
+  Sektörde iki farklı rol felsefesi var: <strong>aşama rolleri</strong> (implementer–reviewer–tester gibi,
+  işin yaşam döngüsüne göre bölünür) ve <strong>stack rolleri</strong> (backend, mobil, data… uzmanlık alanına göre
+  bölünür). Olgun sistemler az sayıda aşama rolü + ayrı bir kural/skill katmanıyla çalışıyor; devasa rol
+  katalogları ise daha çok "kütüphane" olarak duruyor. Taskard zaten doğru eksende.
+</p>
+
+<h2>1 · Orchestrator Karşılaştırma Tablosu</h2>
+<table>
+  <thead>
+    <tr><th style="width:170px">Sistem</th><th style="width:250px">Rolleri</th><th>Yaklaşım</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="name">Claude Code <small>(native)</small></td>
+      <td class="roles"><em>Explore</em>, <em>Plan</em>, <em>general-purpose</em> + toplulukta <em>code-reviewer</em></td>
+      <td>Sadece 3 built-in rol; description = routing katmanı. Model alanı maliyet kaldıracı (haiku arama, opus derin muhakeme). Tools alanı güvenlik kolu.</td>
+    </tr>
+    <tr>
+      <td class="name">Taskard <small>(bizimki)</small></td>
+      <td class="roles"><em>implementer</em>, <em>reviewer</em>, <em>frontend-developer</em></td>
+      <td>Aşama rollü + tek stack istisnası. Brief sözleşmesi + report.md payload. Claude Code native felsefesine en yakın konvansiyon paketi.</td>
+    </tr>
+    <tr>
+      <td class="name">Cognition Devin <small>+ Windsurf</small></td>
+      <td class="roles">manager Devin → child Devins → <em>Devin Review</em>; "smart friend"</td>
+      <td>Bilinçli minimalizm: tek yazar + temiz-bağlam reviewer + akıllı danışman. Reviewer bağlam paylaşmaz — PR başına ~2 bulgu, %58 ciddi.</td>
+    </tr>
+    <tr>
+      <td class="name">BMAD-METHOD <small>★19k</small></td>
+      <td class="roles">Analyst·PM·Architect·UX·<em>Dev</em>·SM·<em>QA</em> + TEA modülü</small></td>
+      <td>Tüm çevik takımı simüle eder. İsimli personacılar ("Mary", "Winston"). SM'in hyper-detaylı story sharding'i = Taskard'ın brief'i. v6'da simple/expert/module hiyerarşisi + hafıza.</td>
+    </tr>
+    <tr>
+      <td class="name">MetaGPT / ChatDev <small>(akademik)</small></td>
+      <td class="roles">PM→Architect→Project Mgr→Engineer→QA · CEO·CTO·Programmer·Reviewer·Tester</td>
+      <td>SDLC şirket simülasyonu, SOP'lu artifact handoff. Ablasyon: her yeni rol insan revizyon maliyetini düşürüyor (10→2.5). Profil anatomisi: name/profile/goal/constraint.</td>
+    </tr>
+    <tr>
+      <td class="name">Roo Code <small>modes</small></td>
+      <td class="roles"><em>Code·Architect·Ask·Debug·Orchestrator</em> + özel modlar</td>
+      <td>5 aşama modu varsayılan. <code class="inline">whenToUse</code> alanı orchestrator'ın alt görev yönlendirmesine girdi; tool grupları regex'le dosya erişimi kısıtlar. Disiplin bilgisi <code class="inline">rules-{mode}/</code> klasöründe.</td>
+    </tr>
+    <tr>
+      <td class="name">claude-flow / ruflo</td>
+      <td class="roles">coder·tester·reviewer·planner·researcher + backend-dev·mobile-dev·ml-dev·cicd·security + swarm koordinatörleri (54–100+ tür)</td>
+      <td>Katalog yaklaşımı: capabilities listeli YAML frontmatter, pre/post hook scriptleri, MCP memory koordinasyonu. Zengin ama doğrulanmamış pipeline.</td>
+    </tr>
+    <tr>
+      <td class="name">VoltAgent kataloğu <small>★20k</small></td>
+      <td class="roles">100+ rol, 10 kategori: core-dev·language·infra·quality-security·data-AI·meta-orchestration</td>
+      <td>Kopyala-kullan kütüphane. Model yönlendirme kalibrasyonu değerli: opus→review/güvenlik/mimari, sonnet→günlük kod, haiku→hızlı iş.</td>
+    </tr>
+    <tr>
+      <td class="name">OpenHands <small>★85k</small></td>
+      <td class="roles">CodeAct·Browsing·Delegator + microagent sistemi (knowledge/tasks/repo)</td>
+      <td>Rol yerine bilgi tipi ayırımı: keyword-tetikli knowledge agent'ları, interaktif task workflow'ları (pr_review.md), repo-başına kurallar. Disiplin = microagent, süreç = ana agent.</td>
+    </tr>
+    <tr>
+      <td class="name">CrewAI / AutoGen</td>
+      <td class="roles">role·goal·backstory üçlüsü (örn. researcher + reporting_analyst)</td>
+      <td>Genel amaçlı framework; kod projelerinde değil otomasyonlarda güçlü. Backstory/persona vurgusu Taskard'ın Humanish diline benzer.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2 · Rol Ekseni: Aşama mı, Stack mi?</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Aşama (yaşam-döngüsü) rolleri</h3>
+    <ul>
+      <li><strong>Plan/spec:</strong> BMAD PM+SM, Anthropic initializer/planner, Roo Architect</li>
+      <li><strong>Implement:</strong> Taskard implementer, claude-flow coder, MetaGPT Engineer, Roo Code</li>
+      <li><strong>Review:</strong> neredeyse hepsi — Taskard reviewer, Devin Review, ChatDev Reviewer, Roo Ask</li>
+      <li><strong>Test/doğrula:</strong> BMAD QA, MetaGPT QA Engineer, Anthropic evaluator, claude-flow tester</li>
+      <li><strong>Koordinasyon:</strong> Roo Orchestrator, Devin manager, ChatDev CTO</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Stack (uzmanlık) rolleri</h3>
+    <ul>
+      <li><strong>Backend/frontend/mobile:</strong> VoltAgent core-dev, claude-flow backend-dev &amp; mobile-dev, sarvottam koleksiyonu</li>
+      <li><strong>Data/ML:</strong> data-engineer, ml-developer, database-optimizer (her iki katalogda da var)</li>
+      <li><strong>Güvenlik/DevOps:</strong> security-auditor, penetration-tester, cicd-engineer, sre</li>
+      <li><strong>Dil uzmanları:</strong> python-pro, go-architect, rust-architect (yalnızca kataloglarda)</li>
+    </ul>
+    <p style="margin-top:12px;color:var(--muted)">Dikkat: stack rolleri yalnızca katalog tipi sistemlerde yoğun; üretim pipeline'larında (Devin, Roo, Anthropic) yok — onlar disiplini rule/skill dosyalarından alıyor.</p>
+  </div>
+</div>
+
+<h2>3 · Örnek Tanım Dosyaları (GitHub)</h2>
+<ul class="plain">
+  <li><strong>VoltAgent — backend-developer.md</strong>: 222 satır; frontmatter (tools/model) + checklist blokları + "Communication Protocol". Katalojik yaklaşımın tam örneği.<br>
+  <small>github.com/VoltAgent/awesome-claude-code-subagents/blob/main/categories/01-core-development/backend-developer.md</small></li>
+  <li><strong>VoltAgent — qa-expert.md &amp; code-reviewer.md</strong>: quality-security kategorisi; read-only sınırlı test/review rolleri.<br>
+  <small>…/categories/04-quality-security/qa-expert.md · …/code-reviewer.md</small></li>
+  <li><strong>ruflo — agent-reviewer/SKILL.md</strong>: ruvnet'in reviewer'ının birebir tanımı (skills dizininde yaşar).<br>
+  <small>github.com/ruvnet/ruflo/blob/main/.agents/skills/agent-reviewer/SKILL.md</small></li>
+  <li><strong>claude-flow — coder SKILL.md</strong>: YAML frontmatter'da <code class="inline">capabilities</code> + <code class="inline">hooks.pre</code> (TDD hatırlatıcısı shell script!) + MCP memory protokolü.<br>
+  <small>agentskills.so/skills/ruvnet-claude-flow-agent-coder</small></li>
+  <li><strong>BMAD-METHOD — bmad-core/agents/</strong>: dev.txt, qa.txt, sm.txt… persona + komut menüsü + bağımlılık listesi formatı.<br>
+  <small>github.com/bmad-code-org/BMAD-METHOD/tree/main/bmad-core/agents</small></li>
+  <li><strong>Roo Code — .roomodes</strong>: SPARC mod koleksiyonu; roleDefinition + whenToUse + tool group kısıtları tek YAML'da.<br>
+  <small>github.com/enescingoz/roocode-modes/blob/main/.roomodes</small></li>
+  <li><strong>CrewAI — researcher.jsonc</strong>: {"role","goal","backstory","llm","tools"} beş alanlık minimal tanım.<br>
+  <small>github.com/crewAIInc/crewAI (README örneği) · crewAI-examples/crews/</small></li>
+  <li><strong>OpenHands — microagents/</strong>: knowledge/github.md (keyword tetikli), tasks/update_pr_description.md (interaktif workflow).<br>
+  <small>github.com/All-Hands-AI/OpenHands/tree/main/microagents</small></li>
+  <li><strong>MetaGPT — roles/*.py</strong>: ProductManager, Architect, QaEngineer… profile/goal/constraints kod olarak.<br>
+  <small>github.com/FoundationAgents/MetaGPT/tree/main/metagpt/roles</small></li>
+</ul>
+
+<h2>4 · Üç Tanım Anatomisi, Yan Yana</h2>
+
+<div class="grid">
+  <div class="card">
+    <h3>VoltAgent (katalog)</h3>
+<pre>---
+name: backend-developer
+description: "Use this agent when
+building server-side APIs..."
+tools: Read, Write, Edit, Bash,
+       Glob, Grep
+model: sonnet
+---
+
+You are a senior backend developer...
+
+Backend development checklist:
+- RESTful API design...
+- Test coverage exceeding 80%
+
+## Communication Protocol
+### Mandatory Context Retrieval...</pre>
+    <p>Uzun, kapsamlı, her şeyi listeleyen. Yeni başlayan için iyi, ama prompt şişmesi riski taşır.</p>
+  </div>
+  <div class="card">
+    <h3>Roo Code (mod)</h3>
+<pre>- slug: debug
+  name: 🪲 Debug
+  roleDefinition: You are Roo,
+  an expert in root cause
+  analysis...
+  whenToUse: Use for investigating
+  bugs, errors, unexpected behavior
+  groups:
+    - read
+    - edit
+    - command</pre>
+    <p><code class="inline">whenToUse</code> = orchestrator routing girdisi. Tool gruplarıyla yetki sınırı tek satırda. Taskard'ın description+fro­ntmatter ikilisine en yakın yapı.</p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px">
+  <h3>Taskard (konvansiyon) — mevcut implementer.md'nin iskeleti</h3>
+<pre>---
+name: implementer
+description: Brief'teki görevi TDD disipliniyle uygulayan ucuz el...
+---
+
+Sen bir lane'in delegate'isin. Brief dışına çıkmak yasaktır.
+- TDD: önce failing test, sonra minimal implementasyon
+- Başarıyı BEYAN ETME, kanıtla: komut + son 3 satır çıktısı
+
+## Bitirme protokolü
+Durum: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+## Dönüş kuralı
+Mesaj = pointer, dosya = payload.</pre>
+  <p>Prompt Shelf standardıyla ölçüldüğünde Taskard tanımları zaten sağlam: kısa, done-when'li, sözleşmeli. Eksik tek boyut: description'da <em>tetik koşulu</em> ve <em>kapsam dışı beyanı</em> (Roo'nun whenToUse'unun karşılığı).</p>
+</div>
+
+<h2>5 · Taskard İçin Çıkarımlar</h2>
+<ul class="plain">
+  <li><strong>Eksen doğru:</strong> Üretimde kanıtlanmış tüm sistemler (Devin, Roo, Anthropic harness) aşama rollü; stack rollü kataloglarda kalıyor. backend-developer/data-engineer'ı agent yapma; disiplini brief + skill router'a bırak — sektörün ortak kararı bu.</li>
+  <li><strong>Eksiğin adı whenToUse:</strong> Roo'nun orchestrator'a yönlendirme alanı, mehdi.cz'in "tetik koşulu" şablonuyla aynı şey. Üç agent'ın description'ına "ne zaman / ne zaman değil" cümlelerini ekle — routing doğruluğu buradan gelir.</li>
+  <li><strong>qa-tester ekle, ama Roo Debug gibi tanımla:</strong> read-mostly + komut yetkisi, end-state doğrulaması, fix'i brief'e yazıp döndürme. BMAD QA + Anthropic evaluator karışımı; Taskard'ın üç kapısının dördüncüsü.</li>
+  <li><strong>Model kalibrasyonunu katalogdan al:</strong> reviewer → güçlü model (derin muhakeme kapısı), implementer → orta, ileride eklenecek explorer/doc rolleri → hafif. config.toml'daki rol/model seçimini bu tabloya oturt.</li>
+  <li><strong>Persona Taskard'ın farkı olabilir:</strong> BMAD'ın isimli personacıları ("Mary hep Mary") hatırlanabilirlik + tutarlılık getiriyor. Taskard'ın Humanish diliyle uyumlu — roller isimsiz değil, karakterli olabilirdi; en azından reviewer'a "şüpheci ikinci göz" gibi net bir ses ver.</li>
+</ul>
+
+<h2>6 · Ana Kaynaklar</h2>
+<ul class="srcs">
+  <li>BMAD-METHOD docs — Named Agents &amp; Agent Architecture: docs.bmad-method.org/reference/agents · /explanation/named-agents</li>
+  <li>claude-flow / ruflo README + Agent Types Catalog (DeepWiki) + coder SKILL.md</li>
+  <li>Roo Code Docs — Customizing Modes: roocodeinc.github.io/Roo-Code/features/custom-modes</li>
+  <li>SPARC modes koleksiyonu: github.com/enescingoz/roocode-modes</li>
+  <li>MetaGPT (ICLR 2024, arXiv:2308.00352) — rol ablasyonu tablosu; UA-ChatDev (arXiv:2607.02186) — ChatDev faz diyagramı</li>
+  <li>CrewAI README — researcher.jsonc / reporting_analyst.jsonc örnekleri</li>
+  <li>OpenHands — Microagents README + agenthub delegasyon dokümanı</li>
+  <li>VoltAgent awesome-claude-code-subagents — katalog yapısı + model yönlendirme felsefesi</li>
+  <li>Cognition — Multi-Agents: What's Actually Working (Nisan 2026); Anthropic — Effective Harnesses (initializer/evaluator)</li>
+</ul>
+
+<footer>
+  Taskard roloji araştırması · derlendi: 26 Ağustos 2026 · eşlik eden detaylı rapor: .scratch/taskard/research/r4-agent-tanimi-iyilestirme.md
+</footer>
+
+</main>
+</body>
+</html>
