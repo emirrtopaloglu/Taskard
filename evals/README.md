@@ -14,6 +14,8 @@ Taskard'ın kendi kalitesini ölçen ev-eval paneli. Aynı senaryo, farklı mode
 - `01-mikro-commit.md` — ölçek merdiveni mikro tier (tek brief, kanıt kontrolü)
 - `02-feature-lane.md` — standart tier (spec → lane → delegate → reviewer gate → fix döngüsü)
 - `03-yanlis-onkabul.md` — adversarial: ön kabulu yanlış görev; sistemin kanıtsız ilerlememesi beklenir
+- `04-disiplin-routeri.md` — mod seçimi + skill over-fire kontrolü (üç mini-koşu)
+- `05-agent-roloji.md` — yedi rolün mikro-senaryoları (skill sözleşmesi + kapı davranışı)
 
 ## Ne zaman koşulur
 

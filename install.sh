@@ -56,15 +56,17 @@ sync_block() {
   local target="$1"
   mkdir -p "$(dirname "$target")"
   touch "$target"
-  local block_ver
-  block_ver="$(grep -o 'taskard:v[0-9]*' "$SRC/templates/directive-block.md" | head -1)"
-  if grep -q "$block_ver" "$target"; then return 0; fi
+  local want have
+  want="$(awk '/taskard:start/{f=1} f{print} /taskard:end/{exit}' "$SRC/templates/directive-block.md" | sed 's/[[:space:]]*$//' | shasum -a 256 | cut -d' ' -f1)"
+  have="$(awk '/taskard:start/{f=1} f{print} /taskard:end/{exit}' "$target" | sed 's/[[:space:]]*$//' | shasum -a 256 | cut -d' ' -f1)"
+  if [ "$want" = "$have" ]; then return 0; fi
   if grep -q "$MARK" "$target"; then
     awk -v s="$MARK" -v e="<!-- taskard:end -->" '$0~s{skip=1;next} $0~e{skip=0;next} !skip{print}' "$target" > "$target.tmp" && mv "$target.tmp" "$target"
-    echo "Eski direktif bloğu kaldırıldı → $target"
+    echo "Direktif bloğu güncellendi → $target"
+  else
+    echo "Direktif bloğu kuruldu → $target"
   fi
   cat "$SRC/templates/directive-block.md" >> "$target"
-  echo "Direktif bloğu kuruldu ($block_ver) → $target"
 }
 
 for target in "$CLAUDE_MD" "$AGENTS_MD"; do

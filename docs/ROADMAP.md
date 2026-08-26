@@ -4,7 +4,9 @@ Dogfooding benchmark'ı: Reminder Tab A/B koşusu (2026-08-24) — Taskard $12.6
 
 ## Şimdi / sıradaki
 
-- [ ] **Agent kalitesi ve çeşitliliği:** mevcut tanımlar (implementer/reviewer/frontend-developer) bilinçli olarak yüzeysel; her rol derinleştirilecek ve yeni roller eklenecek (backend-developer, qa-tester, data-engineer...). Her güncelleme eval senaryolarıyla doğrulanır. *(Emir kararı — şimdilik todo)*
+- [x] **Agent kadrosu v1 (2026-08-26):** implementer + reviewer v2 (skill sözleşmeli, davranış sözleşmeli) · yeni roller: ui-developer (web→frontend-design, mobil→expo ailesi), qa-tester, explorer, planner, debugger. Karar: stack rolleri (backend-developer/data-engineer) agent YAPILMAZ — disiplin skill router + brief'te yaşar. *(Emir seçimi; gerekçe: .scratch/taskard/research/r4 + r5)*
+- [x] **Agent tanımları için eval senaryoları:** 7 rolün mikro-senaryoları `evals/05-agent-roloji.md`'de (skill sözleşmesi + kapı davranışı kontrolleriyle). *(2026-08-26)*
+- [ ] Eval koşuları: 05 roloji matrisinin ilk tam turu + tanım değişikliklerinde eval'siz commit atılmaması kuralının fiilen uygulanması
 - [ ] Final review + ürün kararları turu + canlı doğrulama politikasının dogfooding ile doğrulanması
 
 ## v0.5 (OSS açılışı)

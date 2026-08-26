@@ -190,7 +190,7 @@ function buildDemo() {
   const w = (rel, body) => fs.writeFileSync(path.join(t, rel), body)
 
   w('tasks/T-001-auth-refactor.md', '---\nstatus: done\nblocked_by: []\nassignee: implementer\n---\n\n# T-001: Auth modülü refactor\n\nSpec: `.taskard/context/specs/auth.md`\n')
-  w('tasks/T-002-ui-materials.md', '---\nstatus: in_progress\nblocked_by: []\nassignee: frontend-developer\n---\n\n# T-002: Materials sekmesi arayüzü\n')
+  w('tasks/T-002-ui-materials.md', '---\nstatus: in_progress\nblocked_by: []\nassignee: ui-developer\n---\n\n# T-002: Materials sekmesi arayüzü\n')
   w('tasks/T-003-rag-index.md', '---\nstatus: in_progress\nblocked_by: [T-001]\nassignee: implementer\n---\n\n# T-003: RAG index yazıcı\n')
   w('tasks/T-004-release-notes.md', '---\nstatus: todo\nblocked_by: [T-002, T-003]\nassignee: implementer\n---\n\n# T-004: Sürüm notları ve changelog\n')
 

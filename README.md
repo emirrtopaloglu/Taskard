@@ -7,7 +7,9 @@ A multi-harness agent orchestration **convention package** — no runtime code o
 Philosophy: every harness (Claude Code, Codex, OpenCode...) already has its own subagent capability. Taskard layers **doctrine** on top of it: named roles, lane discipline, brief quality, report contracts, human approval gates.
 
 - The main agent (expensive brain) never writes code: it writes specs, splits work, spawns delegates, and judges results
-- Every delegate runs under a **named** role (implementer, reviewer, frontend-developer) — anonymous agents are forbidden
+- Every delegate runs under a **named** role (implementer, reviewer, ui-developer, qa-tester, explorer, planner, debugger) — anonymous agents are forbidden
+- Every role carries a **mandatory skill contract**: Superpowers / Matt Pocock / Expo skills are the calibration layer agents must use when installed
+- Closing reports always carry a **manual test checklist** in plain language — each line one action + expected result
 - Model selection belongs to the user: a `config.toml` table + natural-language overrides
 - Four memory layers travel inside the `.taskard/` markdown convention
 - Cross-harness needs are covered by headless bash recipes inside the skill
@@ -72,6 +74,9 @@ permission_mode = "bypassPermissions"
 planner = "opus"
 implementer = "sonnet"
 reviewer = "opus"
+qa-tester = "sonnet"
+explorer = "haiku"
+disabled = ["debugger"]   # these roles never get lanes; work falls back (see skill)
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
@@ -79,13 +84,15 @@ patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 
 Global: `~/.taskard/config.toml` · Per-project: `<project>/.taskard/config.toml` · Session: whatever you say wins.
 
+Don't want a role? Put it in `disabled` — the project list replaces the global one, your spoken words replace both. Work falls back to the nearest capable role; disabling a gate role (reviewer / qa-tester) is announced at plan approval, never silently skipped.
+
 ## Project setup (once per project)
 
 The main agent follows the recipe in the skill: it creates the `.taskard/` tree and appends the directive block to the project's CLAUDE.md/AGENTS.md. To do it manually, see the "Setup recipe" section of the skill.
 
 ## Adding a new role
 
-Need a domain specialist (e.g. mobile-developer, data-engineer)? Add a `<role>.md` definition under `agents/`, run `./install.sh` — or simply drop `.claude/agents/<role>.md` into your project.
+Need another specialist? Add a `<role>.md` definition under `agents/` with a mandatory skill contract (which installed skills this role must use), run `./install.sh` — or simply drop `.claude/agents/<role>.md` into your project. Stack knowledge usually belongs in skills + briefs, not in new roles.
 
 ## Architectural principles (short)
 

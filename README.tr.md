@@ -7,7 +7,9 @@
 Felsefe: her harness'ın (Claude Code, Codex, OpenCode...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, lane disiplini, brief kalitesi, rapor sözleşmesi, insan onay kapıları.
 
 - Main agent (pahalı akıl) asla kod yazmaz: spec yazar, böler, delegate açar, yargı verir
-- Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, frontend-developer) — isimsiz agent yasak
+- Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, ui-developer, qa-tester, explorer, planner, debugger) — isimsiz agent yasak
+- Her rolün **zorunlu skill sözleşmesi** vardır: Superpowers / Matt Pocock / Expo skill'leri kuruluysa ilgili rolde kullanmak mecburidir — skill'ler kalibrasyon katmanıdır
+- Kapanış raporu her zaman **elle test listesi** taşır: senin bizzat denemen gerekenler; her satır tek eylem + beklenen sonuç, günlük dilde
 - Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil override
 - Dört hafıza katmanı `.taskard/` markdown konvansiyonunda taşınır
 - Cross-harness ihtiyaçlar skill içindeki headless bash tarifleriyle karşılanır
@@ -72,12 +74,17 @@ permission_mode = "bypassPermissions"
 planner = "opus"
 implementer = "sonnet"
 reviewer = "opus"
+qa-tester = "sonnet"
+explorer = "haiku"
+disabled = ["debugger"]   # bu rollere lane açılmaz; iş en yakın yetkili ele düşer
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
 Global: `~/.taskard/config.toml` · Proje bazlı: `<proje>/.taskard/config.toml` · Session: doğal dilin sözü en güçlüsü.
+
+Bir rol istemiyor musun? `disabled` listesine yaz — proje listesi global listeyi komple değiştirir, oturumdaki sözlerin ikisini de geçer. İş en yakın yetkili ele düşer; kapı rolü (reviewer / qa-tester) devre dışı bırakılırsa bu plan onayında açıkça söylenir, sessizce atlanmaz.
 
 ## Proje kurulumu (proje başına bir kez)
 

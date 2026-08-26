@@ -11,7 +11,7 @@ Argüman olarak verilen görevi Taskard akışıyla yürüt. Akış görev biten
 
 - **Ana döngü** — sen. Yalnızca akıl: spec yazarsın, lane bölersin, rol/model seçersin, delegate açarsın, rapora yargı verirsin. Elini işe sokmazsın: dosya düzenlemek, test koşmak, build hatası kovalamak delegate işidir; tek meşru hamle yeni delegate açmaktır.
 - **Lane** — bir task'ın çalışma birimi: brief'i, çalışma notları ve raporu (`.taskard/lanes/<ts>-<slug>/`).
-- **Delegate** — ADLANDIRILMIŞ subagent (implementer, reviewer, frontend-developer...). **İsimsiz agent yasak** — general-purpose'a görev verilmez; domain uzmanı yoksa en yakın rol adını kullan veya projeye yeni tanım ekle.
+- **Delegate** — ADLANDIRILMIŞ subagent (implementer, reviewer, ui-developer, qa-tester, explorer, planner, debugger...). **İsimsiz agent yasak** — general-purpose'a görev verilmez; domain uzmanı yoksa en yakın rol adını kullan veya projeye yeni tanım ekle. Her tanımın **skill sözleşmesi** vardır: Superpowers / Matt Pocock / Expo skill'leri kuruluysa ilgili rolde kullanmak zorunludur.
 - **Brief** — delegate'e verilen spec; lane'in kalitesi brief'in kalitesiyle sınırlıdır; token'ı brief'e yatır.
 - **Report** — delegate'in bitişte yazdığı ≤15 satır: DONE / DONE_WITH_CONCERNS / BLOCKED / NEEDS_CONTEXT + kanıt.
 
@@ -62,7 +62,7 @@ Akışın başında `using-superpowers` yüklüyse onunla başla — skill seçi
 
 - **Ana döngü:** karar verisi olan ucuz, hedefli komutlar (git status/log/diff, grep, config okuma) + ön kabul doğrulaması için minimal dosya kontrolü. Bu yetki devredilemez — brief'i ve kullanıcı raporunu yazan odur.
 - **Reviewer:** kodun kalite okuması (diff'i satır satır değerlendirmek, standartlara göre yargılamak). Ana döngü kalite yargısı için kod okumaz.
-- **Ağır keşif / geniş arama:** explore-research delegate'i. Bulk içerik ana döngü penceresini yakmaz.
+- **Ağır keşif / geniş arama:** explorer delegate'i. Bulk içerik ana döngü penceresini yakmaz.
 
 ## Kurulum tarifi (proje başına bir kez)
 
@@ -72,16 +72,7 @@ Akışın başında `using-superpowers` yüklüyse onunla başla — skill seçi
 mkdir -p .taskard/{context/specs,context/decisions,tasks,handoff,memory,tmp}
 ```
 
-Projenin CLAUDE.md / AGENTS.md'ine Taskard direktif bloğu yoksa ekle:
-
-```markdown
-<!-- taskard:start -->
-## Taskard
-- Rol/model seçimi için ~/.taskard/config.toml (global) ve .taskard/config.toml (proje) okunur; kullanıcının doğal dil override'ı her ikisini geçer.
-- Subagent'lar yalnızca adlandırılmış rollerle açılır.
-- Worker varsayılan bypassPermissions ile çalışır; insan onayı üç kapıda: plan onayı, merge öncesi doğrulama, risky_operations listesi.
-<!-- taskard:end -->
-```
+Projenin CLAUDE.md / AGENTS.md'ine Taskard direktif bloğu yoksa ekle — **tek kaynak `~/.taskard/templates/directive-block.md` dosyasıdır**, içeriği marker'larıyla birlikte (`taskard:start` … `taskard:end`) aynen kopyala. Elle yazma/özetleme: blok sürümüyle oynanırsa global kurulumla proje kurulumu ayrışır.
 
 ## Hafıza + Handoff
 
@@ -114,23 +105,27 @@ Spec'ten task çıkar → `.taskard/tasks/T-NNN-slug.md` (frontmatter: status/bl
 Her task için:
 1. **Ön kabul doğrulaması:** görevin dayandığı iddiaları brief yazmadan DOĞRULA (dosya gerçekten var mı, diff gerçekten var mı, kod gerçekten orada mı). İddia yanlışsa uydurma yoluna girme — kullanıcıya sun, kararı ondan al.
 2. `.taskard/lanes/<ts>-<slug>-<suffix>/` altında brief.md doldur — **lane ID sonuna 4 karakterlik rastgele suffix ekle** (örn. `-a3f2`): aynı saniye+slug çakışması overwrite riskini keser (saha provasında kanıtlandı). Brief içeriği: bağlam + sıralı adımlar + kabul kriterleri + kapsam dışı + commit mesajı varsa birebir. Brief header'ına **bütçe** yaz: `max_deneme` (config default'u) + varsa zaman/token tavanı; **Disiplinler satırı ZORUNLU** (örn. "Disiplinler: TDD zorunlu · verification-before-completion kanıt kuralı") — sub-agent'lar using-superpowers'ı görmez, disiplinler ancak brief'ten taşınır. Graph modunda DAG'i mermaid olarak ekle. **Olumsuz iddia kuralı:** brief'e "X yok / Y yapılmadı" yazmadan önce TEK komutla doğrula (`ls`/`grep`); doğrulayamıyorsan koşullu yaz (*"test dosyası görünmüyorsa oluştur"*) — keşif özetindeki olumsuz iddialar ham halde brief'e taşınmaz.
-3. Config'ten rol→model oku (`~/.taskard/config.toml`, proje override'u, sonra kullanıcının bu session'daki sözleri).
-4. **Native subagent** aç: rolün adlandırılmış tanımıyla, config'teki modelle. Claude Code'da Agent tool + agent adı; başka harness'taysan o harness'ın native mekanizması.
+3. Config'ten rol→model oku (`~/.taskard/config.toml`, proje override'u, sonra kullanıcının bu session'daki sözleri). **Devre dışı roller:** `[roles]` altındaki `disabled = [...]` listesindeki rollere lane AÇILMAZ — proje listesi global listeyi komple değiştirir, session sözleri ikisini de geçer. Düşme davranışı sabittir: **planner** → brief'leri ana döngü yazar · **explorer** → keşif ana döngünün hedefli okumasıyla yapılır · **ui-developer** → arayüz lane'leri implementer'a gider · **debugger** → teşhis implementer'da kalır, 2. başarısız denemede kullanıcıya eskale · **qa-tester** → harici-etkili işlerde reviewer tek kapı olur, canlı doğrulama teklifi kapanışta vurgulanır · **reviewer** → bağımsız kalite gözü kalmaz: qa-tester varsa o bakar, o da yoksa kullanıcıya AÇIK uyarı verilir ve merge kararı tamamen onundadır. Kapı rollü (reviewer/qa-tester) devre dışıysa bu plan onayında bir kez söylenir — sessiz kapı düşürme yasaktır.
+4. **Native subagent** aç: rolün adlandırılmış tanımıyla, config'teki modelle. Claude Code'da Agent tool + agent adı; başka harness'taysan o harness'ın native mekanizması. Native adlandırılmış agent olmayan harness'ta (örn. Codex) rol sözleşmesi brief ile taşınır: tanım dosyasının içeriği brief'in başına eklenir — isim, yetki sınırı ve skill sözleşmesi delegate'e böylece ulaşır.
 5. Report'u oku — **mesaj = pointer, dosya = payload:** dönüş mesajı yarım/eksik geldiyse önce `report.md`'i oku; doluysa ekstra bekleme turu AÇMA. BLOCKED ise aynı lane'de en fazla 2 deneme; üçüncüsünde teşhis topla, kullanıcıya raporla, bağımsız sonraki lane'e geç.
 
 Fix protokolü: düzeltme HER ZAMAN yeni delegate ile. Sonrasında en az bağımsız kanıt kontrolü zorunlu (tsc/lint/test); Critical/Important bulgularda scoped re-review yapılır (yalnızca finding karşılandı mı bakılır). Push EDİLMEMİŞ lane commit'i amend edilebilir; push edilmiş commit'e asla dokunulmaz.
 
 ## 4. Gate'ler
 
-Yeni kod üreten lane'lerde iki kapı, ikisi de TAZE reviewer subagent'ta (implementer'la aynı context'te asla):
-1. Code review (standartlar + spec uyumu)
-2. Merge öncesi son kontrol
+Yeni kod üreten lane'lerde kapılar TAZE subagent'larda koşar (implementer'la aynı context'te asla):
 
-**Mikro lane istisnası:** küçük diff'li mikro işlerde iki gate yerine TEK scoped mini-review — reviewer sadece diff + kabul kriterlerine bakar, bulgusu ≤5 satır. Bağımsızlık korunur, gramaj düşer.
+1. **Code review** — reviewer: standartlar + spec uyumu (her yeni-kod lane'inde)
+2. **End-state doğrulama** — qa-tester: yalnızca **harici-etkili** işlerde. *Harici-etkili:* API, migration, auth, ödeme, veri dönüşümü — davranışı dış dünyaya veya kalıcı veriye dokunan her şey; şüphede VAR say. qa-tester çalışan ürünün kabul ölçütlerini kanıtlar, raporu `verification.md`dir.
+3. **Merge öncesi son kontrol** — reviewer: lane'in merge'e hazır hali
 
-Bulgu varsa düzeltme yeni implementer delegate'iyle, aynı lane'de.
+**Mikro lane istisnası:** küçük diff'li mikro işlerde iki review kapısı yerine TEK scoped mini-review — reviewer sadece diff + kabul kriterlerine bakar, bulgusu ≤5 satır. Harici-etkili mikro işte (tek endpoint fix'i gibi) mini end-state kanıtı eklenir. Bağımsızlık korunur, gramaj düşer.
 
-Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) reviewer gate atlanır — yerine ana döngünün bağımsız kanıt kontrolü geçer (git log/diff/status ile delegate iddiasının doğrulanması). Bu istisna raporda belirtilir.
+Bulgu varsa düzeltme yeni implementer delegate'iyle, aynı lane'de. qa-tester FAILED döndürürse açık işler brief maddesine çevrilip implementer'a döner; ikinci turda hâlâ FAILED ise kullanıcıya eskale.
+
+Yeni kod ÜRETMEYEN lane'lerde (doğrulama, commit-only, inceleme) review kapısı atlanır — yerine ana döngünün bağımsız kanıt kontrolü geçer (git log/diff/status ile delegate iddiasının doğrulanması). Bu istisna raporda belirtilir.
+
+**Devre dışı rollerle etkileşim:** §3'teki `disabled` listesi burayı da bağlar — düşme davranışları orada sabittir; kapı rolü devre dışıysa bu plan onayında bir kez söylenir.
 
 ## 5. Final Review (merge öncesi son kapı)
 
@@ -144,6 +139,8 @@ Standart ve graph tier'da, TÜM lane'ler kendi gate'lerinden geçtikten sonra me
 ## 6. Canlı doğrulama + kapanış
 
 Gate'leri geçen lane'i kullanıcıya sun; merge kararı HER ZAMAN kullanıcının. **Onay isteklerinde hangi proje olduğu her zaman belirtilir** (örn. "[spechy-lite-react] merge onayı bekliyor") — çoklu-proje koşuda karışmayı önler. Kapanışta kapanış raporu + her task sonuna tek satır durum: `Yapıldı · Sonraki · Engel`.
+
+**Elle test listesi:** Kapanış raporu kod değişikliği içeriyorsa **"Senin test etmen gerekenler"** bölümüyle biter — bu bölüm ATLANMAZ. Maddeler üç kaynaktan damıtılır: lane report'larındaki dikkat notları, qa-tester'ın açık işleri, ui-developer'ın ekran/durum listesi. Format kuralları: her madde TEK eylem + beklenen sonuç ("Giriş yapıp çık, tekrar gir — oturum düşmemeli"), günlük dilde; jargon, dosya yolu, durum kodu bu listede yer bulmaz. En kritik senaryo üstte. Otomatik kanıtı zaten raporda olan şeyler listeye girmez; liste doğal olarak boşsa "otomatik testlerle tam kapandı" cümlesi yazılır.
 
 **Canlı doğrulama:** varsayılan olarak SUNULUR, yapılmaz — *"istersen tarayıcıda uçtan uca koşarım"* teklifi kapanışta yer alır. Kullanıcı isterse veya proje direktifi varsa (`canlı doğrulama: otomatik`), ana akış tarayıcı doğrulamasını kendisi çalıştırır ve sonucu rapora ekler. Neden önemli: statik gate'ler runtime görünürlüğünü yakalayamaz (i18n namespace, env farkları yalnızca canlı koşuda çıkar).
 

@@ -30,6 +30,22 @@ Kaynaklar: [obra/superpowers](https://github.com/obra/superpowers) · [mattpococ
 | finishing-a-development-branch | superpowers | Yeşil suite sonrası merge menüsü | Merge kararı doğrudan kullanıcıya |
 | improve-codebase-architecture | mattpocock | Periyodik bakım / refactor turu | Ayrı istekle manuel |
 
+## Rol sözleşmelerine bağlı ek skill'ler
+
+Aşağıdakiler agent tanımlarındaki **zorunlu skill sözleşmelerinde** geçer; makinede kurulu olanlar kullanılır, paketlenmez.
+
+| Skill | Bağlı rol | Kaynak |
+|---|---|---|
+| web-design-guidelines | reviewer (UI diff), ui-developer (self-check) | Vercel skill koleksiyonu |
+| security-review | reviewer (güvenlik-duyarlı diff) | Anthropic skill koleksiyonu |
+| diagnosing-bugs | debugger | obra/superpowers ailesi |
+| find-docs | explorer | lokal kurulu |
+| webapp-testing · agent-browser | qa-tester (web end-state testi) | lokal kurulu |
+| frontend-design | ui-developer (web) | anthropics/claude-code plugin'i |
+| expo-* (project-structure, native-ui, router, data-fetching, ui, tailwind-setup) | ui-developer (mobil) | Expo OSS skill koleksiyonu |
+
+> v0.5 notu: bu tablodaki kaynakların `npx skills` kurulum adresleri install.sh'e bağlanacak.
+
 ## Kurulum
 
 ```bash

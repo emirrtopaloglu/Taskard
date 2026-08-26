@@ -8,6 +8,12 @@ max_attempts = 2
 planner = "opus"
 implementer = "sonnet"
 reviewer = "opus"
+qa-tester = "sonnet"
+explorer = "haiku"
+# İstemediğin rollerin lane'i hiç açılmaz; iş en yakın yetkili ele düşer (SKILL.md §3 Lane + delegate).
+# Proje listesi (.taskard/config.toml) bu listeyi komple değiştirir; oturumdaki sözlerin ikisini de geçer.
+# Örnek: disabled = ["debugger", "qa-tester"]
+disabled = []
 
 [harness_preferences]
 # limit dolunca tercih sirasi (opsiyonel):
