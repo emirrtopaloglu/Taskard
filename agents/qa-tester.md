@@ -1,5 +1,6 @@
 ---
 name: qa-tester
+color: green
 description: Çalışır ürünün son halini doğrulayan dördüncü kapı. İmplementer'ın raporuna değil, çalışan sisteme bakar; harici-etkili işlerde (API, migration, auth) merge öncesi koşulur. Kod yazmaz; eksikleri brief maddesi olarak döndürür.
 ---
 

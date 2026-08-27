@@ -15,14 +15,55 @@ mkdir -p "$DEST/deck"
 cp -R "$SRC/apps/deck/server" "$SRC/apps/deck/dist" "$SRC/apps/deck/README.md" "$DEST/deck/"
 ln -sfn server/server.mjs "$DEST/deck/server.mjs"
 
-mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.agents/skills" "$HOME/.opencode/agent"
+mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.agents/skills" "$HOME/.opencode/agent" "$HOME/.opencode/agents" "$HOME/.config/opencode/agent" "$HOME/.config/opencode/agents"
 ln -sfn "$DEST/skills/taskard" "$HOME/.claude/skills/taskard"
 ln -sfn "$DEST/skills/taskard" "$HOME/.agents/skills/taskard"
+
+# Claude Code renk adları → opencode tema tokenları (şema: "#RRGGBB" | primary|secondary|accent|success|warning|error|info).
+# Kaynak .md tek kaynaktır; opencode'a SYMLINK değil ÇEVİRİLMİŞ KOPYA yazılır — renk değeri iki harness'ta da geçerli kalır.
+color_for_opencode() {
+  case "$1" in
+    blue)            echo "primary" ;;
+    purple)          echo "secondary" ;;
+    orange|pink)     echo "accent" ;;
+    green)           echo "success" ;;
+    yellow)          echo "warning" ;;
+    red)             echo "error" ;;
+    cyan)            echo "info" ;;
+    primary|secondary|accent|success|warning|error|info) echo "$1" ;;
+    *)
+      if [[ "$1" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+        echo "$1"
+      else
+        echo ""
+      fi
+      ;;
+  esac
+}
+
+sync_opencode_agent() {
+  local src="$1"
+  local name
+  name="$(basename "$src" .md)"
+  local c oc
+  c="$(awk '/^color:[[:space:]]*/{print $2; exit}' "$src" | tr -d '"'\'' ')"
+  oc="$(color_for_opencode "$c")"
+  for dest_dir in "$HOME/.config/opencode/agent" "$HOME/.config/opencode/agents" "$HOME/.opencode/agent" "$HOME/.opencode/agents"; do
+    mkdir -p "$dest_dir"
+    rm -f "$dest_dir/$name.md"   # önce kaldır: symlink ise > yönlendirmesi hedefi bozar
+    if [ -n "$oc" ]; then
+      sed "s/^color:.*/color: $oc/" "$src" > "$dest_dir/$name.md"
+    else
+      grep -v '^color:' "$src" > "$dest_dir/$name.md"
+    fi
+  done
+}
+
 for agent_file in "$DEST"/agents/*.md; do
   [ -e "$agent_file" ] || continue
   name="$(basename "$agent_file")"
   ln -sfn "$agent_file" "$HOME/.claude/agents/$name"
-  ln -sfn "$agent_file" "$HOME/.opencode/agent/$name"
+  sync_opencode_agent "$agent_file"
 done
 
 if [ ! -f "$HOME/.taskard/config.toml" ]; then

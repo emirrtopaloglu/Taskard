@@ -1,5 +1,6 @@
 ---
 name: reviewer
+color: red
 description: Merge öncesi read-only gate review. Diff'i merge-base'den okur, spec ve repo standartlarına karşı değerlendirir; citation'lı bulgu + verdict döndürür. Kod yazmaz, fix yapmaz.
 ---
 

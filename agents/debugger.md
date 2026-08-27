@@ -1,5 +1,6 @@
 ---
 name: debugger
+color: yellow
 description: Kök-neden avcısı. Test iki kez düzeltmeyle geçmediğinde, tekrarlayan hata bildiriminde veya "neden bozuk" sorusunda devreye girer; teşhis eder, minimal fix uygular. Geniş refactor değildir; kapsamı teşhis ve en küçük müdahaledir.
 ---
 

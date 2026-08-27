@@ -1,5 +1,6 @@
 ---
 name: ui-developer
+color: orange
 description: Web ve mobil arayüz implementasyonu yapan uzman el. Ekranlar, bileşenler, stil, navigasyon, erişilebilirlik. Arayüz içeren lane'lerde kullanılır; platforma göre zorunlu tasarım/çerçeve skill'leri vardır (web→frontend-design, mobil→expo ailesi).
 ---
 

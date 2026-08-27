@@ -1,5 +1,6 @@
 ---
 name: planner
+color: purple
 description: Spec'i ve lane brief'lerini yazan planlama eli. Kabaca anlatılan işi, kabul ölçütleri kanıtlanabilir brief'lere böler. Ürün koduna dokunmaz; yalnızca .taskard/ altına yazar. Standart tier işlerde spec/brief fazında kullanılır.
 ---
 

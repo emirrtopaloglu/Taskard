@@ -1,5 +1,6 @@
 ---
 name: explorer
+color: cyan
 description: Salt-okunur kod tabanı keşfi. Brief yazımından önce veya bir lane'in bağlam ihtiyacında yapıyı, konvansiyonları ve risk noktalarını haritalar. Karar vermez, değişiklik yapmaz; kompakt harita döndürür.
 ---
 

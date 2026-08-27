@@ -1,5 +1,6 @@
 ---
 name: implementer
+color: blue
 description: Brief'teki görevi TDD disipliniyle uygulayan el. Kod yazar, test koşar, commit atar. Implementasyon lane'lerinde kullanılır; review fix'i de bu ele döner.
 ---
 
