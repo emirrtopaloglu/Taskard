@@ -2,7 +2,7 @@
 
 [🇬🇧 English](README.md)
 
-Çoklu-harness agent orchestration **konvansiyon paketi** — `apps/` dışında çalışan kod yok.
+Çoklu-harness agent orchestration **konvansiyon paketi** — saf konvansiyon, sıfır çalışma zamanı kodu.
 
 Felsefe: her harness'ın (Claude Code, Codex, OpenCode...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, lane disiplini, brief kalitesi, rapor sözleşmesi, insan onay kapıları.
 
@@ -21,28 +21,16 @@ git clone <repo-url> && cd taskard   # ya da mevcut klon
 ./install.sh
 ```
 
-`install.sh` ne yapar (`apps/` dışında çalışan kod yok; Deck izleyicisi hazır gelir):
+`install.sh` ne yapar:
 1. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
 2. Adlandırılmış agent tanımlarını `~/.claude/agents/` ve `~/.opencode/agent/` altına symlink'ler
 3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)
 4. `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md`'e marker-wrapped statik direktif bloğu ekler (idempotent)
 5. Dış disiplin skill'leri (superpowers + mattpocock) eksikse `npx skills` ile global kurar
-6. Deck izleyicisini (salt-okur `.taskard` monitörü) `~/.taskard/deck/` altına kopyalar
 
 Güncelleme: `./install.sh`'i tekrar çalıştır — config'in korunur.
 
 Dış skill bağımlılıkları pakete GÖMÜLMEZ — kurulu olanlar referans edilir, upstream güncellemesi otomatik akar. Tam liste: [`docs/dependencies.md`](docs/dependencies.md).
-
-## Deck
-
-`.taskard` lane'leri için salt-okur canlı izleyici. `install.sh` tarafından `~/.taskard/deck/` altına kurulur.
-
-```bash
-node ~/.taskard/deck/server.mjs          # → http://localhost:7420
-node ~/.taskard/deck/server.mjs --demo   # örnek veri
-```
-
-Hiçbir dosyaya yazmaz; sadece gözlemler.
 
 ## Kullanım
 

@@ -2,7 +2,7 @@
 
 [🇹🇷 Türkçe](README.tr.md)
 
-A multi-harness agent orchestration **convention package** — no runtime code outside `apps/`.
+A multi-harness agent orchestration **convention package** — zero runtime code.
 
 Philosophy: every harness (Claude Code, Codex, OpenCode...) already has its own subagent capability. Taskard layers **doctrine** on top of it: named roles, lane discipline, brief quality, report contracts, human approval gates.
 
@@ -21,28 +21,16 @@ git clone <repo-url> && cd taskard   # or your existing clone
 ./install.sh
 ```
 
-What `install.sh` does (no runtime code outside `apps/`; the Deck viewer ships prebuilt):
+What `install.sh` does:
 1. Symlinks the skill to `~/.claude/skills/taskard` and `~/.agents/skills/taskard`
 2. Symlinks named agent definitions into `~/.claude/agents/` and `~/.opencode/agent/`
 3. Creates `~/.taskard/config.toml` on first run (never overwrites)
 4. Appends a marker-wrapped static directive block to `~/.claude/CLAUDE.md` and `~/.claude/AGENTS.md` (idempotent)
 5. Installs missing external discipline skills (superpowers + mattpocock) globally via `npx skills`
-6. Copies the Deck viewer (read-only `.taskard` monitor) to `~/.taskard/deck/`
 
 To update: re-run `./install.sh` — your config is preserved.
 
 External skill dependencies are NOT vendored into the package — installed copies are referenced, so upstream updates flow through automatically. Full list: [`docs/dependencies.md`](docs/dependencies.md).
-
-## Deck
-
-A read-only live monitor for `.taskard` lanes. Installed by `install.sh` under `~/.taskard/deck/`.
-
-```bash
-node ~/.taskard/deck/server.mjs          # → http://localhost:7420
-node ~/.taskard/deck/server.mjs --demo   # sample data
-```
-
-Writes to no files; purely observational.
 
 ## Usage
 

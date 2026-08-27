@@ -3,7 +3,7 @@
 ## Duran kurallar
 
 1. **README her zaman güncel kalsın:** kurulum ve kullanım adımları README.md'de yaşar; skill'i, config formatını veya akışı değiştiren her commit README'yi de güncellemek ZORUNDADIR.
-2. **Çekirdek dizinler (skills/, agents/, templates/) kod içermez; çalışma zamanı kodu YALNIZCA `apps/` altında yaşar, her app kendi README'sinde nasıl koştuğunu belirtir.**
+2. **Çekirdek paket kod içermez:** Taskard saf konvansiyon paketidir (skills/, agents/, templates/); çalışma zamanı kodu barındırmaz.
 3. Config dosyaları agent-okur veridir; hiçbir mekanizma çalışma anında config mutasyonu yapmaz.
 4. Wayfinder haritası (`.scratch/taskard/map.md`) kararların tek kaynağıdır — mimari kararı haritaya işlemeden değişiklik yapma.
 5. Yeni agent tanımı eklerken frontmatter'da `name` zorunludur; isimsiz rol tanımlanmaz.
