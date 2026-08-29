@@ -1,26 +1,30 @@
-# Taskard Eval Seti
+# Taskard Evaluation Suite
 
-Taskard'ın kendi kalitesini ölçen ev-eval paneli. Aynı senaryo, farklı model/harness kombinasyonlarında koşturulur; raporlar karşılaştırılır.
+This evaluation panel measures the execution quality, doctrine adherence, and token efficiency of Taskard across different AI CLI harnesses and model tiers.
 
-## Metodoloji
+---
 
-1. Senaryo brief'ini aynen kullan — değiştirme, yoksa koşular kıyaslanamaz
-2. Her koşuyu farklı harness/model ikilisinde çalıştır (örn. implementer=sonnet vs implementer=gpt)
-3. Değerlendirme kriterleri senaryo dosyasında yazar; çıktılar `results/` altına tarih damgasıyla kaydedilir
-4. Panel tablosu: senaryo × konfigürasyon × süre × kanıt kalitesi × gate sonucu
+## Methodology
 
-## Senaryolar
+1. **Exact Prompt Replay:** Use the scenario prompt verbatim without modification to ensure comparable benchmark runs.
+2. **Matrix Combinations:** Run scenarios across diverse harness/model pairings (e.g. `implementer=sonnet` vs `implementer=haiku` vs `implementer=claude`).
+3. **Objective Grading:** Evaluate results against the criteria declared in each scenario file; record reports under `results/` with timestamps.
+4. **Evaluation Metrics:** Scenario × Configuration × Duration × Token Footprint × Evidence Completeness × Gate Verdict.
 
-- `01-mikro-commit.md` — ölçek merdiveni mikro tier (tek brief, kanıt kontrolü)
-- `02-feature-lane.md` — standart tier (spec → lane → delegate → reviewer gate → fix döngüsü)
-- `03-yanlis-onkabul.md` — adversarial: ön kabulu yanlış görev; sistemin kanıtsız ilerlememesi beklenir
-- `04-disiplin-routeri.md` — mod seçimi + skill over-fire kontrolü (üç mini-koşu)
-- `05-agent-roloji.md` — yedi rolün mikro-senaryoları (skill sözleşmesi + kapı davranışı)
+---
 
-## Ne zaman koşulur
+## Scenarios
 
-- Yeni rol tanımı eklendiğinde
-- SKILL.md'de büyük doktrin değişikliği sonrası
-- Yeni harness tarifi eklenince (o tarifin senaryosu bir kez uçtan uca)
+- [`01-micro-commit.md`](01-micro-commit.md) — Nano mode evaluation (single brief/prompt, command evidence check).
+- [`02-feature-lane.md`](02-feature-lane.md) — Express mode evaluation (spec -> lane -> implementer -> reviewer gate -> fix cycle).
+- [`03-adversarial-premise.md`](03-adversarial-premise.md) — Adversarial evaluation: task with a false premise; verifies that the agent refuses to hallucinate and clarifies with user.
+- [`04-discipline-router.md`](04-discipline-router.md) — Speed gear classification and skill router precision (verifies skills only load when triggered).
+- [`05-agent-roles.md`](05-agent-roles.md) — Micro-scenarios for all 7 named roles (verifying skill contracts and gate behaviors).
 
-Sıklık hedefi değil, değişim tetiklidir.
+---
+
+## When to Run Evals
+
+- When proposing or defining a new agent role in `agents/`.
+- After modifying doctrine in `skills/taskard/SKILL.md`.
+- When adding integration recipes for a new AI CLI harness.
