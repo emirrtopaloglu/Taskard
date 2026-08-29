@@ -1,23 +1,42 @@
 [defaults]
 permission_mode = "bypassPermissions"
+default_mode = "express"    # "nano" | "express" (varsayılan) | "full"
 report_max_lines = 15
-max_attempts = 2
-# budget_minutes = 30   # opsiyonel: lane başına zaman tavanı (graph modunda önerilir)
+max_attempts = 2            # 2-Strike kuralı: 1 düzeltme denemesi, 2. hatada derhal insana eskalasyon
+# budget_minutes = 30       # opsiyonel: lane başına zaman tavanı (full modunda önerilir)
 
 [roles]
+# Tier 1: Ağır Beyinler (Derin Strateji, Planlama & Final Yargı)
 planner = "opus"
-implementer = "sonnet"
+debugger = "opus"
 reviewer = "opus"
-qa-tester = "sonnet"
+
+# Tier 2: Hızlı & Güvenilir İşçiler (Aktif Kodlama & Arayüz)
+implementer = "sonnet"
+ui-developer = "sonnet"
+
+# Tier 3: Işık Hızında Asistanlar (Geniş Keşif, Doğrulama & Hızlı Diff)
+# Not: model adları harness'a göre değişir; Tier 3 = o harness'ta karşılığı olan en ucuz/hızlı model.
 explorer = "haiku"
-# İstemediğin rollerin lane'i hiç açılmaz; iş en yakın yetkili ele düşer (SKILL.md §3 Lane + delegate).
+qa-tester = "haiku"
+
+# İstemediğin rollerin lane'i hiç açılmaz; iş en yakın yetkili ele düşer (SKILL.md §3).
 # Proje listesi (.taskard/config.toml) bu listeyi komple değiştirir; oturumdaki sözlerin ikisini de geçer.
-# Örnek: disabled = ["debugger", "qa-tester"]
+# Örnek: disabled = ["debugger"]
 disabled = []
 
+[qa]
+# QA rolünün headless test yetenekleri (varsayılan KAPALI)
+# Oturumda "QA tarayıcıda doğrulasın" dendiğinde veya burada true yapıldığında devreye girer
+enabled = false
+headless_browser = false       # agent-browser / playwright-cli ile UI doğrulaması
+run_integration_tests = false  # test suite (npm test, pytest vb.) çalıştırma
+auto_verify_endpoints = false  # curl / HTTP API yanıt doğrulaması
+
 [harness_preferences]
-# limit dolunca tercih sirasi (opsiyonel):
+# Limit dolunca tercih sırası (opsiyonel):
 # implementer = ["claude", "codex", "opencode"]
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
+

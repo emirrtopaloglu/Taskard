@@ -40,15 +40,17 @@ Proje dizininde harness'ını aç ve de:
 Taskard akışıyla <görev>
 ```
 
-Main agent seni grill'ler → spec yazar (`.taskard/context/specs/`) → task'lara böler (`T-001-slug.md`) → her task için lane açar → adlandırılmış delegate'lerle çalıştırır → kısa raporlarla sana sunar.
+Taskard görevi uygun hız kademesine sınıflandırır ve yürütür:
+- ⚡ **Nano (<2-3 dk):** 1 dosya, typo veya CSS/stil fix'i için hızlı şerit. Sıfır dosya; tek implementer + doğrudan doğrulama.
+- 🚀 **Express (Varsayılan, 5-10 dk):** 2-4 dosyalık net özellikler ve bileşen eklemeleri. Self-priming brief (`brief.md`) + implementer + scoped mini-review gate. Ağır grilling/spec dosyası yok.
+- 🏛️ **Full (15-30 dk):** Karmaşık mimari, paralel worktree'ler ve kritik veri/auth değişiklikleri. Tam grilling → spec → tasks → DAG → QA → final review.
 
 Senin karar noktaların:
-- **Model/rol override** — *"bu implement'te opus kullan"* demen yeterli
-- **Plan onayı** — spec onaylanmadan implementasyon başlamaz
-- **Canlı doğrulama** — merge öncesi uygulamayı sen test edersin; merge kararı senin
+- **Mod & Model override** — *"bu işi full modda ve implementer'da opus ile yap"* demen yeterli
+- **2-Strike Kuralı (Circuit Breaker)** — bir lane en fazla 1 kez düzeltme dener; 2. hatada akış durur ve sana 3 net seçenek sunar
+- **Plan onayı** — Full modda spec onaylanmadan kodlama başlamaz
+- **Canlı doğrulama & merge** — canlı test onayı ve nihai merge kararı her zaman senindir
 - **Riskli işlemler** — config'deki listeyle eşleşen her adım onay ister
-
-**Ölçek merdiveni:** mikro işler (tek adım, ~10 dk) tek brief ile koşar — spec/tasks dosyası yazılmaz, yeni kod üretilmiyorsa reviewer gate yerine bağımsız kanıt kontrolü yapılır. Tam seremoni standart işler içindir.
 
 ## Config
 
@@ -57,14 +59,31 @@ Senin karar noktaların:
 ```toml
 [defaults]
 permission_mode = "bypassPermissions"
+default_mode = "express"    # "nano" | "express" (varsayılan) | "full"
+max_attempts = 2            # 2-Strike circuit breaker
 
 [roles]
+# Tier 1: Ağır Beyinler (Derin Strateji, Planlama & Final Yargı)
 planner = "opus"
-implementer = "sonnet"
+debugger = "opus"
 reviewer = "opus"
-qa-tester = "sonnet"
+
+# Tier 2: Hızlı & Güvenilir İşçiler (Aktif Kodlama & Arayüz)
+implementer = "sonnet"
+ui-developer = "sonnet"
+
+# Tier 3: Işık Hızında Asistanlar (Geniş Keşif & Doğrulama)
+# Not: model adları harness'a göre değişir; Tier 3 = o harness'ta karşılığı olan en ucuz/hızlı model.
 explorer = "haiku"
+qa-tester = "haiku"
+
 disabled = ["debugger"]   # bu rollere lane açılmaz; iş en yakın yetkili ele düşer
+
+[qa]
+enabled = false              # varsayılan KAPALI; açıldığında headless browser/test çalıştırır
+headless_browser = false
+run_integration_tests = false
+auto_verify_endpoints = false
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]

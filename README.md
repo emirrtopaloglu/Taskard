@@ -40,15 +40,17 @@ Open your harness in the project directory and say:
 Run this task through the Taskard workflow
 ```
 
-The main agent grills you → writes a spec (`.taskard/context/specs/`) → splits it into tasks (`T-001-slug.md`) → opens a lane per task → runs them through named delegates → reports back in short summaries.
+Taskard classifies the task into the appropriate gear and executes:
+- ⚡ **Nano (<2-3 min):** Fast-lane for 1 file/typo/styling fix. Zero documentation files. Single implementer + instant verification.
+- 🚀 **Express (Default, 5-10 min):** For 2-4 files features and component additions. Self-priming brief (`brief.md`) + implementer + scoped mini-review gate. No heavy grilling/spec files.
+- 🏛️ **Full (15-30 min):** For complex architecture, multi-lane parallel worktrees, and critical data/auth changes. Full grilling → spec → tasks → DAG → QA → final review.
 
 Your decision points:
-- **Model/role override** — just say *"use opus for this implementation"*
-- **Plan approval** — no implementation starts before you approve the spec
-- **Live verification** — you test the app before merge; the merge call is yours
+- **Mode & Model override** — just say *"run this in full mode with opus for implementation"*
+- **2-Strike Circuit Breaker** — a lane retries at most once on error; on the 2nd failure, execution halts and presents 3 clear options
+- **Plan approval** — no implementation starts before you approve the plan/spec
+- **Live verification & merge** — the human owns the merge gate and live browser validation
 - **Risky operations** — anything matching the config list asks for approval first
-
-**Scale ladder:** micro tasks (single step, ~10 min) run on a single brief — no spec/tasks files, and if no new code is produced an independent evidence check replaces the reviewer gate. Full ceremony is for standard tasks.
 
 ## Config
 
@@ -57,14 +59,31 @@ Your decision points:
 ```toml
 [defaults]
 permission_mode = "bypassPermissions"
+default_mode = "express"    # "nano" | "express" (default) | "full"
+max_attempts = 2            # 2-Strike circuit breaker
 
 [roles]
+# Tier 1: Heavy Brains (Strategy, Planning & Final Verdict)
 planner = "opus"
-implementer = "sonnet"
+debugger = "opus"
 reviewer = "opus"
-qa-tester = "sonnet"
+
+# Tier 2: Fast & Reliable Workers (Active Coding & UI)
+implementer = "sonnet"
+ui-developer = "sonnet"
+
+# Tier 3: Light & Blazing Fast (Exploration & QA)
+# Note: model names vary by harness; Tier 3 = the cheapest/fastest model available on that harness.
 explorer = "haiku"
-disabled = ["debugger"]   # these roles never get lanes; work falls back (see skill)
+qa-tester = "haiku"
+
+disabled = ["debugger"]   # these roles never get lanes; work falls back
+
+[qa]
+enabled = false              # default OFF; runs headless browser/integration tests when enabled
+headless_browser = false
+run_integration_tests = false
+auto_verify_endpoints = false
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
