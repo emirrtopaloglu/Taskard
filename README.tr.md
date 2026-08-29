@@ -12,7 +12,7 @@
 ### AI Geliştirici CLI'ları İçin Sıfır-Çalışma-Zamanlı Çoklu-Ajan Orkestrasyon Konvansiyonu
 
 [![CI](https://github.com/emirrtopaloglu/Taskard/actions/workflows/ci.yml/badge.svg)](https://github.com/emirrtopaloglu/Taskard/actions)
-[![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-v0.1.3-blue.svg)](package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Zero Runtime](https://img.shields.io/badge/Runtime-Zero--Dependency-success.svg)](#)
 [![Multi-Harness](https://img.shields.io/badge/Harness-Claude%20%7C%20OpenCode%20%7C%20Codex%20%7C%20Antigravity%20%7C%20Cursor-orange.svg)](#-çoklu-harness-desteği)
