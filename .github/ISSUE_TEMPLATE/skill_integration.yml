@@ -1,0 +1,51 @@
+name: '💡 Skill Integration Request'
+description: Request support or document an external skill integration in docs/dependencies.md
+title: '[SKILL]: '
+labels: ['enhancement', 'skill-integration']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 📦 External Skill Policy
+        Taskard does NOT vendor external skills into the repository. Instead, skills are referenced in `docs/dependencies.md` and installed dynamically via `npx skills` during setup.
+
+  - type: input
+    id: skill_name
+    attributes:
+      label: Skill Name
+      description: The name of the skill (e.g. `agent-browser`, `playwright-cli`, `web-design-guidelines`)
+      placeholder: e.g. agent-browser
+    validations:
+      required: true
+
+  - type: input
+    id: source_repo
+    attributes:
+      label: Upstream Repository URL
+      description: Public GitHub repo or package source for the skill
+      placeholder: https://github.com/obra/superpowers
+    validations:
+      required: true
+
+  - type: dropdown
+    id: lifecycle_phase
+    attributes:
+      label: Taskard Lifecycle Phase / Target Role
+      description: Where in the Taskard workflow does this skill trigger?
+      options:
+        - Planning & Brainstorming (planner)
+        - Implementation / Frontend (ui-developer / implementer)
+        - Review & Quality Gate (reviewer)
+        - Debugging & Diagnosis (debugger)
+        - QA & Browser Testing (qa-tester)
+        - Discovery & Research (explorer)
+    validations:
+      required: true
+
+  - type: textarea
+    id: fallback_behavior
+    attributes:
+      label: Fallback Behavior (When Skill is Absent)
+      description: How should the agent proceed gracefully if the skill is not installed?
+    validations:
+      required: true

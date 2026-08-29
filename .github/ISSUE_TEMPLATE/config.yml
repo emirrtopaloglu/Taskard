@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Taskard Documentation & Roadmap
+    url: https://github.com/emirrtopaloglu/Taskard#readme
+    about: Read our architectural principles, 3-speed gear system, and roadmap.
+  - name: Security Vulnerability Reporting
+    url: https://github.com/emirrtopaloglu/Taskard/security/advisories
+    about: Report security issues privately.

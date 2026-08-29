@@ -1,0 +1,72 @@
+name: '🐛 Bug / Hallucination Report'
+description: Report a bug, broken harness integration, or agent hallucination
+title: '[BUG]: '
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide as much detail as possible to help us reproduce and resolve it quickly.
+
+  - type: dropdown
+    id: harness
+    attributes:
+      label: Harness / Environment
+      description: Which AI CLI harness were you using when the issue occurred?
+      options:
+        - Claude Code
+        - OpenCode
+        - Codex / OpenAgent
+        - Antigravity / agy
+        - Cursor
+        - Other / Standalone CLI
+    validations:
+      required: true
+
+  - type: dropdown
+    id: speed_mode
+    attributes:
+      label: Speed Mode
+      description: Which speed mode was active?
+      options:
+        - Express (Default)
+        - Nano
+        - Full (Graph)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Taskard Version
+      description: Version of Taskard (e.g. `npx taskard --version` or git commit hash)
+      placeholder: v0.5.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what happened vs what was expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / Log Output / report.md
+      description: Paste relevant terminal output, error messages, or `report.md` snippets.
+      render: markdown
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklists
+    attributes:
+      label: Checklist
+      options:
+        - label: I have verified this behavior without committing private repository details or secrets.
+          required: true
+        - label: I have checked existing issues to avoid duplicates.
+          required: true

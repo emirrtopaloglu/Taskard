@@ -1,0 +1,65 @@
+name: '🎭 New Role Proposal'
+description: Propose a new named agent role for the Taskard roster
+title: '[ROLE]: '
+labels: ['enhancement', 'role-proposal']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🏛️ Taskard Role Roster Policy
+        Taskard keeps a minimal, highly disciplined role roster (currently 7 roles). Before proposing a new role, remember:
+        - Stack roles (`backend-developer`, `data-engineer`) are avoided in favor of `implementer` + discipline skill router.
+        - Every role MUST have an explicit `name:`, strict input/output contract (≤15 line report), and a corresponding eval scenario in `evals/`.
+
+  - type: input
+    id: role_name
+    attributes:
+      label: Role Name
+      description: Single lowercase identifier (e.g., `security-auditor`, `perf-profiler`)
+      placeholder: e.g. perf-profiler
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role_tier
+    attributes:
+      label: Target Model Tier
+      description: Which tier does this role belong to?
+      options:
+        - Tier 1 (Heavy Brain / Strategy - opus)
+        - Tier 2 (Execution / Code - sonnet)
+        - Tier 3 (Assist / Fast Scan - haiku)
+    validations:
+      required: true
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Justification vs Existing Roles
+      description: Why can this task not be handled by `implementer`, `debugger`, or `reviewer` with a specialized skill?
+    validations:
+      required: true
+
+  - type: textarea
+    id: yaml_frontmatter
+    attributes:
+      label: Proposed Agent YAML Frontmatter & Contract
+      description: Complete frontmatter and core instructions.
+      render: markdown
+      value: |
+        ---
+        name: 
+        color: 
+        model: 
+        description: 
+        ---
+    validations:
+      required: true
+
+  - type: textarea
+    id: eval_scenario
+    attributes:
+      label: Proposed Eval Scenario
+      description: Describe the eval test scenario that will be added to `evals/` to prove this role behaves correctly.
+    validations:
+      required: true
