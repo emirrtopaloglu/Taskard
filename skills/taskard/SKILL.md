@@ -1,6 +1,6 @@
 ---
 name: taskard
-description: Multi-harness agent orchestration convention. Classifies tasks (Nano/Express/Full), writes point-to-range briefs, delegates to named subagents, and operates quality gates.
+description: Multi-harness agent orchestration convention. Classifies tasks (Fast/Pro/Max), writes point-to-range briefs, delegates to named subagents, and operates quality gates.
 ---
 
 # Taskard
@@ -9,15 +9,15 @@ Execute tasks following the Taskard orchestration workflow. The main agent coord
 
 ## 1. Speed Gear Selection (3-Speed Transmission)
 
-Classify the task complexity at the start of execution. Session instructions (e.g., *"run this in nano mode"*, *"use full mode"*) take immediate precedence.
+Classify the task complexity at the start of execution. Session instructions (e.g., *"run this in fast mode"*, *"use max mode"*) take immediate precedence.
 
 | Mode | Duration | Scope & Ceremony Level |
 |---|---|---|
-| ⚡ **NANO** | **< 1-2 min** | **Aggressive Default / Zero Overhead:** 1 file, typo, CSS/styling, single function fix, config. Writes zero files to `.taskard/`. Spawns a single `implementer`, produces diff, main agent validates and presents immediately. No separate reviewer subagent. |
-| 🚀 **EXPRESS** *(Default)* | **5-10 min** | **Lightweight Documentation:** 2–4 files, standard features, new components, endpoints, small refactors. No grilling or heavy specification. Single `brief.md` + single `implementer` + single `reviewer` (mini-review) gate. |
-| 🏛️ **FULL** *(Graph)* | **15-30 min** | **Full Architectural Rigor:** Complex architecture, ≥2 parallel lanes (git worktrees), database migrations, authentication. Grilling/Product decisions (`grill-with-docs`/`grill-me`) → Spec (`context/specs/`) → Tasks (`tasks/`) → Parallel Lane DAG → QA → Opus Final Review. |
+| ⚡ **FAST** | **< 1-2 min** | **Aggressive Default / Zero Overhead:** 1 file, typo, CSS/styling, single function fix, config. Writes zero files to `.taskard/`. Spawns a single `implementer`, produces diff, main agent validates and presents immediately. No separate reviewer subagent. |
+| 🚀 **PRO** *(Default)* | **5-10 min** | **Lightweight Documentation:** 2–4 files, standard features, new components, endpoints, small refactors. No grilling or heavy specification. Single `brief.md` + single `implementer` + single `reviewer` (mini-review) gate. |
+| 🏛️ **MAX** *(Graph)* | **15-30 min** | **Full Architectural Rigor:** Complex architecture, ≥2 parallel lanes (git worktrees), database migrations, authentication. Grilling/Product decisions (`grill-with-docs`/`grill-me`) → Spec (`context/specs/`) → Tasks (`tasks/`) → Parallel Lane DAG → QA → Opus Final Review. |
 
-> **Ratchet Rule:** If scope expands during Nano or Express (>4 files, unexpected dependencies), ratchet the workflow up to the next gear immediately.
+> **Ratchet Rule:** If scope expands during Fast or Pro (>4 files, unexpected dependencies), ratchet the workflow up to the next gear immediately.
 
 ## 2. Discipline Router (Pull-Based)
 
@@ -26,13 +26,13 @@ If `using-superpowers` is present in the environment, start with its routing; ot
 | Phase / Condition | Skill | Function |
 |---|---|---|
 | Workflow start | `using-superpowers` | Skill router (if available) |
-| Pre-spec exploration (Full) | `brainstorming` | Clarify intent and requirements |
-| Alignment & decisions (Full) | `grilling` + `domain-modeling` | Question assumptions and terms for high-risk work |
+| Pre-spec exploration (Max) | `brainstorming` | Clarify intent and requirements |
+| Alignment & decisions (Max) | `grilling` + `domain-modeling` | Question assumptions and terms for high-risk work |
 | Product decision round | `grill-with-docs` / `grill-me` | Resolve current vs target state differences before locking spec |
 | Ambiguous multi-session scope | `wayfinder` | Multi-session scope mapping |
 | Architectural seam design | `codebase-design` | Module boundary and interface design |
-| Plan documentation (Full) | `writing-plans` | Extract actionable briefs from specifications |
-| Parallel lanes (Full) | `dispatching-parallel-agents` + `using-git-worktrees` | Isolate ≥2 independent worktree lanes |
+| Plan documentation (Max) | `writing-plans` | Extract actionable briefs from specifications |
+| Parallel lanes (Max) | `dispatching-parallel-agents` + `using-git-worktrees` | Isolate ≥2 independent worktree lanes |
 | Merge conflict | `resolving-merge-conflicts` | Worktree merge conflict resolution |
 | Review feedback cycle | `receiving-code-review` | Verify and apply review findings |
 | Blocker diagnosis (2nd failure) | `systematic-debugging` | Root-cause analysis (Circuit Breaker) |
@@ -51,7 +51,7 @@ If `using-superpowers` is present in the environment, start with its routing; ot
 
 ## 4. Self-Priming Brief & Point-to-Range Standard
 
-In Express and Full modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md` for each lane (suffix: 4 random characters, e.g., `-a3f2`).
+In Pro and Max modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md` for each lane (suffix: 4 random characters, e.g., `-a3f2`).
 
 - **Verify Premises Before Writing:** Inspect assumptions with `ls` or `grep` before writing briefs. If a premise is invalid, clarify with the user.
 - **Point-to-Range Rule:**
@@ -66,7 +66,7 @@ In Express and Full modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md`
 
 ## 5. Tiered Model Matrix (Smart Tiering)
 
-| Role | Express Mode (Default) | Full Mode (Architectural Rigor) |
+| Role | Pro Mode (Default) | Max Mode (Architectural Rigor) |
 |---|:---:|:---:|
 | **`planner`** | *(Skipped)* | **`opus`** |
 | **`reviewer`** | **`sonnet`** *(Focused mini-review)* | **`opus`** *(Deep architecture & security)* |
@@ -90,9 +90,9 @@ In Express and Full modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md`
   *If all four fields are not present in exact order, reject the report and request one formatting correction (does not count against the 2-Strike budget).*
 
 - **Review Gate:**
-  - **Nano:** No separate subagent; main orchestrator validates diff directly.
-  - **Express:** Scoped `reviewer` (`sonnet` with ≤5 lines of findings, standards + diff).
-  - **Full:** `reviewer` (`opus`) + `qa-tester` on external impact changes + `final review`.
+  - **Fast:** No separate subagent; main orchestrator validates diff directly.
+  - **Pro:** Scoped `reviewer` (`sonnet` with ≤5 lines of findings, standards + diff).
+  - **Max:** `reviewer` (`opus`) + `qa-tester` on external impact changes + `final review`.
 
 - **Telegraph Output & Close:**
   - Provide single-sentence Humanish progress updates at each stage (do not dump raw status codes into chat).

@@ -34,7 +34,7 @@ Instead of adding heavyweight Python servers, complex runtime orchestrators, or 
 2. **Strictly Named Role Roster:** Anonymous agents are forbidden. Every task runs under an explicit role (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`).
 3. **Point-to-Range Briefs:** Never paste code blocks into subagent prompts. Taskard uses precise line pointers (`src/auth/session.ts#L40-L65`) — subagents read only targeted slices.
 4. **Embedded TDD & Verification:** `implementer` natively executes the Red-Green-Refactor loop and provides real command output proof without external skill bloat.
-5. **3-Speed Gear Transmission:** Automatically shifts between ⚡ **Nano** (<2m, zero overhead), 🚀 **Express** (5-10m, lightweight review gate), and 🏛️ **Full** (15-30m, worktrees & DAG).
+5. **3-Speed Gear Transmission:** Automatically shifts between ⚡ **Fast** (<2m, zero overhead), 🚀 **Pro** (5-10m, lightweight review gate), and 🏛️ **Max** (15-30m, worktrees & DAG).
 6. **2-Strike Circuit Breaker:** Tasks retry at most once; on the second error, the loop halts and escalates with 3 structured options.
 7. **Human-in-the-Loop Ownership:** Humans own the plan approval, pre-merge verification, and dangerous operation gates.
 
@@ -47,7 +47,7 @@ Instead of adding heavyweight Python servers, complex runtime orchestrators, or 
 | **Runtime Requirement** | None | Heavy Python runtime, server, daemon | **Zero (Zero-Runtime Markdown Convention)** |
 | **Token Efficiency** | Low (Severe Context Rot & Bloat) | Medium (Chatty agent-to-agent loops) | **High (-68% Savings via Point-to-Range)** |
 | **TDD & Evidence Gate** | Ad-hoc / Optional | Complex custom glue code | **Embedded & Enforced (RGR Loop + Evidence)** |
-| **Speed Transmission** | Flat (One size fits all) | Sluggish & Rigid | **3-Speed Transmission (⚡ Nano / 🚀 Express / 🏛️ Full)** |
+| **Speed Transmission** | Flat (One size fits all) | Sluggish & Rigid | **3-Speed Transmission (⚡ Fast / 🚀 Pro / 🏛️ Max)** |
 | **Workflow Safety** | Unrestricted tool loops | Manual breakpoint coding | **2-Strike Circuit Breaker + 3 Approval Gates** |
 | **Harness Portability** | Single vendor lock-in | Framework lock-in | **Universal (Claude Code, OpenCode, Codex, Antigravity, Cursor)** |
 | **Installation** | N/A | Complex `pip install` + virtualenvs | **1-second `npx taskard init` or `curl \| bash`** |
@@ -83,6 +83,11 @@ Run directly inside any repository:
 npx taskard init
 ```
 
+*For guided interactive setup wizard:*
+```bash
+npx taskard init -i
+```
+
 *For global installation across all harnesses:*
 ```bash
 npx taskard init --global
@@ -105,9 +110,11 @@ cd Taskard
 ### Useful CLI Commands
 
 ```bash
-taskard doctor    # Diagnose harness bridges, skills symlinks & config health
-taskard config    # Inspect effective configuration and 7-role routing table
-taskard roles     # Display the 7-role tier roster matrix
+taskard lanes             # List active, completed, and blocked taskard lanes (--global, --active, --completed)
+taskard clean             # Clean workspace lanes, diffs, and temp files (--dry-run, --yes, --completed)
+taskard doctor            # Diagnose harness bridges, skills symlinks & config health
+taskard config            # Inspect effective configuration and 7-role routing table
+taskard roles             # Display the 7-role tier roster matrix
 ```
 
 ---
@@ -121,8 +128,8 @@ Run this task through the Taskard workflow
 ```
 
 Or trigger with explicit speed gear:
-- *"Run this in nano mode: fix typo in header component"*
-- *"Run this in full mode with opus: migrate database schema to multi-tenant"*
+- *"Run this in fast mode: fix typo in header component"*
+- *"Run this in max mode with opus: migrate database schema to multi-tenant"*
 
 ---
 
@@ -132,16 +139,16 @@ Or trigger with explicit speed gear:
 flowchart TD
     Task([Incoming Task]) --> Classify{Task Complexity}
     
-    Classify -->|1 file, typo, styling, <2 min| Nano["⚡ NANO GEAR\n• Zero .taskard/ files\n• Single implementer\n• Instant main-loop verification"]
-    Classify -->|2-4 files, feature, 5-10 min| Express["🚀 EXPRESS GEAR (Default)\n• Point-to-range brief.md\n• implementer (sonnet)\n• reviewer mini-gate (sonnet)"]
-    Classify -->|Complex, >4 files, parallel, 15-30 min| Full["🏛️ FULL GEAR\n• Grilling & Spec\n• Worktree parallel lanes (DAG)\n• implementer + QA + opus Final Review"]
+    Classify -->|1 file, typo, styling, <2 min| Fast["⚡ FAST GEAR\n• Zero .taskard/ files\n• Single implementer\n• Instant main-loop verification"]
+    Classify -->|2-4 files, feature, 5-10 min| Pro["🚀 PRO GEAR (Default)\n• Point-to-range brief.md\n• implementer (sonnet)\n• reviewer mini-gate (sonnet)"]
+    Classify -->|Complex, >4 files, parallel, 15-30 min| Max["🏛️ MAX GEAR\n• Grilling & Spec\n• Worktree parallel lanes (DAG)\n• implementer + QA + opus Final Review"]
 ```
 
-- ⚡ **Nano (< 1-2 min — Aggressive Fast-Lane):** Single file changes, typos, CSS adjustments, or isolated bug fixes. Generates zero overhead files. Delegate produces diff; main orchestrator validates immediately.
-- 🚀 **Express (5-10 min — Default Workhorse):** Standard features, API endpoints, refactors (2–4 files). Single point-to-range `brief.md` + `implementer` + scoped `reviewer` mini-gate. No heavy spec ceremony.
-- 🏛️ **Full (15-30 min — Architectural Rigor):** Multi-lane parallel tasks, breaking migrations, security/auth updates. Full grilling → spec (`context/specs/`) → task breakdown (`tasks/`) → Git worktree parallel DAG → QA testing → Opus final review.
+- ⚡ **Fast (< 1-2 min — Direct Lane):** Single file changes, typos, CSS adjustments, or isolated bug fixes. Generates zero overhead files. Delegate produces diff; main orchestrator validates immediately.
+- 🚀 **Pro (5-10 min — Default Workhorse):** Standard features, API endpoints, refactors (2–4 files). Single point-to-range `brief.md` + `implementer` + scoped `reviewer` mini-gate. No heavy spec ceremony.
+- 🏛️ **Max (15-30 min — Architectural Rigor):** Multi-lane parallel tasks, breaking migrations, security/auth updates. Full grilling → spec (`context/specs/`) → task breakdown (`tasks/`) → Git worktree parallel DAG → QA testing → Opus final review.
 
-> **Ratchet Rule:** If scope expands during Nano or Express (>4 files, unexpected dependencies), Taskard immediately ratchets up to the next gear.
+> **Ratchet Rule:** If scope expands during Fast or Pro (>4 files, unexpected dependencies), Taskard immediately ratchets up to the next gear.
 
 ---
 
@@ -162,8 +169,8 @@ Taskard defines 7 specialized agent roles mapped across 3 capability tiers:
 |---|:---:|---|---|
 | **`planner`** | `opus` | Breaks user intent into verifiable specs and point-to-range briefs | Reads requirements → Writes `context/specs/` & briefs |
 | **`implementer`** | `sonnet` | Executes code changes via native TDD (Red-Green-Refactor) | Reads line pointers → Writes code & tests → `report.md` |
-| **`reviewer`** | `sonnet` *(Exp)* / `opus` *(Full)* | Read-only code reviewer. Evaluates diffs against standards | Reads diff & acceptance criteria → `review.md` (PASS/FAIL) |
-| **`debugger`** | `sonnet` *(Exp)* / `opus` *(Full)* | Root-cause diagnostician. 4-step reproduction and minimal fix | Reproduces failure → Applies minimal fix → `report.md` |
+| **`reviewer`** | `sonnet` *(Pro)* / `opus` *(Max)* | Read-only code reviewer. Evaluates diffs against standards | Reads diff & acceptance criteria → `review.md` (PASS/FAIL) |
+| **`debugger`** | `sonnet` *(Pro)* / `opus` *(Max)* | Root-cause diagnostician. 4-step reproduction and minimal fix | Reproduces failure → Applies minimal fix → `report.md` |
 | **`ui-developer`** | `sonnet` | Web & Mobile UI specialist (Tailwind, React, Expo HIG) | Implements screens/components → `report.md` |
 | **`explorer`** | `haiku` | Read-only codebase reconnaissance before brief creation | Scans module structure → Compact 3-point architecture map |
 | **`qa-tester`** | `haiku` | Live system validation gate for API, migration, and UI | Executes headless browser/CLI tests → `verification.md` |
@@ -177,21 +184,21 @@ Taskard configuration is **agent-readable data** stored in TOML format:
 ```toml
 [defaults]
 permission_mode = "bypassPermissions"
-default_mode = "express"    # "nano" | "express" (default) | "full"
+default_mode = "pro"        # "fast" | "pro" (default) | "max"
 max_attempts = 2            # 2-Strike circuit breaker
 report_max_lines = 15
 
 [roles]
-# Express Mode Defaults (Tier 2 Fast & Balanced):
+# Pro Mode Defaults (Tier 2 Fast & Balanced):
 implementer = "sonnet"
 ui-developer = "sonnet"
-reviewer = "sonnet"         # Express scoped mini-review
-debugger = "sonnet"         # Express targeted bug fixing
+reviewer = "sonnet"         # Pro scoped mini-review
+debugger = "sonnet"         # Pro targeted bug fixing
 
-# Full Mode Heavy Brains (Tier 1 Architecture & Security):
+# Max Mode Heavy Brains (Tier 1 Architecture & Security):
 planner = "opus"
-reviewer_full = "opus"      # Full deep architecture/security review
-debugger_full = "opus"      # Full complex root-cause diagnosis
+reviewer_max = "opus"       # Max deep architecture/security review
+debugger_max = "opus"       # Max complex root-cause diagnosis
 
 # Tier 3: Fast & Lightweight (Exploration & QA):
 explorer = "haiku"

@@ -38,7 +38,7 @@ We keep our default role roster lean (currently 7 roles: `planner`, `implementer
 ### 2. Improving Skills & Doctrine
 - Skill changes live in `skills/taskard/SKILL.md`.
 - Deep reference documents belong in `skills/taskard/references/` to preserve token efficiency via progressive disclosure.
-- Ensure all rules follow the 3-speed gear system (⚡ Nano, 🚀 Express, 🏛️ Full).
+- Ensure all rules follow the 3-speed gear system (⚡ Fast, 🚀 Pro, 🏛️ Max).
 
 ### 3. CLI & Distribution (`bin/taskard.js`, `install.sh`)
 - Taskard's CLI initializer (`bin/taskard.js`) is strictly **zero external runtime dependencies** (uses Node.js standard libraries only).

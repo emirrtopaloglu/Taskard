@@ -1,21 +1,21 @@
 [defaults]
 permission_mode = "bypassPermissions"
-default_mode = "express"    # "nano" | "express" (default) | "full"
+default_mode = "pro"        # "fast" | "pro" (default) | "max"
 report_max_lines = 15
 max_attempts = 2            # 2-Strike rule: max 1 retry attempt, halt on 2nd failure
-# budget_minutes = 30       # optional: time ceiling per lane (recommended in full mode)
+# budget_minutes = 30       # optional: time ceiling per lane (recommended in max mode)
 
 [roles]
-# Express Mode Defaults (Tier 2 Fast & Balanced):
+# Pro Mode Defaults (Tier 2 Fast & Balanced):
 implementer = "sonnet"
 ui-developer = "sonnet"
-reviewer = "sonnet"         # Scoped mini-review for Express mode
-debugger = "sonnet"         # Targeted bug fixing for Express mode
+reviewer = "sonnet"         # Scoped mini-review for Pro mode
+debugger = "sonnet"         # Targeted bug fixing for Pro mode
 
-# Full Mode Heavy Brains (Tier 1 Strategy, Architecture & Deep Security):
+# Max Mode Heavy Brains (Tier 1 Strategy, Architecture & Deep Security):
 planner = "opus"
-reviewer_full = "opus"      # Deep architectural & security review for Full mode
-debugger_full = "opus"      # Complex root-cause diagnosis for Full mode
+reviewer_max = "opus"       # Deep architectural & security review for Max mode
+debugger_max = "opus"       # Complex root-cause diagnosis for Max mode
 
 # Tier 3: Light & Fast (Exploration & Verification):
 # Note: Model names vary by harness; Tier 3 is the fastest/lightest model in that harness.

@@ -34,7 +34,7 @@ Taskard, sisteminize ağır Python sunucuları, karmaşık orkestrasyon bağıml
 2. **Adlandırılmış Rol Kadrosu:** İsimsiz subagent yasaktır. Her iş sözleşmesi tanımlı bir role atanır (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`).
 3. **Point-to-Range Brief Standardı:** Brief'e asla kod yapıştırılmaz. Yalnızca hedef dosya ve satır aralığı pointer'ı (`src/auth/session.ts#L40-L65`) verilir; delege yalnızca o aralığı okur.
 4. **Yerleşik TDD & Kanıt Kapısı:** `implementer`, Red-Green-Refactor döngüsünü ve komut çıktısı kanıtını harici skill şişkinliği olmadan yerleşik olarak işletir.
-5. **3 Kademeli Hız Şanzımanı:** Göreve göre ⚡ **Nano** (<2 dk, sıfır dosya), 🚀 **Express** (5-10 dk, hızlı mini-review), ve 🏛️ **Full** (15-30 dk, worktree DAG) arasında otomatik vites değiştirir.
+5. **3 Kademeli Hız Şanzımanı:** Göreve göre ⚡ **Fast** (<2 dk, sıfır dosya), 🚀 **Pro** (5-10 dk, hızlı mini-review), ve 🏛️ **Max** (15-30 dk, worktree DAG) arasında otomatik vites değiştirir.
 6. **2-Strike Devre Kesici (Circuit Breaker):** Bir lane en fazla 1 kez düzeltme dener; 2. hatada akış durur ve 3 net seçenekle kullanıcıya eskalasyon yapılır.
 7. **İnsan Onay Kapıları:** Plan onayı, merge öncesi canlı doğrulama ve riskli işlemler her zaman insanın kontrolündedir.
 
@@ -47,7 +47,7 @@ Taskard, sisteminize ağır Python sunucuları, karmaşık orkestrasyon bağıml
 | **Runtime İhtiyacı** | Yok | Ağır Python sunucusu, arka plan servisleri | **Sıfır (Zero-Runtime Markdown Konvansiyonu)** |
 | **Token Verimliliği** | Düşük (Şiddetli Bağlam Körlüğü / Rot) | Orta (Sürekli ajanlar arası gevezelik) | **Yüksek (-%68 Tasarruf / Point-to-Range)** |
 | **TDD & Kanıt Kapısı** | İsteğe bağlı / Ad-hoc | Karmaşık özel kodlar | **Yerleşik & Zorunlu (RGR Döngüsü + Kanıt)** |
-| **Hız Şanzımanı** | Tek düze (Herkese aynı muamele) | Hantal ve esnek olmayan | **3 Kademeli Şanzıman (⚡ Nano / 🚀 Express / 🏛️ Full)** |
+| **Hız Şanzımanı** | Tek düze (Herkese aynı muamele) | Hantal ve esnek olmayan | **3 Kademeli Şanzıman (⚡ Fast / 🚀 Pro / 🏛️ Max)** |
 | **İş Akışı Güvenliği** | Başıboş araç döngüleri | Elle breakpoint kodlama | **2-Strike Devre Kesici + 3 İnsan Onay Kapısı** |
 | **Taşınabilirlik** | Tek üretici bağımlılığı | Çerçeve bağımlılığı | **Evrensel (Claude Code, OpenCode, Codex, Antigravity, Cursor)** |
 | **Kurulum** | — | Zorlu `pip install` + virtualenv | **1 saniyede `npx taskard init` veya `curl \| bash`** |
@@ -83,6 +83,11 @@ Herhangi bir proje dizininde doğrudan çalıştırın:
 npx taskard init
 ```
 
+*Etkileşimli sihirbaz ile adım adım yapılandırma:*
+```bash
+npx taskard init -i
+```
+
 *Tüm harness'lar için global kurulum:*
 ```bash
 npx taskard init --global
@@ -105,9 +110,11 @@ cd Taskard
 ### Faydalı CLI Komutları
 
 ```bash
-taskard doctor    # Harness köprülerini, skill symlink'lerini ve yapılandırma sağlığını denetle
-taskard config    # Etkin yapılandırmayı ve 7 rolün model yönlendirme tablosunu incele
-taskard roles     # 7 rollü kademe matrisini göster
+taskard lanes             # Aktif, tamamlanan ve bloklanan lane'leri listele (--global, --active, --completed)
+taskard clean             # Çalışma alanındaki lane'leri, diff'leri ve geçici dosyaları temizle (--dry-run, --yes, --completed)
+taskard doctor            # Harness köprülerini, skill symlink'lerini ve yapılandırma sağlığını denetle
+taskard config            # Etkin yapılandırmayı ve 7 rolün model yönlendirme tablosunu incele
+taskard roles             # 7 rollü kademe matrisini göster
 ```
 
 ---
@@ -121,8 +128,8 @@ Taskard akışıyla <görev tanımı>
 ```
 
 Veya doğrudan vites belirterek başlatın:
-- *"Bunu nano modda yap: header bileşenindeki yazım hatasını düzelt"*
-- *"Bunu full modda opus ile yap: veritabanı şemasını çok kiracılı yapıya geçir"*
+- *"Bunu fast modda yap: header bileşenindeki yazım hatasını düzelt"*
+- *"Bunu max modda opus ile yap: veritabanı şemasını çok kiracılı yapıya geçir"*
 
 ---
 
@@ -132,16 +139,16 @@ Veya doğrudan vites belirterek başlatın:
 flowchart TD
     Task([Gelen Görev]) --> Classify{Görev Karmaşıklığı}
     
-    Classify -->|1 dosya, typo, stil, <2 dk| Nano["⚡ NANO VİTES\n• Sıfır .taskard/ dosyası\n• Tek implementer\n• Ana döngüde anında doğrulama"]
-    Classify -->|2-4 dosya, özellik, 5-10 dk| Express["🚀 EXPRESS VİTES (Varsayılan)\n• Point-to-range brief.md\n• implementer (sonnet)\n• reviewer mini-gate (sonnet)"]
-    Classify -->|Karmaşık, >4 dosya, paralel, 15-30 dk| Full["🏛️ FULL VİTES\n• Grilling & Spec\n• Worktree paralel lane'leri (DAG)\n• implementer + QA + opus Final Review"]
+    Classify -->|1 dosya, typo, stil, <2 dk| Fast["⚡ FAST VİTES\n• Sıfır .taskard/ dosyası\n• Tek implementer\n• Ana döngüde anında doğrulama"]
+    Classify -->|2-4 dosya, özellik, 5-10 dk| Pro["🚀 PRO VİTES (Varsayılan)\n• Point-to-range brief.md\n• implementer (sonnet)\n• reviewer mini-gate (sonnet)"]
+    Classify -->|Karmaşık, >4 dosya, paralel, 15-30 dk| Max["🏛️ MAX VİTES\n• Grilling & Spec\n• Worktree paralel lane'leri (DAG)\n• implementer + QA + opus Final Review"]
 ```
 
-- ⚡ **Nano (< 1-2 dk — Agresif Hızlı Tercih):** Tek dosya, typo, stil/CSS düzeltmesi. `.taskard/` altına dosya yazılmaz. Delege diff üretir, ana döngü diff'i doğrular ve sunar.
-- 🚀 **Express (5-10 dk — Varsayılan İş Atı):** 2–4 dosyalık özellikler, yeni bileşenler, endpoint'ler, küçük refactor'lar. Tek `brief.md` + `implementer` + `reviewer` mini-gate. Grilling ve spec seremonisi yoktur.
-- 🏛️ **Full (15-30 dk — Tam Mimari Seremoni):** Karmaşık mimari, ≥2 paralel lane (git worktree), veri migration/auth. Grilling → Spec (`context/specs/`) → Tasks (`tasks/`) → Paralel Lane DAG → QA → Opus Final Review.
+- ⚡ **Fast (< 1-2 dk — Doğrudan Hızlı Hat):** Tek dosya, typo, stil/CSS düzeltmesi. `.taskard/` altına dosya yazılmaz. Delege diff üretir, ana döngü diff'i doğrular ve sunar.
+- 🚀 **Pro (5-10 dk — Varsayılan İş Atı):** 2–4 dosyalık özellikler, yeni bileşenler, endpoint'ler, küçük refactor'lar. Tek `brief.md` + `implementer` + `reviewer` mini-gate. Grilling ve spec seremonisi yoktur.
+- 🏛️ **Max (15-30 dk — Tam Mimari Seremoni):** Karmaşık mimari, ≥2 paralel lane (git worktree), veri migration/auth. Grilling → Spec (`context/specs/`) → Tasks (`tasks/`) → Paralel Lane DAG → QA → Opus Final Review.
 
-> **Ratchet Kuralı:** Nano veya Express sırasında kapsam genişlerse (>4 dosya, beklenmeyen bağımlılık), akış derhal bir üst vitese yükseltilir.
+> **Ratchet Kuralı:** Fast veya Pro sırasında kapsam genişlerse (>4 dosya, beklenmeyen bağımlılık), akış derhal bir üst vitese yükseltilir.
 
 ---
 
@@ -160,8 +167,8 @@ flowchart TD
 |---|:---:|---|---|
 | **`planner`** | `opus` | Kullanıcı niyetini spec ve point-to-range brief'lere böler | İhtiyaçları okur → `context/specs/` & brief yazar |
 | **`implementer`** | `sonnet` | Kodu yerleşik TDD (Red-Green-Refactor) ile uygular | Satır pointer'larını okur → Kod & test yazar → `report.md` |
-| **`reviewer`** | `sonnet` *(Exp)* / `opus` *(Full)* | Salt-okunur kod incelemesi. Diff'i standartlara göre değerlendirir | Diff & kriterleri okur → `review.md` (PASS/FAIL) |
-| **`debugger`** | `sonnet` *(Exp)* / `opus` *(Full)* | Kök neden avcısı. 4 adımlı teşhis ve minimal müdahale | Hatayı yeniden üretir → Minimal fix uygular → `report.md` |
+| **`reviewer`** | `sonnet` *(Pro)* / `opus` *(Max)* | Salt-okunur kod incelemesi. Diff'i standartlara göre değerlendirir | Diff & kriterleri okur → `review.md` (PASS/FAIL) |
+| **`debugger`** | `sonnet` *(Pro)* / `opus` *(Max)* | Kök neden avcısı. 4 adımlı teşhis ve minimal müdahale | Hatayı yeniden üretir → Minimal fix uygular → `report.md` |
 | **`ui-developer`** | `sonnet` | Web ve Mobil UI geliştirme (Tailwind, React, Expo HIG) | Arayüz ve bileşen geliştirir → `report.md` |
 | **`explorer`** | `haiku` | Brief öncesi salt-okunur kod tabanı keşfi | Modül yapısını tarar → 3 maddelik mimari harita |
 | **`qa-tester`** | `haiku` | Canlı sistem doğrulaması (API, migration, UI) | Headless tarayıcı/CLI testleri çalıştırır → `verification.md` |
@@ -175,21 +182,21 @@ Taskard konfigürasyonu **ajanlar tarafından okunan TOML verisidir**:
 ```toml
 [defaults]
 permission_mode = "bypassPermissions"
-default_mode = "express"    # "nano" | "express" (varsayılan) | "full"
+default_mode = "pro"        # "fast" | "pro" (varsayılan) | "max"
 max_attempts = 2            # 2-Strike kuralı: 1 düzeltme, 2. hatada eskalasyon
 report_max_lines = 15
 
 [roles]
-# Express Mod Varsayılanları (Tier 2 Hızlı & Dengeli):
+# Pro Mod Varsayılanları (Tier 2 Hızlı & Dengeli):
 implementer = "sonnet"
 ui-developer = "sonnet"
-reviewer = "sonnet"         # Express mini-review
-debugger = "sonnet"         # Express hedefli fix
+reviewer = "sonnet"         # Pro mini-review
+debugger = "sonnet"         # Pro hedefli fix
 
-# Full Mod Ağır Beyinleri (Tier 1 Mimari & Güvenlik):
+# Max Mod Ağır Beyinleri (Tier 1 Mimari & Güvenlik):
 planner = "opus"
-reviewer_full = "opus"      # Full mimari & güvenlik
-debugger_full = "opus"      # Full derin kök-neden
+reviewer_max = "opus"       # Max mimari & güvenlik
+debugger_max = "opus"       # Max derin kök-neden
 
 # Tier 3: Işık Hızında Asistanlar (Keşif & QA):
 explorer = "haiku"

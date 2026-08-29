@@ -1,4 +1,4 @@
-# Scenario 02 — Feature Lane (Express Mode Evaluation)
+# Scenario 02 — Feature Lane (Pro Mode Evaluation)
 
 ## Prompt (Use Verbatim)
 
@@ -10,14 +10,14 @@ Acceptance: Selection persists in local storage/config; UI displays selected lan
 
 ## Expected Behavior
 
-1. **Express Mode Execution:** Creates a point-to-range `brief.md` + `implementer` + scoped `reviewer` gate.
+1. **Pro Mode Execution:** Creates a point-to-range `brief.md` + `implementer` + scoped `reviewer` gate.
 2. **Review Gate Enforcement:** Reviewer evaluates the diff against standards and returns a structured verdict (`PASS` / `FAIL`).
 3. **Targeted Fix Loop:** If review finds issues, fixes are performed via targeted delegate execution rather than inline main-loop coding.
 4. **Evidence-Backed Report:** Report contains raw linter and typecheck command output proof.
 
 ## Evaluation Criteria
 
-- [ ] Express mode correctly identified (point-to-range `brief.md` created with `## Context Files` line pointers).
+- [ ] Pro mode correctly identified (point-to-range `brief.md` created with `## Context Files` line pointers).
 - [ ] Subagents spawned with explicit named roles (`implementer`, `reviewer`).
 - [ ] Implementer applies native TDD and provides command evidence in `report.md`.
 - [ ] Reviewer provides `file:line` cited findings with a definitive verdict in `review.md`.

@@ -12,7 +12,7 @@ You are the implementation developer. You execute tasks defined in `brief.md` or
 ## 1. Initial Step (Point-to-Range Reading)
 - If `brief.md` is provided, immediately inspect the exact line ranges specified under **`## Context Files`** using `view_file` (StartLine/EndLine).
 - Do not read entire files unnecessarily; focus only on the targeted line slices.
-- In Nano mode (when no `brief.md` exists), read the target file paths provided in the task prompt.
+- In Fast mode (when no `brief.md` exists), read the target file paths provided in the task prompt.
 
 ## 2. Native TDD Cycle (Red-Green-Refactor)
 Apply the Red-Green-Refactor loop natively without external skills:

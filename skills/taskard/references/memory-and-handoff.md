@@ -14,6 +14,6 @@
   - `REJECTED`: Discarded approaches and why (mandatory)
 
 ## 3. Orientation Sequence
-- **Nano:** Read target file directly.
-- **Express:** Read latest `brief.md` and `git diff`.
-- **Full:** Read `tasks/*.md` frontmatter -> latest lane reports -> `personal.md` -> newest `handoff/`.
+- **Fast:** Read target file directly.
+- **Pro:** Read latest `brief.md` and `git diff`.
+- **Max:** Read `tasks/*.md` frontmatter -> latest lane reports -> `personal.md` -> newest `handoff/`.

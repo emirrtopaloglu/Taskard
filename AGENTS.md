@@ -9,7 +9,7 @@
 5. **Mandatory agent name:** When defining a new agent role in `agents/<name>.md`, the frontmatter must include `name:`, `model:`, `color:`, and `description:`. Anonymous agents are forbidden.
 6. **No private test project names:** Do not write internal dogfooding project names into documentation, examples, or tests. Use the generic term "test project".
 7. **Do not vendor external skills:** External skills are referenced dynamically in `docs/dependencies.md` and resolved via `npx skills` during installation.
-8. **Classify speed gear at start:** Every workflow starts by selecting a gear (⚡ Nano / 🚀 Express [Default] / 🏛️ Full). Session overrides take immediate precedence.
+8. **Classify speed gear at start:** Every workflow starts by selecting a gear (⚡ Fast / 🚀 Pro [Default] / 🏛️ Max). Session overrides take immediate precedence.
 
 ## Verification
 
@@ -22,11 +22,11 @@ node bin/taskard.js init --dry-run
 <!-- taskard:start -->
 <!-- taskard:v2 -->
 ## Taskard
-- Model routing: Express mode uses sonnet for reviewer/debugger; Full mode uses opus; session prompts override both (~/.taskard/config.toml).
+- Model routing: Pro mode uses sonnet for reviewer/debugger; Max mode uses opus; session prompts override both (~/.taskard/config.toml).
 - Subagents execute only under explicit named roles (implementer, reviewer, ui-developer, qa-tester...) — anonymous agents are forbidden.
 - Implementer operates with native TDD (Red-Green-Refactor) and command verification without external skill dependencies.
 - Point-to-range standard: never copy code blocks into briefs; specify target file paths and line ranges (file#L10-L40); delegates read only the specified lines.
-- Classify speed gear at start: 1-file fix uses aggressive Nano (<2m, zero overhead); 2-4 files use Express (single brief + sonnet mini-review); complex work uses Full.
+- Classify speed gear at start: 1-file fix uses Fast (<2m, zero overhead); 2-4 files use Pro (single brief + sonnet mini-review); complex work uses Max.
 - Subagents default to bypassPermissions; humans own three gates: plan approval, pre-merge verification, and risky_operations.
 - Never mutate config files at runtime; 2-Strike rule halts execution on 2nd error and presents 3 options to human.
 - Telegraph output is Humanish: full sentences, clear meaning, no raw status code dumps.

@@ -132,9 +132,9 @@ log_step "2" "Harness Bridges & Roles" "Claude Code & OpenCode (${agent_count} r
 # 3. Global Configuration
 if [ ! -f "$HOME/.taskard/config.toml" ]; then
   cp "$SRC/templates/config.toml" "$HOME/.taskard/config.toml"
-  log_step "3" "Configuration Layer" "~/.taskard/config.toml (created - Express Default)"
+  log_step "3" "Configuration Layer" "~/.taskard/config.toml (created - Pro Default)"
 else
-  log_step "3" "Configuration Layer" "~/.taskard/config.toml (preserved - Express Default)"
+  log_step "3" "Configuration Layer" "~/.taskard/config.toml (preserved - Pro Default)"
 fi
 
 # 4. External Skills Resolution
@@ -212,7 +212,7 @@ HEADER_PAD=$(printf '%*s' "$HEADER_PAD_LEN" "")
 echo -e "\n  ${C_EMERALD}${BOLD}╭─────────────────────────────────────────────────────────────────────────╮${RESET}"
 echo -e "  ${C_EMERALD}│${RESET}  ${BOLD}${C_EMERALD}✨${RESET}  ${BOLD}${HEADER_TEXT}${RESET}${HEADER_PAD}  ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}${BOLD}├─────────────────────────────────────────────────────────────────────────┤${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Speed Gear   :${RESET} ${C_CYAN}${BOLD}Express (Default)${RESET} ${DIM}· Nano · Full${RESET}                      ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Speed Gear   :${RESET} ${C_CYAN}${BOLD}Pro (Default)${RESET} ${DIM}· Fast · Max${RESET}                          ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Safety       :${RESET} ${C_AMBER}${BOLD}2-Strike Circuit Breaker${RESET} ${DIM}· 3 Approval Gates${RESET}         ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Config File  :${RESET} ${C_DARK}~/.taskard/config.toml${RESET}                                 ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}│${RESET}                                                                         ${C_EMERALD}│${RESET}"

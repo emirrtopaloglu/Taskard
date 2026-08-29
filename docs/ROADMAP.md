@@ -6,7 +6,7 @@ Benchmark Evidence: Multi-step full-stack A/B benchmark (2026-08-24) — Taskard
 
 ## 🚀 v0.1.0 (Initial Public Release — Current)
 
-- [x] **Zero-Runtime Core Doctrine:** Pure convention package with 3-Speed Gear transmission (⚡ Nano / 🚀 Express / 🏛️ Full), point-to-range brief standards, and 2-Strike Circuit Breaker.
+- [x] **Zero-Runtime Core Doctrine:** Pure convention package with 3-Speed Gear transmission (⚡ Fast / 🚀 Pro / 🏛️ Max), point-to-range brief standards, and 2-Strike Circuit Breaker.
 - [x] **7-Role Roster:** Explicitly named agent definitions (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`) with strict YAML frontmatter and model tiering.
 - [x] **Zero-Dependency CLI & Single-Line Install:** `npx taskard init` zero-dependency initializer + `install.sh` remote curl execution fallback.
 - [x] **CI/CD & Automated Verification:** Multi-OS and Node (18/20/22) GitHub Actions CI, role contract validators, and comprehensive test suite (`npm test`).

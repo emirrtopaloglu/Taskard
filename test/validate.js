@@ -7,6 +7,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { execSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -93,6 +94,113 @@ try {
     pass('CLI config alias (cfg) executed successfully');
   } else {
     fail('CLI config alias did not produce expected output');
+  }
+
+  // CLI Lanes Command Test
+  const lanesOut = execSync('node bin/taskard.js lanes', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (lanesOut.includes('TASKARD WORKSPACE LANES') && (lanesOut.includes('Total Lanes') || lanesOut.includes('No active'))) {
+    pass('CLI lanes command executed successfully with status cards and summary');
+  } else {
+    fail(`CLI lanes command unexpected output: ${lanesOut}`);
+  }
+
+  // CLI Lane Aliases Test (lane, ls, list-lanes)
+  const laneAliasOut = execSync('node bin/taskard.js lane', { cwd: ROOT, stdio: 'pipe' }).toString();
+  const lsAliasOut = execSync('node bin/taskard.js ls', { cwd: ROOT, stdio: 'pipe' }).toString();
+  const listLanesAliasOut = execSync('node bin/taskard.js list-lanes', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (laneAliasOut.includes('TASKARD WORKSPACE LANES') && lsAliasOut.includes('TASKARD WORKSPACE LANES') && listLanesAliasOut.includes('TASKARD WORKSPACE LANES')) {
+    pass('CLI lane aliases (lane, ls, list-lanes) executed successfully');
+  } else {
+    fail('CLI lane aliases did not produce expected output');
+  }
+
+  // CLI Clean Command Dry-Run Test
+  const cleanDryOut = execSync('node bin/taskard.js clean --dry-run', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (cleanDryOut.includes('TASKARD WORKSPACE CLEANUP') && cleanDryOut.includes('[DRY-RUN]')) {
+    pass('CLI clean --dry-run executed successfully');
+  } else {
+    fail(`CLI clean --dry-run unexpected output: ${cleanDryOut}`);
+  }
+
+  // CLI Clean Aliases Test (clear, prune)
+  const clearDryOut = execSync('node bin/taskard.js clear --dry-run', { cwd: ROOT, stdio: 'pipe' }).toString();
+  const pruneDryOut = execSync('node bin/taskard.js prune --dry-run', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (clearDryOut.includes('TASKARD WORKSPACE CLEANUP') && pruneDryOut.includes('TASKARD WORKSPACE CLEANUP')) {
+    pass('CLI clean aliases (clear, prune) executed successfully');
+  } else {
+    fail('CLI clean aliases did not produce expected output');
+  }
+
+  // CLI Clean --completed Dry-Run Test
+  const cleanCompletedDryOut = execSync('node bin/taskard.js clean --dry-run --completed', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (cleanCompletedDryOut.includes('TASKARD WORKSPACE CLEANUP') && cleanCompletedDryOut.includes('completed lanes only')) {
+    pass('CLI clean --dry-run --completed executed successfully');
+  } else {
+    fail(`CLI clean --dry-run --completed unexpected output: ${cleanCompletedDryOut}`);
+  }
+
+  // CLI Clean & Confirmation Functional Test in Isolated Temp Workspace
+  const testWorkspace = path.join(os.tmpdir(), `taskard-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  try {
+    const dummyLaneDir = path.join(testWorkspace, '.taskard', 'lanes', 'test-lane-01');
+    const dummyTmpDir = path.join(testWorkspace, '.taskard', 'tmp');
+    const dummyDiffsDir = path.join(testWorkspace, '.taskard', 'diffs');
+    fs.mkdirSync(dummyLaneDir, { recursive: true });
+    fs.mkdirSync(dummyTmpDir, { recursive: true });
+    fs.mkdirSync(dummyDiffsDir, { recursive: true });
+
+    fs.writeFileSync(path.join(dummyLaneDir, 'brief.md'), '# Brief: Test Lane\n## Objective\nDummy test lane for cleanup verification\n');
+    fs.writeFileSync(path.join(dummyLaneDir, 'report.md'), 'STATUS: DONE\nDIFF_SUMMARY: test.js (+1, -0)\n');
+    fs.writeFileSync(path.join(dummyTmpDir, 'cache.tmp'), 'dummy cache content');
+    fs.writeFileSync(path.join(dummyDiffsDir, 'patch.diff'), 'diff --git a/test b/test');
+
+    // Run clean without flags in non-interactive mode -> must abort safely with exit code 1
+    try {
+      execSync(`node "${path.join(ROOT, 'bin', 'taskard.js')}" clean`, { cwd: testWorkspace, stdio: 'pipe' });
+      fail('CLI clean without confirmation flags in non-interactive mode should exit with code 1');
+    } catch (cleanErr) {
+      if (cleanErr.status === 1 || cleanErr.stderr.toString().includes('Confirmation required')) {
+        pass('CLI clean safely refuses non-interactive execution without --yes / --force');
+      } else {
+        fail(`CLI clean unexpected error: ${cleanErr.message}`);
+      }
+    }
+
+    // Run clean --yes
+    const cleanYesOut = execSync(`node "${path.join(ROOT, 'bin', 'taskard.js')}" clean --yes`, { cwd: testWorkspace, stdio: 'pipe' }).toString();
+    if (cleanYesOut.includes('TASKARD WORKSPACE CLEANUP') && cleanYesOut.includes('Cleanup complete') && cleanYesOut.includes('freed')) {
+      pass('CLI clean --yes successfully deleted target items');
+    } else {
+      fail(`CLI clean --yes unexpected output: ${cleanYesOut}`);
+    }
+
+    // Verify lanes and tmp items were deleted
+    const remainingLanes = fs.readdirSync(path.join(testWorkspace, '.taskard', 'lanes'));
+    if (remainingLanes.length === 0) {
+      pass('CLI clean --yes verified: target lane directory was cleanly deleted');
+    } else {
+      fail(`CLI clean --yes left files: ${remainingLanes.join(', ')}`);
+    }
+
+    // Run clean again on already clean workspace
+    const cleanAgainOut = execSync(`node "${path.join(ROOT, 'bin', 'taskard.js')}" clean --yes`, { cwd: testWorkspace, stdio: 'pipe' }).toString();
+    if (cleanAgainOut.includes('Workspace is clean') || cleanAgainOut.includes('0 items')) {
+      pass('CLI clean on clean workspace reports workspace is clean');
+    } else {
+      fail(`CLI clean on clean workspace unexpected output: ${cleanAgainOut}`);
+    }
+  } finally {
+    try {
+      fs.rmSync(testWorkspace, { recursive: true, force: true });
+    } catch (_) {}
+  }
+
+  // CLI Help Documentation Check
+  const helpOut = execSync('node bin/taskard.js --help', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (helpOut.includes('clean') && helpOut.includes('lanes') && helpOut.includes('--completed') && helpOut.includes('--yes')) {
+    pass('CLI help output documents new commands (clean, lanes, --completed, --yes)');
+  } else {
+    fail(`CLI help output missing new command documentation: ${helpOut}`);
   }
 } catch (err) {
   fail(`CLI command execution failed: ${err.message}`);
