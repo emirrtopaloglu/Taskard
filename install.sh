@@ -2,11 +2,30 @@
 set -euo pipefail
 
 START_TIME=$(python3 -c 'import time; print(int(time.time() * 1000))' 2>/dev/null || date +%s000 2>/dev/null || echo 0)
-SRC="$(cd "$(dirname "$0")" && pwd)"
+SRC="$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo "")"
 DEST="$HOME/.taskard"
 MARK="<!-- taskard:start -->"
+TMP_DIR=""
+CLEANUP_TMP=0
 
-# --- Modern Renk Paleti ---
+cleanup() {
+  if [ "$CLEANUP_TMP" -eq 1 ] && [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT INT TERM
+
+if [ -z "$SRC" ] || [ ! -d "$SRC/skills" ] || [ ! -d "$SRC/agents" ]; then
+  TMP_DIR="$(mktemp -d)"
+  CLEANUP_TMP=1
+  git clone --depth 1 https://github.com/emirrtopaloglu/Taskard.git "$TMP_DIR" >/dev/null 2>&1 || {
+    echo "Error: Failed to clone Taskard repository. Check your internet connection." >&2
+    exit 1
+  }
+  SRC="$TMP_DIR"
+fi
+
+# --- Modern Color Palette ---
 if [ -t 1 ]; then
   RESET="\033[0m"
   BOLD="\033[1m"
@@ -40,7 +59,7 @@ EOF
 echo -e "${RESET}${C_CYAN}${BOLD}     ◈ MULTI-HARNESS AGENT ORCHESTRATION CONVENTION ◈${RESET}"
 echo -e "${C_GRAY}        Zero-Runtime · 3-Speed Gear · Aggressive Tiering${RESET}\n"
 
-# --- Adım Göstergesi Yardımcısı ---
+# --- Step Logger ---
 log_step() {
   local num="$1"
   local title="$2"
@@ -49,15 +68,15 @@ log_step() {
   echo -e "        ${C_EMERALD}✔${RESET} ${C_GRAY}${detail}${RESET}"
 }
 
-# 1. Çekirdek Dizinler
+# 1. Core Directories & Templates
 mkdir -p "$DEST"
 cp -R "$SRC/skills" "$DEST/"
 rm -rf "$DEST/agents"
 cp -R "$SRC/agents" "$DEST/"
 cp -R "$SRC/templates" "$DEST/"
-log_step "1" "Çekirdek Dizinler & Şablonlar" "~/.taskard (skills, agents, templates senkronize)"
+log_step "1" "Core Directories & Templates" "~/.taskard (skills, agents, templates synchronized)"
 
-# 2. Harness Entegrasyonu & Ajanlar
+# 2. Harness Integration & Roles
 mkdir -p "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.agents/skills" "$HOME/.opencode/agent" "$HOME/.opencode/agents" "$HOME/.config/opencode/agent" "$HOME/.config/opencode/agents"
 ln -sfn "$DEST/skills/taskard" "$HOME/.claude/skills/taskard"
 ln -sfn "$DEST/skills/taskard" "$HOME/.agents/skills/taskard"
@@ -108,17 +127,17 @@ for agent_file in "$DEST"/agents/*.md; do
   sync_opencode_agent "$agent_file"
   agent_count=$((agent_count + 1))
 done
-log_step "2" "Harness Köprüleri & Roller" "Claude Code & OpenCode (${agent_count} rol bağlandı)"
+log_step "2" "Harness Bridges & Roles" "Claude Code & OpenCode (${agent_count} roles connected)"
 
-# 3. Global Konfigürasyon
+# 3. Global Configuration
 if [ ! -f "$HOME/.taskard/config.toml" ]; then
   cp "$SRC/templates/config.toml" "$HOME/.taskard/config.toml"
-  log_step "3" "Global Konfigürasyon" "~/.taskard/config.toml (oluşturuldu - Express Varsayılan)"
+  log_step "3" "Configuration Layer" "~/.taskard/config.toml (created - Express Default)"
 else
-  log_step "3" "Global Konfigürasyon" "~/.taskard/config.toml (korundu - Express Varsayılan)"
+  log_step "3" "Configuration Layer" "~/.taskard/config.toml (preserved - Express Default)"
 fi
 
-# 4. Dış Disiplin Skill'leri
+# 4. External Skills Resolution
 ensure_external_skills() {
   local missing=0
   for s in grilling using-superpowers; do
@@ -127,21 +146,21 @@ ensure_external_skills() {
     fi
   done
   if [ "$missing" = "0" ]; then
-    log_step "4" "Disiplin Standartları" "Superpowers & Matt Pocock (aktif)"
+    log_step "4" "Discipline Standards" "Superpowers & Matt Pocock (active)"
     return 0
   fi
   if command -v npx >/dev/null 2>&1; then
-    echo -e "        ${C_AMBER}⚡ Dış paketler kuruluyor (npx skills)...${RESET}"
+    echo -e "        ${C_AMBER}⚡ Resolving external packages via npx skills...${RESET}"
     npx -y skills add obra/superpowers --global >/dev/null 2>&1 || true
     npx -y skills add mattpocock/skills --global >/dev/null 2>&1 || true
-    log_step "4" "Disiplin Standartları" "npx üzerinden global bağlandı"
+    log_step "4" "Discipline Standards" "Resolved and connected via npx"
   else
-    log_step "4" "Disiplin Standartları" "npx bulunamadı (elle kurulum önerilir)"
+    log_step "4" "Discipline Standards" "npx not found (manual installation recommended)"
   fi
 }
 ensure_external_skills
 
-# 5. Direktif Blokları
+# 5. Directive Blocks
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 AGENTS_MD="$HOME/.claude/AGENTS.md"
 
@@ -164,9 +183,9 @@ sync_block() {
 for target in "$CLAUDE_MD" "$AGENTS_MD"; do
   sync_block "$target"
 done
-log_step "5" "Harness Direktifleri" "CLAUDE.md & AGENTS.md direktif bloğu güncel"
+log_step "5" "Harness Directives" "CLAUDE.md & AGENTS.md directive blocks up to date"
 
-# --- Süre Hesaplama ---
+# --- Elapsed Time ---
 END_TIME=$(python3 -c 'import time; print(int(time.time() * 1000))' 2>/dev/null || date +%s000 2>/dev/null || echo 0)
 DURATION=$((END_TIME - START_TIME))
 if [ "$DURATION" -le 0 ] || [ "$START_TIME" -eq 0 ]; then
@@ -175,7 +194,7 @@ else
   DUR_STR="${DURATION}ms"
 fi
 
-# --- 1. Rol Roster Kartı ---
+# --- 1. Role Roster Card ---
 echo -e "\n  ${C_VIOLET}${BOLD}╭────────────────────────────── ROLE ROSTER ──────────────────────────────╮${RESET}"
 echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}${BOLD}STRATEGY (Tier 1)${RESET}       ${C_BLUE}${BOLD}EXECUTION (Tier 2)${RESET}      ${C_EMERALD}${BOLD}ASSIST (Tier 3)${RESET}        ${C_VIOLET}│${RESET}"
 echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} planner  ${DIM}[opus]${RESET}        ${C_BLUE}●${RESET} implementer  ${DIM}[sonnet]${RESET} ${C_EMERALD}●${RESET} explorer  ${DIM}[haiku]${RESET}    ${C_VIOLET}│${RESET}"
@@ -183,25 +202,22 @@ echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} reviewer ${DIM}[sonnet
 echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} debugger ${DIM}[sonnet/opus]${RESET}                                                   ${C_VIOLET}│${RESET}"
 echo -e "  ${C_VIOLET}${BOLD}╰─────────────────────────────────────────────────────────────────────────╯${RESET}"
 
-# --- 2. Başarı & Hızlı Başlatma Kartı (Dinamik Hizalama) ---
-# Header: "✨  TASKARD HAZIR · SENKRONİZASYON TAMAMLANDI (XXXms)"
-HEADER_TEXT="✨  TASKARD HAZIR · SENKRONİZASYON TAMAMLANDI (${DUR_STR})"
-# Emojiler terminalde 2 sütun kaplar. "✨" = 2 sütun.
-# Görünen toplam karakter = 48 + len(DUR_STR)
-HEADER_VIS_LEN=$((48 + ${#DUR_STR}))
+# --- 2. Success Card ---
+HEADER_TEXT="TASKARD READY · SYNCHRONIZATION COMPLETE (${DUR_STR})"
+HEADER_VIS_LEN=$((44 + ${#DUR_STR}))
 HEADER_PAD_LEN=$((69 - HEADER_VIS_LEN))
 if [ "$HEADER_PAD_LEN" -lt 0 ]; then HEADER_PAD_LEN=0; fi
 HEADER_PAD=$(printf '%*s' "$HEADER_PAD_LEN" "")
 
 echo -e "\n  ${C_EMERALD}${BOLD}╭─────────────────────────────────────────────────────────────────────────╮${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${BOLD}${C_EMERALD}✨${RESET}  ${BOLD}TASKARD HAZIR · SENKRONİZASYON TAMAMLANDI (${DUR_STR})${RESET}${HEADER_PAD}  ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${BOLD}${C_EMERALD}✨${RESET}  ${BOLD}${HEADER_TEXT}${RESET}${HEADER_PAD}  ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}${BOLD}├─────────────────────────────────────────────────────────────────────────┤${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Hız Şanzımanı :${RESET} ${C_CYAN}${BOLD}Express (Varsayılan)${RESET} ${DIM}· Nano · Full${RESET}                   ${C_EMERALD}│${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Güvenlik      :${RESET} ${C_AMBER}${BOLD}2-Strike Circuit Breaker${RESET} ${DIM}· 3 Onay Kapısı${RESET}             ${C_EMERALD}│${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Konfigürasyon :${RESET} ${C_DARK}~/.taskard/config.toml${RESET}                               ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Speed Gear   :${RESET} ${C_CYAN}${BOLD}Express (Default)${RESET} ${DIM}· Nano · Full${RESET}                      ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Safety       :${RESET} ${C_AMBER}${BOLD}2-Strike Circuit Breaker${RESET} ${DIM}· 3 Approval Gates${RESET}         ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${C_GRAY}• Config File  :${RESET} ${C_DARK}~/.taskard/config.toml${RESET}                                 ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}│${RESET}                                                                         ${C_EMERALD}│${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}  ${BOLD}🚀 Hemen Başlat:${RESET}                                                       ${C_EMERALD}│${RESET}"
-echo -e "  ${C_EMERALD}│${RESET}     ${C_AMBER}${BOLD}\"Taskard akışıyla <görev tanımı>\"${RESET}                                   ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}  ${BOLD}🚀 Quick Start:${RESET}                                                         ${C_EMERALD}│${RESET}"
+echo -e "  ${C_EMERALD}│${RESET}     ${C_AMBER}${BOLD}\"Run this task through the Taskard workflow\"${RESET}                     ${C_EMERALD}│${RESET}"
 echo -e "  ${C_EMERALD}${BOLD}╰─────────────────────────────────────────────────────────────────────────╯${RESET}\n"
 
 

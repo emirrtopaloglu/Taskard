@@ -1,0 +1,55 @@
+{
+  "name": "taskard",
+  "version": "0.1.0",
+  "description": "Zero-runtime multi-agent orchestration convention for Claude Code, OpenCode, Codex, Antigravity, and Cursor",
+  "main": "bin/taskard.js",
+  "bin": {
+    "taskard": "./bin/taskard.js"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "agents",
+    "templates",
+    "install.sh",
+    "README.md",
+    "README.tr.md",
+    "LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "test": "node test/validate.js",
+    "lint": "bash -n install.sh",
+    "init": "node ./bin/taskard.js init"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "claude-code",
+    "opencode",
+    "codex",
+    "antigravity",
+    "cursor",
+    "multi-agent",
+    "orchestration",
+    "tdd",
+    "developer-tools",
+    "zero-runtime"
+  ],
+  "author": "Emir Topaloğlu <emir@topaloglu.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emirrtopaloglu/Taskard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/emirrtopaloglu/Taskard/issues"
+  },
+  "homepage": "https://github.com/emirrtopaloglu/Taskard#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
