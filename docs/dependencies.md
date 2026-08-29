@@ -1,57 +1,63 @@
-# Dış Skill Bağımlılıkları
+# External Skill Dependencies
 
-Taskard bu skill'leri PAKETE GÖMEZ — makinende kurulu olanları referans verir. Upstream güncellenirse sen otomatik günceldesin; senkron derdi sıfır. `install.sh` eksikleri `npx skills` ile kurar.
+Taskard **does not vendor** external skills into the repository. It references skills installed on your system. When upstream packages update, your system receives the latest improvements automatically with zero synchronization overhead. The installer resolves missing packages via `npx skills`.
 
-Kaynaklar: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills)
+Upstream Sources: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills)
 
-*(Not: `test-driven-development` ve `verification-before-completion` kuralları doğrudan `implementer` rol tanımına yerleşik olarak gömülmüştür; dış skill yüklemesi gerektirmez.)*
+*(Note: `test-driven-development` and `verification-before-completion` contracts are embedded natively into the `implementer` role; they do not require external skill loading.)*
 
-## Bağlama tablosu
+---
 
-| Skill | Kaynak | Tetik fazı | Yoksa |
+## Discipline Routing Table
+
+| Skill | Upstream Source | Trigger Condition | Fallback (If Absent) |
 |---|---|---|---|
-| using-superpowers | superpowers | Akış başı router | SKILL.md tablosu tek kaynak olur |
-| brainstorming | superpowers | Yaratıcı/işlev ekleme iş | Kompakt spec ile devam, riskli işte ekstra dikkat |
-| grilling | mattpocock | Büyük/riskli görevde hizalanma | Kendi soru disipliniyle hizalanma |
-| grill-with-docs | mattpocock | Ürün kararları turu (proje-bağlamlı; CONTEXT.md/ADR → `.taskard/context/`) | grilling ile devam |
-| grill-me | mattpocock | Ürün kararları turu (repo-dışı/kavramsal) | grilling ile devam |
-| domain-modeling | mattpocock | Grilling sırasında terim/ADR kağıt izi | Terimler CONTEXT.md'e elle |
-| wayfinder | mattpocock | İş >1 oturum, sisli kapsam | İş standart tier'a bölünür |
-| writing-plans | superpowers | Standart tier plan dokümanı | Spec doğrudan brief'lere bölünür |
-| codebase-design | mattpocock | Seam/mimari karar tartışması | Derinlik prensipleri brief'e elle yazılır |
-| subagent-driven-development | superpowers | Standart tier delegate döngüsü | Taskard'ın kendi lane/gate disiplini yeterli |
-| executing-plans | superpowers | Inline yürütme alternatifi | Lane sırası elle işletilir |
-| dispatching-parallel-agents | superpowers | ≥2 bağımsız lane (graph modu) | Sıralı yürütme (yavaş ama doğru) |
-| using-git-worktrees | superpowers | Paralel lane izolasyonu | Tek checkout, paralel yapılmaz |
-| resolving-merge-conflicts | superpowers | Worktree merge çakışması | Çakışma kullanıcıya eskalasyon |
-| requesting-code-review | superpowers | Gate 1 kalibrasyonu (reviewer agent) | Reviewer tanımındaki kalibrasyon metni |
-| receiving-code-review | superpowers | Fix delegate'i bulgu aldığında | Doğrula-sonra-uygula kuralı SKILL.md'de |
-| systematic-debugging | superpowers | 2. başarısız denemede teşhis | Kök-neden soruları elle sorulur |
-| finishing-a-development-branch | superpowers | Yeşil suite sonrası merge menüsü | Merge kararı doğrudan kullanıcıya |
-| improve-codebase-architecture | mattpocock | Periyodik bakım / refactor turu | Ayrı istekle manuel |
+| `using-superpowers` | superpowers | Workflow entry point | Consult SKILL.md router table |
+| `brainstorming` | superpowers | Creative/feature addition | Proceed with compact specification |
+| `grilling` | mattpocock | High-risk alignment | Question assumptions directly |
+| `grill-with-docs` | mattpocock | Product decisions (project-context; CONTEXT.md/ADR -> `.taskard/context/`) | Fall back to `grilling` |
+| `grill-me` | mattpocock | Product decisions (conceptual / repo-external) | Fall back to `grilling` |
+| `domain-modeling` | mattpocock | Terminology / ADR capture during grilling | Manually record terms in CONTEXT.md |
+| `wayfinder` | mattpocock | Multi-session task with ambiguous scope | Decompose task into standard gears |
+| `writing-plans` | superpowers | Standard plan generation | Decompose spec directly into briefs |
+| `codebase-design` | mattpocock | Interface seam discussions | Write modularity principles into brief |
+| `subagent-driven-development` | superpowers | Standard delegate execution loop | Taskard native lane/gate flow suffices |
+| `executing-plans` | superpowers | Inline plan execution | Execute lanes sequentially |
+| `dispatching-parallel-agents` | superpowers | ≥2 independent lanes (Full mode) | Sequential lane execution |
+| `using-git-worktrees` | superpowers | Worktree lane isolation | Single checkout execution |
+| `resolving-merge-conflicts` | superpowers | Worktree merge conflicts | Escalate conflict to human |
+| `requesting-code-review` | superpowers | Review calibration (reviewer agent) | Embedded review criteria |
+| `receiving-code-review` | superpowers | Applying review findings | Verify-then-apply rule in SKILL.md |
+| `systematic-debugging` | superpowers | 2nd failure diagnosis (Circuit Breaker) | Prompt root-cause questions |
+| `finishing-a-development-branch` | superpowers | Post-green merge menu | Escalate merge decision to human |
+| `improve-codebase-architecture` | mattpocock | Periodic codebase maintenance | Manual request |
 
-## Rol sözleşmelerine bağlı ek skill'ler
+---
 
-Aşağıdakiler agent tanımlarındaki **zorunlu skill sözleşmelerinde** geçer; makinede kurulu olanlar kullanılır, paketlenmez.
+## Role-Specific Additional Skills
 
-| Skill | Bağlı rol | Kaynak |
+The following skills are referenced in **agent role contracts**. If installed, delegates utilize them dynamically:
+
+| Skill | Associated Role | Source |
 |---|---|---|
-| web-design-guidelines | reviewer (UI diff), ui-developer (self-check) | Vercel skill koleksiyonu |
-| security-review | reviewer (güvenlik-duyarlı diff) | Anthropic skill koleksiyonu |
-| diagnosing-bugs | debugger | obra/superpowers ailesi |
-| find-docs | explorer | lokal kurulu |
-| webapp-testing · agent-browser | qa-tester (web end-state testi) | lokal kurulu |
-| frontend-design | ui-developer (web) | anthropics/claude-code plugin'i |
-| expo-* (project-structure, native-ui, router, data-fetching, ui, tailwind-setup) | ui-developer (mobil) | Expo OSS skill koleksiyonu |
+| `web-design-guidelines` | `reviewer` (UI diff), `ui-developer` (self-check) | Vercel Skill Collection |
+| `security-review` | `reviewer` (security-sensitive diffs) | Anthropic Skill Collection |
+| `diagnosing-bugs` | `debugger` | obra/superpowers |
+| `find-docs` | `explorer` | Local installation |
+| `webapp-testing` · `agent-browser` | `qa-tester` (web runtime verification) | Local installation |
+| `frontend-design` | `ui-developer` (web) | Anthropic Claude Code plugin |
+| `expo-*` (`native-ui`, `router`, `data-fetching`, `ui`, `tailwind-setup`) | `ui-developer` (mobile) | Expo OSS Collection |
 
-## Kurulum
+---
 
+## Installation
+
+Automatic installation:
 ```bash
-./install.sh   # eksikleri npx skills ile kurar, mevcutları atlar
+./install.sh   # installs missing packages via npx skills
 ```
 
-Elle kurulum:
-
+Manual installation:
 ```bash
 npx skills add obra/superpowers --global
 npx skills add mattpocock/skills --global

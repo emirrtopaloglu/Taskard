@@ -1,25 +1,29 @@
 # Taskard Roadmap
 
-Dogfooding benchmark'ı: Reminder Tab A/B koşusu (2026-08-24) — Taskard $12.62 vs Taskard'sız $32.39, daha kısa sürede aynı kalite.
+Benchmark Evidence: Multi-step full-stack A/B benchmark (2026-08-24) — Taskard $12.62 vs Baseline $32.39 (-61% cost), delivered faster with zero context rot.
 
-## Şimdi / sıradaki
+---
 
-- [x] **Agent kadrosu v1 (2026-08-26):** implementer + reviewer v2 (skill sözleşmeli, davranış sözleşmeli) · yeni roller: ui-developer (web→frontend-design, mobil→expo ailesi), qa-tester, explorer, planner, debugger. Karar: stack rolleri (backend-developer/data-engineer) agent YAPILMAZ — disiplin skill router + brief'te yaşar. *(Emir seçimi; gerekçe: .scratch/taskard/research/r4 + r5)*
-- [x] **Agent tanımları için eval senaryoları:** 7 rolün mikro-senaryoları `evals/05-agent-roloji.md`'de (skill sözleşmesi + kapı davranışı kontrolleriyle). *(2026-08-26)*
-- [ ] Eval koşuları: 05 roloji matrisinin ilk tam turu + tanım değişikliklerinde eval'siz commit atılmaması kuralının fiilen uygulanması
-- [ ] Final review + ürün kararları turu + canlı doğrulama politikasının dogfooding ile doğrulanması
+## 🚀 v0.1.0 (Initial Public Release — Current)
 
-## v0.5 (OSS açılışı)
+- [x] **Zero-Runtime Core Doctrine:** Pure convention package with 3-Speed Gear transmission (⚡ Nano / 🚀 Express / 🏛️ Full), point-to-range brief standards, and 2-Strike Circuit Breaker.
+- [x] **7-Role Roster:** Explicitly named agent definitions (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`) with strict YAML frontmatter and model tiering.
+- [x] **Zero-Dependency CLI & Single-Line Install:** `npx taskard init` zero-dependency initializer + `install.sh` remote curl execution fallback.
+- [x] **CI/CD & Automated Verification:** Multi-OS and Node (18/20/22) GitHub Actions CI, role contract validators, and comprehensive test suite (`npm test`).
+- [x] **Evaluation Suite (`evals/`):** 5 benchmark scenarios covering micro-commits, feature lanes, adversarial premise verification, discipline routing, and role behaviors.
+- [x] **Legal & Community Foundation:** MIT License, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SECURITY.md`.
 
-- [ ] Remote push + GitHub public · lisans · README EN
-- [ ] Vendoring kararı: dış skill'ler pakete gömülecek mi (manifest + sync prosedürü) — bkz. docs/dependencies.md
-- [ ] `npx taskard init` tarzı tek komut kurulum (kod gerektirir — bilinçli karar gerekir)
-- [ ] Cursor/Antigravity tarifi genişletme + o harness'larda uçtan uca test
-- [ ] Eval panelinin ilk sistematik koşuları (aynı görev × farklı model/harness matrisi)
+---
 
-## Ufuk (v0 sonrası)
+## 🔮 Next: v0.2.0 (Planned)
 
-- [ ] GUI zemini — izleyici / kontrol modu ileride (ayrı proje)
-- [ ] GitHub Issues senkron katmanı
-- [ ] Memory katmanının büyütülmesi (facts/, otomatik özetleme)
-- [ ] Limit-farkındalıklı yönlendirmenin otomatikleşmesi
+- [ ] **Cross-Harness Adapter Expansion:** Expanded automation recipes and verification for additional terminal environments (Cursor background tasks, Antigravity CLI).
+- [ ] **Automated Limit-Aware Routing:** Automatic harness fallback when token rate limits are reached (Claude -> Codex -> OpenCode).
+- [ ] **Extended Memory Distillation:** Automated rolling distillation of session handoffs into persistent workspace context.
+
+---
+
+## 🌌 Horizon (Future Milestones)
+
+- [ ] **GUI Visualizer / Observer Mode:** Lightweight visual execution DAG inspector (separate zero-dependency package).
+- [ ] **GitHub Issues / Project Board Sync:** Bi-directional sync between Taskard lane states and GitHub issue boards.

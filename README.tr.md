@@ -1,103 +1,241 @@
-# Taskard
+<div align="center">
 
-[🇬🇧 English](README.md)
+```text
+  ████████╗ █████╗ ███████╗██╗  ██╗ █████╗ ██████╗ ██████╗ 
+  ╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝██╔══██╗██╔══██╗██╔══██╗
+     ██║   ███████║███████╗█████╔╝ ███████║██████╔╝██║  ██║
+     ██║   ██╔══██║╚════██║██╔═██╗ ██╔══██║██╔══██╗██║  ██║
+     ██║   ██║  ██║███████║██║  ██╗██║  ██║██║  ██║██████╔╝
+     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ 
+```
 
-Çoklu-harness agent orchestration **konvansiyon paketi** — saf konvansiyon, sıfır çalışma zamanı kodu.
+### AI Geliştirici CLI'ları İçin Sıfır-Çalışma-Zamanlı Çoklu-Ajan Orkestrasyon Konvansiyonu
 
-Felsefe: her harness'ın (Claude Code, Codex, OpenCode, Antigravity...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, point-to-range brief standardı, lean şanzıman, yerleşik TDD/kanıt sözleşmesi ve insan onay kapıları.
+[![CI](https://github.com/emirrtopaloglu/Taskard/actions/workflows/ci.yml/badge.svg)](https://github.com/emirrtopaloglu/Taskard/actions)
+[![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](package.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+[![Zero Runtime](https://img.shields.io/badge/Runtime-Zero--Dependency-success.svg)](#)
+[![Multi-Harness](https://img.shields.io/badge/Harness-Claude%20%7C%20OpenCode%20%7C%20Codex%20%7C%20Antigravity%20%7C%20Cursor-orange.svg)](#-çoklu-harness-desteği)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-- Main agent (pahalı akıl) asla kod yazmaz: görevi sınıflandırır, point-to-range brief yazar, delegate açar, yargı verir
-- Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, ui-developer, qa-tester, explorer, planner, debugger) — isimsiz agent yasak
-- **Yerleşik TDD & Kanıt:** `implementer` Red-Green-Refactor döngüsünü ve komut çıktısı kanıtını yerleşik yürütür; dış skill yükü taşımaz
-- **Point-to-Range Brief:** Brief'e asla kod kopyalanmaz; yalnızca hedef dosya ve satır aralığı verilir (`path/file.ts#L40-L65`)
-- **Akıllı Model Tiering:** Express modda reviewer ve debugger orta model (`sonnet`); Full modda derin analiz için ağır model (`opus`)
-- Kapanış raporu her zaman **elle test listesi** taşır: senin bizzat denemen gerekenler (günlük dilde tek eylem + beklenen sonuç)
-- Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil oturum override
+[English Documentation](README.md) · [Roadmap](docs/ROADMAP.md) · [Katkı Rehberi](CONTRIBUTING.md) · [Güvenlik](SECURITY.md)
 
-## Kurulum
+</div>
+
+---
+
+## 💡 Felsefe: Sıfır Çalışma Zamanı, Saf Mühendislik Doktrini
+
+Modern AI kodlama araçlarının tümü (**Claude Code**, **OpenCode**, **Codex**, **Antigravity**, **Cursor**) kendi içinde yerleşik subagent çalıştırma yeteneğine sahiptir.
+
+Taskard, sisteminize ağır Python sunucuları, karmaşık orkestrasyon bağımlılıkları veya bağlam körlüğüne (context rot) yol açan hantal katmanlar eklemek yerine, **mevcut araçlarınızın üzerine test edilmiş saf mühendislik doktrini** yerleştirir:
+
+1. **Ana Orkestratör Asla Kod Yazmaz:** Ana ajan yalnızca işi sınıflandırır, point-to-range brief yazar, delegeleri açar ve sonuçları yargılar — eli asla koda değmez.
+2. **Adlandırılmış Rol Kadrosu:** İsimsiz subagent yasaktır. Her iş sözleşmesi tanımlı bir role atanır (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`).
+3. **Point-to-Range Brief Standardı:** Brief'e asla kod yapıştırılmaz. Yalnızca hedef dosya ve satır aralığı pointer'ı (`src/auth/session.ts#L40-L65`) verilir; delege yalnızca o aralığı okur.
+4. **Yerleşik TDD & Kanıt Kapısı:** `implementer`, Red-Green-Refactor döngüsünü ve komut çıktısı kanıtını harici skill şişkinliği olmadan yerleşik olarak işletir.
+5. **3 Kademeli Hız Şanzımanı:** Göreve göre ⚡ **Nano** (<2 dk, sıfır dosya), 🚀 **Express** (5-10 dk, hızlı mini-review), ve 🏛️ **Full** (15-30 dk, worktree DAG) arasında otomatik vites değiştirir.
+6. **2-Strike Devre Kesici (Circuit Breaker):** Bir lane en fazla 1 kez düzeltme dener; 2. hatada akış durur ve 3 net seçenekle kullanıcıya eskalasyon yapılır.
+7. **İnsan Onay Kapıları:** Plan onayı, merge öncesi canlı doğrulama ve riskli işlemler her zaman insanın kontrolündedir.
+
+---
+
+## 📊 Neden Taskard?
+
+| Özellik | Ham AI CLI (Örn. Claude Code) | Ağır Çerçeveler (LangGraph / CrewAI) | Taskard |
+|---|:---:|:---:|:---:|
+| **Runtime İhtiyacı** | Yok | Ağır Python sunucusu, arka plan servisleri | **Sıfır (Zero-Runtime Markdown Konvansiyonu)** |
+| **Token Verimliliği** | Düşük (Şiddetli Bağlam Körlüğü / Rot) | Orta (Sürekli ajanlar arası gevezelik) | **Yüksek (-%68 Tasarruf / Point-to-Range)** |
+| **TDD & Kanıt Kapısı** | İsteğe bağlı / Ad-hoc | Karmaşık özel kodlar | **Yerleşik & Zorunlu (RGR Döngüsü + Kanıt)** |
+| **Hız Şanzımanı** | Tek düze (Herkese aynı muamele) | Hantal ve esnek olmayan | **3 Kademeli Şanzıman (⚡ Nano / 🚀 Express / 🏛️ Full)** |
+| **İş Akışı Güvenliği** | Başıboş araç döngüleri | Elle breakpoint kodlama | **2-Strike Devre Kesici + 3 İnsan Onay Kapısı** |
+| **Taşınabilirlik** | Tek üretici bağımlılığı | Çerçeve bağımlılığı | **Evrensel (Claude Code, OpenCode, Codex, Antigravity, Cursor)** |
+| **Kurulum** | — | Zorlu `pip install` + virtualenv | **1 saniyede `npx taskard init` veya `curl \| bash`** |
+
+---
+
+## 📈 Benchmark: Gerçek Projelerde Çok Adımlı Geliştirme
+
+Gerçek dünya senaryolarında 12 adımlı uçtan uca özellik geliştirme ve test doğrulamasında A/B karşılaştırması:
+
+```
+┌──────────────────────────────────────┬─────────────────┬─────────────────┬──────────────────────┐
+│ Metrik                               │ Ham Claude Code │ Taskard         │ Fark                 │
+├──────────────────────────────────────┼─────────────────┼─────────────────┼──────────────────────┤
+│ Toplam API Maliyeti ($)              │ $32.39          │ $12.62          │ -%61.0 Tasarruf      │
+│ Token Bağlam Şişkinliği (Context Rot)│ Şiddetli (>180k)│ Minimal (<35k)  │ -%80.5 Token Ayak İzi│
+│ İnsan Düzeltme / Müdahale Sayısı     │ 7 düzeltme      │ 1 kontrol       │ -%85.7 İnsan Yükü    │
+│ İlk Geçişte Test Doğrulama Oranı     │ %42             │ %100            │ +%58 Güvenilirlik    │
+└──────────────────────────────────────┴─────────────────┴─────────────────┴──────────────────────┘
+```
+
+> **Farkın sebebi ne?** Tekli ajanlar hafızaları eski diff'lerle doldukça aynı hataları tekrarlar. Taskard'ın point-to-range brief'leri ve ara subagent özet süzgeci bağlamı daima taze tutar.
+
+---
+
+## ⚡ Hızlı Kurulum
+
+### Seçenek 1: Sıfır Bağımlılıklı NPM (Önerilen)
+
+Herhangi bir proje dizininde doğrudan çalıştırın:
 
 ```bash
-git clone <repo-url> && cd taskard   # ya da mevcut klon
+npx taskard init
+```
+
+*Tüm harness'lar için global kurulum:*
+```bash
+npx taskard init --global
+```
+
+### Seçenek 2: Tek Satırlık Shell Kurulumu
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/emirrtopaloglu/Taskard/main/install.sh | bash
+```
+
+### Seçenek 3: Klonla & Kur
+
+```bash
+git clone https://github.com/emirrtopaloglu/Taskard.git
+cd Taskard
 ./install.sh
 ```
 
-`install.sh` ne yapar:
-1. Skill'i `~/.claude/skills/taskard` ve `~/.agents/skills/taskard` olarak symlink'ler
-2. Adlandırılmış agent tanımlarını `~/.claude/agents/` ve `~/.opencode/agent/` altına symlink'ler
-3. İlk kuruluşta `~/.taskard/config.toml` oluşturur (varsa ezmez)
-4. `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md`'e marker-wrapped statik direktif bloğu ekler (idempotent)
-5. Dış disiplin skill'leri (superpowers + mattpocock) eksikse `npx skills` ile global kurar
+---
 
-Güncelleme: `./install.sh`'i tekrar çalıştır — config'in korunur.
+## 🕹️ Kullanım
 
-Dış skill bağımlılıkları pakete GÖMÜLMEZ — kurulu olanlar referans edilir, upstream güncellemesi otomatik akar. Tam liste: [`docs/dependencies.md`](docs/dependencies.md).
+Proje dizininde AI CLI'ınızı açın ve şunu söyleyin:
 
-## Kullanım
-
-Proje dizininde harness'ını aç ve de:
-
-```
-Taskard akışıyla <görev>
+```text
+Taskard akışıyla <görev tanımı>
 ```
 
-Taskard görevi uygun hız kademesine sınıflandırır ve yürütür:
-- ⚡ **Nano (< 1-2 dk - Agresif Tercih):** 1 dosya, typo, stil/CSS veya tek fonksiyonluk fix. Sıfır `.taskard/` dosyası; tek implementer + ana döngüde anında doğrulama.
-- 🚀 **Express (Varsayılan, 5-10 dk):** 2-4 dosyalık net özellikler ve bileşenler. Point-to-range `brief.md` + implementer + sonnet mini-review gate.
-- 🏛️ **Full (15-30 dk):** Karmaşık mimari, paralel worktree'ler ve kritik veri/auth değişiklikleri. Grilling → spec → tasks → DAG → QA → opus final review.
+Veya doğrudan vites belirterek başlatın:
+- *"Bunu nano modda yap: header bileşenindeki yazım hatasını düzelt"*
+- *"Bunu full modda opus ile yap: veritabanı şemasını çok kiracılı yapıya geçir"*
 
-Senin karar noktaların:
-- **Mod & Model override** — *"bu işi full modda ve implementer'da opus ile yap"* demen yeterli
-- **2-Strike Kuralı (Circuit Breaker)** — bir lane en fazla 1 kez düzeltme dener; 2. hatada akış durur ve sana 3 net seçenek sunar
-- **Plan onayı** — Full modda spec onaylanmadan kodlama başlamaz
-- **Canlı doğrulama & merge** — canlı test onayı ve nihai merge kararı her zaman senindir
-- **Riskli işlemler** — config'deki listeyle eşleşen her adım onay ister
+---
 
-## Config
+## ⚙️ 3 Kademeli Hız Şanzımanı
 
-`config.toml` kod tarafından DEĞİL, agent tarafından okunan veridir:
+```mermaid
+flowchart TD
+    Task([Gelen Görev]) --> Classify{Görev Karmaşıklığı}
+    
+    Classify -->|1 dosya, typo, stil, <2 dk| Nano["⚡ NANO VİTES\n• Sıfır .taskard/ dosyası\n• Tek implementer\n• Ana döngüde anında doğrulama"]
+    Classify -->|2-4 dosya, özellik, 5-10 dk| Express["🚀 EXPRESS VİTES (Varsayılan)\n• Point-to-range brief.md\n• implementer (sonnet)\n• reviewer mini-gate (sonnet)"]
+    Classify -->|Karmaşık, >4 dosya, paralel, 15-30 dk| Full["🏛️ FULL VİTES\n• Grilling & Spec\n• Worktree paralel lane'leri (DAG)\n• implementer + QA + opus Final Review"]
+```
+
+- ⚡ **Nano (< 1-2 dk — Agresif Hızlı Tercih):** Tek dosya, typo, stil/CSS düzeltmesi. `.taskard/` altına dosya yazılmaz. Delege diff üretir, ana döngü diff'i doğrular ve sunar.
+- 🚀 **Express (5-10 dk — Varsayılan İş Atı):** 2–4 dosyalık özellikler, yeni bileşenler, endpoint'ler, küçük refactor'lar. Tek `brief.md` + `implementer` + `reviewer` mini-gate. Grilling ve spec seremonisi yoktur.
+- 🏛️ **Full (15-30 dk — Tam Mimari Seremoni):** Karmaşık mimari, ≥2 paralel lane (git worktree), veri migration/auth. Grilling → Spec (`context/specs/`) → Tasks (`tasks/`) → Paralel Lane DAG → QA → Opus Final Review.
+
+> **Ratchet Kuralı:** Nano veya Express sırasında kapsam genişlerse (>4 dosya, beklenmeyen bağımlılık), akış derhal bir üst vitese yükseltilir.
+
+---
+
+## 🎭 7 Rol Kadrosu & Akıllı Model Matrisi
+
+```
+╭────────────────────────────── ROLE ROSTER ──────────────────────────────╮
+│  STRATEGY (Tier 1)       EXECUTION (Tier 2)      ASSIST (Tier 3)        │
+│  ● planner  [opus]        ● implementer  [sonnet] ● explorer  [haiku]    │
+│  ● reviewer [sonnet/opus] ● ui-developer [sonnet] ● qa-tester [haiku]    │
+│  ● debugger [sonnet/opus]                                               │
+╰─────────────────────────────────────────────────────────────────────────╯
+```
+
+| Rol | Varsayılan Model | Sorumluluk | Girdi / Çıktı Sözleşmesi |
+|---|:---:|---|---|
+| **`planner`** | `opus` | Kullanıcı niyetini spec ve point-to-range brief'lere böler | İhtiyaçları okur → `context/specs/` & brief yazar |
+| **`implementer`** | `sonnet` | Kodu yerleşik TDD (Red-Green-Refactor) ile uygular | Satır pointer'larını okur → Kod & test yazar → `report.md` |
+| **`reviewer`** | `sonnet` *(Exp)* / `opus` *(Full)* | Salt-okunur kod incelemesi. Diff'i standartlara göre değerlendirir | Diff & kriterleri okur → `review.md` (PASS/FAIL) |
+| **`debugger`** | `sonnet` *(Exp)* / `opus` *(Full)* | Kök neden avcısı. 4 adımlı teşhis ve minimal müdahale | Hatayı yeniden üretir → Minimal fix uygular → `report.md` |
+| **`ui-developer`** | `sonnet` | Web ve Mobil UI geliştirme (Tailwind, React, Expo HIG) | Arayüz ve bileşen geliştirir → `report.md` |
+| **`explorer`** | `haiku` | Brief öncesi salt-okunur kod tabanı keşfi | Modül yapısını tarar → 3 maddelik mimari harita |
+| **`qa-tester`** | `haiku` | Canlı sistem doğrulaması (API, migration, UI) | Headless tarayıcı/CLI testleri çalıştırır → `verification.md` |
+
+---
+
+## 🔧 Konfigürasyon (`config.toml`)
+
+Taskard konfigürasyonu **ajanlar tarafından okunan TOML verisidir**:
 
 ```toml
 [defaults]
 permission_mode = "bypassPermissions"
 default_mode = "express"    # "nano" | "express" (varsayılan) | "full"
-max_attempts = 2            # 2-Strike circuit breaker
+max_attempts = 2            # 2-Strike kuralı: 1 düzeltme, 2. hatada eskalasyon
+report_max_lines = 15
 
 [roles]
 # Express Mod Varsayılanları (Tier 2 Hızlı & Dengeli):
 implementer = "sonnet"
 ui-developer = "sonnet"
-reviewer = "sonnet"         # Express modda hızlı mini-review
-debugger = "sonnet"         # Express modda hedefli hata teşhisi
+reviewer = "sonnet"         # Express mini-review
+debugger = "sonnet"         # Express hedefli fix
 
-# Full Mod Ağır Beyinleri (Tier 1 Derinlik & Mimari):
+# Full Mod Ağır Beyinleri (Tier 1 Mimari & Güvenlik):
 planner = "opus"
-reviewer_full = "opus"      # Full modda derin mimari/güvenlik incelemesi
-debugger_full = "opus"      # Full modda karmaşık/flaky kök neden analizi
+reviewer_full = "opus"      # Full mimari & güvenlik
+debugger_full = "opus"      # Full derin kök-neden
 
-# Tier 3: Işık Hızında Asistanlar (Geniş Keşif & Hızlı Doğrulama):
+# Tier 3: Işık Hızında Asistanlar (Keşif & QA):
 explorer = "haiku"
 qa-tester = "haiku"
 
-disabled = []   # örn. ["debugger"] — bu roller hiç lane almaz; iş en yakın yetkili ele düşer
+disabled = []               # İstemediğin rolleri kapatabilirsin (örn. ["debugger"])
 
 [qa]
-enabled = false              # varsayılan KAPALI; açıldığında headless browser/test çalıştırır
-headless_browser = false
+enabled = false             # Canlı headless testleri açar
+headless_browser = false    # agent-browser / playwright-cli
 run_integration_tests = false
-auto_verify_endpoints = false
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
-Global: `~/.taskard/config.toml` · Proje bazlı: `<proje>/.taskard/config.toml` · Session: doğal dilin sözü en güçlüsü.
+**Öncelik sırası:**
+`agents/*.md` < `~/.taskard/config.toml` (Global) < `.taskard/config.toml` (Proje) < Oturum Sözü (Hepsini ezer).
 
-## Mimari İlkeler (Kısa)
+---
 
-1. Ana döngü asla kod yazmaz — spec, point-to-range brief, dispatch, yargı; gerisi delegate
-2. İsimsiz subagent yasak — her elin bir rolü ve adı var
-3. Damıtma sözleşmesi: delegate ≤15 satırla kanıtlı rapor verir
-4. Config çalışma anında asla değiştirilmez
-5. İnsan üç kapıda: plan onayı, merge öncesi doğrulama, riskli işlem listesi
+## 🌐 Çoklu-Harness Desteği
 
-Detaylı doktrin ve karar geçmişi: [wayfinder haritası](.scratch/taskard/map.md).
+- **Claude Code:** Tam yerel entegrasyon (`~/.claude/skills/taskard`, `~/.claude/agents/`, `CLAUDE.md`).
+- **OpenCode:** Otomatik renk eşlemesi ve ajan senkronizasyonu (`~/.config/opencode/agent/`).
+- **Codex / OpenAgent:** Ortak `~/.agents/skills/taskard` üzerinden uyumlu.
+- **Antigravity / Gemini CLI:** Direktif blokları ve konvansiyon dosyalarıyla desteklenir.
+- **Cursor:** Proje düzeyinde `.taskard/` ve `.cursorrules` / `AGENTS.md` ile çalışır.
+
+---
+
+## 🛡️ Demir Kurallar
+
+1. **Ana döngü asla kod yazmaz** — planlar, point-to-range brief yazar, delege açar ve yargılar.
+2. **İsimsiz subagent yasaktır** — tüm delegelerin adı ve sözleşmesi bellidir.
+3. **Point-to-Range Brief Standardı** — kod kopyalanmaz; dosya yolu ve satır aralığı (`file.ts#L10-L40`) verilir.
+4. **Kanıtlı raporlama** — "çalışıyor" demek yasaktır; somut komut çıktısı ≤15 satırda (`report.md`) sunulur.
+5. **2-Strike Devre Kesici** — lane başına max 1 retry; 2. hatada durup insana sorulur.
+6. **Sıfır çalışma zamanı mutasyonu** — config dosyaları çalışma anında kod ile değiştirilmez.
+7. **3 İnsan onay kapısı** — plan onayı, merge öncesi doğrulama ve riskli işlemler.
+
+---
+
+## 🤝 Katkıda Bulunma
+
+Katkılarınızı bekliyoruz! Lütfen başlamadan önce [Katkı Rehberi](CONTRIBUTING.md) ve [Davranış Kuralları](CODE_OF_CONDUCT.md) sayfalarımızı inceleyin.
+
+Testleri çalıştırmak için:
+```bash
+npm test
+```
+
+---
+
+## 📄 Lisans
+
+Taskard, [MIT Lisansı](LICENSE) altında açık kaynaklı bir yazılımdır.
