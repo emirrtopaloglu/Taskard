@@ -1,23 +1,23 @@
-# Taskard — Proje Kurulum Kılavuzu
+# Taskard — Project Setup Guide
 
-Bir projede Taskard'ı ilk kez etkinleştirmek için gereken adımlar:
+Follow these steps to initialize Taskard in a new repository:
 
-## 1. Dizin Ağacı
-Proje kökünde `.taskard/` yapısını oluşturun:
+## 1. Directory Tree
+Create the `.taskard/` structure in the project root:
 
 ```bash
 mkdir -p .taskard/{context/specs,context/decisions,lanes,tasks,handoff,memory,tmp}
 ```
 
-## 2. Direktif Bloğu
-Projenin `CLAUDE.md` ve/veya `AGENTS.md` dosyasına Taskard direktif bloğunu ekleyin.
-Tek kaynak: `~/.taskard/templates/directive-block.md`
+## 2. Directive Block
+Add the static Taskard directive block to the project's `CLAUDE.md` and/or `AGENTS.md`.
+Source template: `~/.taskard/templates/directive-block.md`
 
-Marker'larla birlikte aynen eklenmelidir:
+Include the enclosing markers verbatim:
 `<!-- taskard:start -->` ... `<!-- taskard:end -->`
 
 ## 3. Gitignore
-Çalışma zamanı verilerinin repoya commitlenmemesi için `.gitignore` dosyasına ekleyin:
+Add runtime directories to `.gitignore` to prevent committing runtime states:
 
 ```gitignore
 .taskard/lanes/

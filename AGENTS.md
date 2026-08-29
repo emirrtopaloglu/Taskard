@@ -1,20 +1,20 @@
-# Taskard — Agent Kuralları
+# Taskard — Agent Rules & Repository Doctrine
 
-## Duran kurallar
+## Non-Negotiable Iron Laws
 
-1. **README her zaman güncel kalsın:** kurulum ve kullanım adımları README.md'de yaşar; skill'i, config formatını veya akışı değiştiren her commit README'yi de güncellemek ZORUNDADIR.
-2. **Çekirdek paket kod içermez:** Taskard saf konvansiyon paketidir (skills/, agents/, templates/); çalışma zamanı kodu barındırmaz.
-3. Config dosyaları agent-okur veridir; hiçbir mekanizma çalışma anında config mutasyonu yapmaz.
-4. Wayfinder haritası (`.scratch/taskard/map.md`) kararların tek kaynağıdır — mimari kararı haritaya işlemeden değişiklik yapma.
-5. Yeni agent tanımı eklerken frontmatter'da `name` zorunludur; isimsiz rol tanımlanmaz.
-6. **Test projeleri ürün kimliğine yazılmaz:** dogfooding yapılan projelerin adları README, SKILL.md, map veya örneklerde geçmez; gerekirse "test projesi" denir.
-7. **Dış skill'ler vendor edilmez** — `docs/dependencies.md` manifest'i + install.sh'in npx kurulum adımı tek mekanizmadır; upstream güncellemesi otomatik akar. Vendoring OSS fazında ayrı karardır.
-8. **Mod seçimi akışın ilk hamlesidir:** 3 kademeli şanzıman (Nano / Express [varsayılan] / Full); görevin karmaşıklığına göre seçilir, oturum override'ı geçerlidir.
+1. **Keep documentation synchronized:** Installation and usage instructions live in `README.md` and `README.tr.md`. Every commit that alters a skill, agent role, config format, or workflow **MUST** update the documentation.
+2. **Zero runtime in core conventions:** Taskard is a pure convention package (`skills/`, `agents/`, `templates/`). The core orchestration layer contains no runtime code.
+3. **Configuration is agent-read data:** Configuration files (`config.toml`) are data read by agents. No mechanism mutates configuration files at runtime.
+4. **Wayfinder map is single source of truth:** Architectural decisions are recorded in `.scratch/taskard/map.md`. Do not implement architectural changes without recording them in the decision log.
+5. **Mandatory agent name:** When defining a new agent role in `agents/<name>.md`, the frontmatter must include `name:`, `model:`, `color:`, and `description:`. Anonymous agents are forbidden.
+6. **No private test project names:** Do not write internal dogfooding project names into documentation, examples, or tests. Use the generic term "test project".
+7. **Do not vendor external skills:** External skills are referenced dynamically in `docs/dependencies.md` and resolved via `npx skills` during installation.
+8. **Classify speed gear at start:** Every workflow starts by selecting a gear (⚡ Nano / 🚀 Express [Default] / 🏛️ Full). Session overrides take immediate precedence.
 
-## Hızlı doğrulama
+## Verification
 
 ```bash
+npm test
 bash -n install.sh
-./install.sh
-ls -la ~/.claude/skills/taskard ~/.claude/agents
+node bin/taskard.js init --dry-run
 ```

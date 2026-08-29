@@ -1,6 +1,6 @@
-# Taskard — Cross-Harness Headless Başlatma
+# Taskard — Cross-Harness Headless Execution
 
-Native subagent her zaman birincil tercihtir. Headless veya harici harness gerektiğinde:
+Native subagents are always the primary choice. When headless execution or external harness delegation is required, use these commands:
 
 ## Claude Code
 ```bash

@@ -1,12 +1,12 @@
 <!-- taskard:start -->
 <!-- taskard:v2 -->
 ## Taskard
-- Rol/model seçimi: Express modda reviewer/debugger=sonnet, Full modda opus; oturum override'ı her ikisini geçer (~/.taskard/config.toml).
-- Subagent'lar yalnızca adlandırılmış rollerle açılır (implementer, reviewer, ui-developer, qa-tester...) — isimsiz agent yasak.
-- Implementer yerleşik TDD (Red-Green-Refactor) ve kanıt disipliniyle çalışır; harici TDD skill bağımlılığı taşımaz.
-- Self-priming brief'lerde point-to-range esastır: brief'e asla kod yapıştırılmaz, yalnızca hedef dosya ve satır aralığı (file#L10-L40) verilir; delege yalnızca bu aralığı okur.
-- Mod seçimi akışın ilk hamlesidir: tek dosya/küçük fix'te agresif Nano (<2 dk, sıfır dosya); 2-4 dosyada Express (tek brief + sonnet mini-review); karmaşık/paralelde Full.
-- Worker varsayılan bypassPermissions ile çalışır; insan onayı üç kapıda: plan onayı, merge öncesi doğrulama, risky_operations listesi.
-- Config dosyaları çalışma anında asla değiştirilmez; 2-Strike kuralında 2. hatada akış durup kullanıcıya 3 seçenek sunulur.
-- Çıktı Humanish'tir: durum kodu değil cümle, jargon değil anlam.
+- Model routing: Express mode uses sonnet for reviewer/debugger; Full mode uses opus; session prompts override both (~/.taskard/config.toml).
+- Subagents execute only under explicit named roles (implementer, reviewer, ui-developer, qa-tester...) — anonymous agents are forbidden.
+- Implementer operates with native TDD (Red-Green-Refactor) and command verification without external skill dependencies.
+- Point-to-range standard: never copy code blocks into briefs; specify target file paths and line ranges (file#L10-L40); delegates read only the specified lines.
+- Classify speed gear at start: 1-file fix uses aggressive Nano (<2m, zero overhead); 2-4 files use Express (single brief + sonnet mini-review); complex work uses Full.
+- Subagents default to bypassPermissions; humans own three gates: plan approval, pre-merge verification, and risky_operations.
+- Never mutate config files at runtime; 2-Strike rule halts execution on 2nd error and presents 3 options to human.
+- Telegraph output is Humanish: full sentences, clear meaning, no raw status code dumps.
 <!-- taskard:end -->

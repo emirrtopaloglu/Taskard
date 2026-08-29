@@ -1,107 +1,107 @@
 ---
 name: taskard
-description: Çoklu-harness agent orchestration konvansiyonu. Görevi sınıflandırır (Nano/Express/Full), point-to-range brief yazar, adlandırılmış subagent'lara dağıtır ve kalite kapılarını işletir.
+description: Multi-harness agent orchestration convention. Classifies tasks (Nano/Express/Full), writes point-to-range briefs, delegates to named subagents, and operates quality gates.
 ---
 
 # Taskard
 
-Görevi Taskard akışıyla yürüt. Ana döngü yalnızca akıl ve koordinatördür; kod yazmaz, test koşmaz, tek meşru hamlesi adlandırılmış delegate açmaktır.
+Execute tasks following the Taskard orchestration workflow. The main agent coordinates and judges; it never writes code directly or runs tests. Its legitimate action is to delegate work to named roles.
 
-## 1. Mod Seçimi (3 Kademeli Hız Şanzımanı)
+## 1. Speed Gear Selection (3-Speed Transmission)
 
-Akışın BAŞINDA görevi sınıflandır. Oturumda söylenen (*"bunu nano yap"*, *"full yap"*) anında geçerlidir.
+Classify the task complexity at the start of execution. Session instructions (e.g., *"run this in nano mode"*, *"use full mode"*) take immediate precedence.
 
-| Mod | Süre | Kapsam & Seremoni Düzeyi |
+| Mode | Duration | Scope & Ceremony Level |
 |---|---|---|
-| ⚡ **NANO** | **< 1-2 dk** | **Agresif Tercih / Sıfır Dosya:** Tek dosya, typo, stil/CSS, tek fonksiyonluk fix, config. `.taskard/` altına dosya yazılmaz. Tek `implementer` açılır, diff üretilir, ana döngü diff'i doğrular ve sunar. Ayrı review subagent açılmaz. |
-| 🚀 **EXPRESS** *(Varsayılan)* | **5-10 dk** | **Hafif Dokümantasyon:** 2-4 dosyalık özellikler, yeni bileşenler, endpoint'ler, küçük refactor'lar. Grilling ve spec YOKTUR. Tek `brief.md` + tek `implementer` + tek `reviewer` (mini-review) gate. |
-| 🏛️ **FULL** *(Graph)* | **15-30 dk** | **Tam Seremoni:** Karmaşık mimari, ≥2 paralel lane (git worktree), veri migration/auth. Grilling/Ürün Kararları (`grill-with-docs`/`grill-me`) → Spec (`context/specs/`) → Tasks (`tasks/`) → Paralel Lane DAG → QA → Final Review. |
+| ⚡ **NANO** | **< 1-2 min** | **Aggressive Default / Zero Overhead:** 1 file, typo, CSS/styling, single function fix, config. Writes zero files to `.taskard/`. Spawns a single `implementer`, produces diff, main agent validates and presents immediately. No separate reviewer subagent. |
+| 🚀 **EXPRESS** *(Default)* | **5-10 min** | **Lightweight Documentation:** 2–4 files, standard features, new components, endpoints, small refactors. No grilling or heavy specification. Single `brief.md` + single `implementer` + single `reviewer` (mini-review) gate. |
+| 🏛️ **FULL** *(Graph)* | **15-30 min** | **Full Architectural Rigor:** Complex architecture, ≥2 parallel lanes (git worktrees), database migrations, authentication. Grilling/Product decisions (`grill-with-docs`/`grill-me`) → Spec (`context/specs/`) → Tasks (`tasks/`) → Parallel Lane DAG → QA → Opus Final Review. |
 
-> **Ratchet Kuralı:** Nano veya Express çalışırken kapsam genleşirse (>4 dosya, beklenmeyen bağımlılık), akış derhal bir üst moda yükseltilir; asla gereksiz ağır modda başlanmaz.
+> **Ratchet Rule:** If scope expands during Nano or Express (>4 files, unexpected dependencies), ratchet the workflow up to the next gear immediately.
 
-## 2. Disiplin Router'ı (Pull-Based)
+## 2. Discipline Router (Pull-Based)
 
-Akış başında `using-superpowers` varsa onunla başla; yoksa bu tablo tek kaynaktır. **Koşul yoksa skill yüklenmez.** Eksik skill akışı durdurmaz; rol sözleşmesindeki çekirdek kural geçerlidir.
+If `using-superpowers` is present in the environment, start with its routing; otherwise, consult this table. **Do not load skills unless the specific trigger condition is met.** A missing skill does not block execution; core role contracts govern behavior.
 
-| Faz / Koşul | Skill | Görevi |
+| Phase / Condition | Skill | Function |
 |---|---|---|
-| Akış başı | `using-superpowers` | Skill yönlendiricisi (varsa) |
-| Spec öncesi (Full) | `brainstorming` | Niyet ve gereksinim netleştirme |
-| Hizalanma / Karar (Full) | `grilling` + `domain-modeling` | Büyük/riskli işte varsayım sorgulama & terimler |
-| Ürün kararları turu | `grill-with-docs` / `grill-me` | Spec kilidi öncesi mevcut-hedef farklarını sorma |
-| Sisli kapsam (>1 oturum) | `wayfinder` | Çok oturumlu kapsam haritalama |
-| Mimari / Arayüz (Seam) | `codebase-design` | Modül sınırları ve arayüz tasarımı |
-| Plan dokümanı (Full) | `writing-plans` | Spec'ten brief/task çıkarma |
-| Paralel lane'ler (Full) | `dispatching-parallel-agents` + `using-git-worktrees` | ≥2 bağımsız lane izolasyonu |
-| Merge çakışması | `resolving-merge-conflicts` | Worktree merge çakışma çözümü |
-| Fix döngüsü | `receiving-code-review` | Review bulgularını doğrulayıp uygulama |
-| Blocker teşhisi (2. hata) | `systematic-debugging` | Kök neden analizi (Circuit Breaker) |
-| Bitiş entegrasyonu | `finishing-a-development-branch` | Yeşil suite sonrası merge menüsü |
+| Workflow start | `using-superpowers` | Skill router (if available) |
+| Pre-spec exploration (Full) | `brainstorming` | Clarify intent and requirements |
+| Alignment & decisions (Full) | `grilling` + `domain-modeling` | Question assumptions and terms for high-risk work |
+| Product decision round | `grill-with-docs` / `grill-me` | Resolve current vs target state differences before locking spec |
+| Ambiguous multi-session scope | `wayfinder` | Multi-session scope mapping |
+| Architectural seam design | `codebase-design` | Module boundary and interface design |
+| Plan documentation (Full) | `writing-plans` | Extract actionable briefs from specifications |
+| Parallel lanes (Full) | `dispatching-parallel-agents` + `using-git-worktrees` | Isolate ≥2 independent worktree lanes |
+| Merge conflict | `resolving-merge-conflicts` | Worktree merge conflict resolution |
+| Review feedback cycle | `receiving-code-review` | Verify and apply review findings |
+| Blocker diagnosis (2nd failure) | `systematic-debugging` | Root-cause analysis (Circuit Breaker) |
+| Completion integration | `finishing-a-development-branch` | Post-green merge options |
 
-*(Not: TDD ve kanıt disiplini doğrudan `implementer` rol sözleşmesine gömülüdür; harici skill yükleme gerektirmez.)*
+*(Note: TDD and verification contracts are embedded directly into the `implementer` role; external skill loading is not required.)*
 
-## 3. Demir Kurallar (Iron Laws)
+## 3. Core Iron Laws
 
-1. **Config dosyaları çalışma anında ASLA değiştirilmez.**
-2. **Ana döngü asla kod yazmaz.**
-3. **İsimsiz subagent yasaktır** (her delegate adlandırılmış rolle açılır).
-4. **Başarı beyanı değil kanıt raporlanır.**
-5. **2-Strike Kuralı (Circuit Breaker):** Lane başına en fazla 1 düzeltme denemesi; 2. hatada akış DURUR ve kullanıcıya 3 seçenek sunulur: (1) Teknik netleştirme, (2) Alternatif yol, (3) Kontrolü devret.
-6. **Riskli işlemler kullanıcı onayı olmadan yapılmaz** (config `risky_operations`).
+1. **Never mutate configuration files at runtime.**
+2. **The main agent never writes code directly.**
+3. **Anonymous subagents are forbidden** (every delegate must run under an explicit named role).
+4. **Report verifiable evidence, not assertions of success.**
+5. **2-Strike Circuit Breaker:** Maximum 1 retry attempt per lane; on the 2nd error, execution HALTS and presents 3 clear options: (1) Technical clarification, (2) Alternative path, (3) Pass control to human.
+6. **Dangerous operations require explicit human approval** (per config `risky_operations`).
 
-## 4. Self-Priming Brief & Point-to-Range Standardı
+## 4. Self-Priming Brief & Point-to-Range Standard
 
-Express ve Full modlarında her lane için `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md` doldur (suffix: 4 karakter rastgele, örn. `-a3f2`).
+In Express and Full modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md` for each lane (suffix: 4 random characters, e.g., `-a3f2`).
 
-- **Ön Kabul Doğrulaması:** Brief yazmadan önce iddiaları kontrol et (`ls`/`grep`). İddia yanlışsa uydurma, kullanıcıya sor.
-- **Point-to-Range Kuralı:**
-  1. Brief'e **ASLA** kod veya fonksiyon gövdesi yapıştırılmaz.
-  2. Yalnızca dosya yolu ve satır aralığı verilir: `## Context Files: src/auth/session.ts#L40-L65`.
-  3. Delege ilk adımda yalnızca bu satır aralıklarını okur (`view_file` StartLine/EndLine).
-- **Brief Formatı:**
-  - `## Context Files` (Zorunlu): İlgili kod satır aralıkları + önceki lane raporu yolları.
-  - `## Kabul Kriterleri`: Somut ve kanıtlanabilir maddeler.
-  - `## Kapsam Dışı`: Dokunulmayacak alanlar.
-  - `## Disiplinler`: `Bütçe: max 1 retry (2-Strike) · TDD & Kanıt Zorunlu`.
+- **Verify Premises Before Writing:** Inspect assumptions with `ls` or `grep` before writing briefs. If a premise is invalid, clarify with the user.
+- **Point-to-Range Rule:**
+  1. Never paste raw code or function bodies into briefs.
+  2. Provide only target file paths and line ranges: `## Context Files: src/auth/session.ts#L40-L65`.
+  3. The delegate reads only the specified line slices on startup (`view_file` StartLine/EndLine).
+- **Brief Structure:**
+  - `## Context Files` (Mandatory): Target code line ranges and prerequisite lane report paths.
+  - `## Acceptance Criteria`: Concrete, verifiable requirements.
+  - `## Non-Goals`: Areas outside the lane scope.
+  - `## Disciplines`: `Budget: max 1 retry (2-Strike) · Native TDD & Evidence Required`.
 
-## 5. Katmanlı Model Matrisi (Smart Tiering)
+## 5. Tiered Model Matrix (Smart Tiering)
 
-| Rol | Express Mod (Varsayılan) | Full Mod (Derinlik) |
+| Role | Express Mode (Default) | Full Mode (Architectural Rigor) |
 |---|:---:|:---:|
-| **`planner`** | *(Atlanır)* | **`opus`** |
-| **`reviewer`** | **`sonnet`** *(Hızlı mini-review)* | **`opus`** *(Derin mimari & güvenlik)* |
-| **`debugger`** | **`sonnet`** *(Hedefli fix)* | **`opus`** *(Karmaşık kök neden)* |
+| **`planner`** | *(Skipped)* | **`opus`** |
+| **`reviewer`** | **`sonnet`** *(Focused mini-review)* | **`opus`** *(Deep architecture & security)* |
+| **`debugger`** | **`sonnet`** *(Targeted fix)* | **`opus`** *(Complex root-cause)* |
 | **`implementer`** | **`sonnet`** | **`sonnet`** |
 | **`ui-developer`** | **`sonnet`** | **`sonnet`** |
-| **`explorer`** | **`haiku`** *(Hafif model)* | **`haiku`** |
+| **`explorer`** | **`haiku`** *(Fast scan)* | **`haiku`** |
 | **`qa-tester`** | **`haiku`** | **`haiku`** |
 
-*Öncelik:* `agents/*.md` < `~/.taskard/config.toml` < `.taskard/config.toml` < Oturum Sözü.
+*Precedence:* `agents/*.md` < `~/.taskard/config.toml` < `.taskard/config.toml` < Session Prompts.
 
-## 6. Kalite Kapıları & Rapor Sözleşmesi
+## 6. Quality Gates & Report Contract
 
-- **Rapor Kapısı (`report.md` - ≤15 satır):**
+- **Report Gate (`report.md` - ≤15 lines):**
   ```
   STATUS: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-  DIFF_SUMMARY: Değişen dosyalar (+X, -Y)
-  EVIDENCE: Koşan test/komut ve tam çıktısı
-  HASH: commit-hash (oluştuysa)
+  DIFF_SUMMARY: Changed files (+X, -Y)
+  EVIDENCE: Executed test command and raw output
+  HASH: Git commit hash (if created)
   ```
-  *Dört alan sırayla yoksa rapor reddedilir; tek satırlık format düzeltme turu istenir (2-Strike sayılmaz).*
+  *If all four fields are not present in exact order, reject the report and request one formatting correction (does not count against the 2-Strike budget).*
 
-- **Review Kapısı:**
-  - **Nano:** Ayrı subagent yok; ana döngü diff'i doğrular.
-  - **Express:** Scoped `reviewer` (`sonnet` ile ≤5 satır bulgu, standartlar + diff).
-  - **Full:** `reviewer` (`opus`) + harici-etkili işlerde `qa-tester` + son `final review`.
+- **Review Gate:**
+  - **Nano:** No separate subagent; main orchestrator validates diff directly.
+  - **Express:** Scoped `reviewer` (`sonnet` with ≤5 lines of findings, standards + diff).
+  - **Full:** `reviewer` (`opus`) + `qa-tester` on external impact changes + `final review`.
 
-- **Açıklayıcı Telegraf & Kapanış:**
-  - Her aşamada tek cümle Humanish bilgilendirme (durum kodları sohbete basılmaz).
-  - Kapanışta kullanıcıya günlük dille **"Senin test etmen gerekenler"** kontrol listesi sunulur.
-  - Merge kararı ve canlı onay her zaman kullanıcıdadır.
+- **Telegraph Output & Close:**
+  - Provide single-sentence Humanish progress updates at each stage (do not dump raw status codes into chat).
+  - At conclusion, present a plain-language **"Manual Verification Checklist"** for the human.
+  - The human always owns the final merge and live verification decision.
 
 ---
 
-## Ek Referanslar (Disclosed)
-- [Proje Kurulum Kılavuzu](references/project-setup.md)
-- [Hafıza & Handoff Formatı](references/memory-and-handoff.md)
-- [Cross-Harness Headless Başlatma](references/cross-harness.md)
+## Disclosed References
+- [Project Setup Guide](references/project-setup.md)
+- [Memory & Handoff Format](references/memory-and-handoff.md)
+- [Cross-Harness Headless Execution](references/cross-harness.md)
