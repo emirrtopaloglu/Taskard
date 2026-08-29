@@ -102,6 +102,14 @@ cd Taskard
 ./install.sh
 ```
 
+### Faydalı CLI Komutları
+
+```bash
+taskard doctor    # Harness köprülerini, skill symlink'lerini ve yapılandırma sağlığını denetle
+taskard config    # Etkin yapılandırmayı ve 7 rolün model yönlendirme tablosunu incele
+taskard roles     # 7 rollü kademe matrisini göster
+```
+
 ---
 
 ## 🕹️ Kullanım

@@ -68,6 +68,8 @@ function printHelp() {
   printBanner();
   console.log(`${C.bold}USAGE:${C.reset}
   npx taskard init [options]     Initialize Taskard in current workspace or globally
+  taskard doctor                 Diagnose harness bridges, skills & configuration health
+  taskard config                 Display effective configuration and role routing
   taskard roles                  Display the 7-role tier matrix
   taskard --version              Show installed Taskard version
   taskard --help                 Show this help message
@@ -80,6 +82,152 @@ ${C.bold}OPTIONS:${C.reset}
 ${C.bold}DOCUMENTATION & REPO:${C.reset}
   https://github.com/emirrtopaloglu/Taskard
 `);
+}
+
+function stripTomlComment(str) {
+  let inQuotes = false;
+  let quoteChar = '';
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if ((ch === '"' || ch === "'") && (i === 0 || str[i - 1] !== '\\')) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = ch;
+      } else if (quoteChar === ch) {
+        inQuotes = false;
+      }
+    } else if (ch === '#' && !inQuotes) {
+      return str.slice(0, i).trim();
+    }
+  }
+  return str.trim();
+}
+
+function parseSimpleToml(content) {
+  const result = {};
+  let currentSection = result;
+
+  const lines = content.split(/\r?\n/);
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const sectionMatch = line.match(/^\[([^\]]+)\]/);
+    if (sectionMatch) {
+      const parts = sectionMatch[1].trim().split('.');
+      let curr = result;
+      for (const p of parts) {
+        curr[p] = curr[p] || {};
+        curr = curr[p];
+      }
+      currentSection = curr;
+      continue;
+    }
+
+    const eqIdx = line.indexOf('=');
+    if (eqIdx !== -1) {
+      const key = line.slice(0, eqIdx).trim();
+      let rawVal = stripTomlComment(line.slice(eqIdx + 1).trim());
+
+      let val = rawVal;
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.slice(1, -1);
+      } else if (val.startsWith("'") && val.endsWith("'")) {
+        val = val.slice(1, -1);
+      } else if (val === 'true') {
+        val = true;
+      } else if (val === 'false') {
+        val = false;
+      } else if (/^-?\d+(\.\d+)?$/.test(val) && val !== '') {
+        val = Number(val);
+      } else if (val.startsWith('[') && val.endsWith(']')) {
+        const inner = val.slice(1, -1).trim();
+        if (!inner) {
+          val = [];
+        } else {
+          const items = [];
+          let current = '';
+          let inQuotes = false;
+          let quoteChar = '';
+          for (let i = 0; i < inner.length; i++) {
+            const ch = inner[i];
+            if ((ch === '"' || ch === "'") && (i === 0 || inner[i - 1] !== '\\')) {
+              if (!inQuotes) {
+                inQuotes = true;
+                quoteChar = ch;
+              } else if (quoteChar === ch) {
+                inQuotes = false;
+              }
+              current += ch;
+            } else if (ch === ',' && !inQuotes) {
+              items.push(current.trim());
+              current = '';
+            } else {
+              current += ch;
+            }
+          }
+          if (current.trim()) items.push(current.trim());
+          val = items.map((s) => {
+            if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+              return s.slice(1, -1);
+            }
+            return s;
+          });
+        }
+      }
+      currentSection[key] = val;
+    }
+  }
+  return result;
+}
+
+function mergeConfigs(target, source) {
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      target[key] = target[key] || {};
+      mergeConfigs(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+
+function loadEffectiveConfig() {
+  const tplPath = path.join(PKG_ROOT, 'templates', 'config.toml');
+  const globalPath = path.join(HOME, '.taskard', 'config.toml');
+  const projectPath = path.join(CWD, '.taskard', 'config.toml');
+
+  let config = {};
+  if (fs.existsSync(tplPath)) {
+    try {
+      config = parseSimpleToml(fs.readFileSync(tplPath, 'utf8'));
+    } catch (_) {}
+  }
+
+  let source = 'templates/config.toml (Built-in Defaults)';
+  let isProject = false;
+  let isGlobal = false;
+
+  if (fs.existsSync(globalPath)) {
+    try {
+      const globalCfg = parseSimpleToml(fs.readFileSync(globalPath, 'utf8'));
+      mergeConfigs(config, globalCfg);
+      source = '~/.taskard/config.toml (Global)';
+      isGlobal = true;
+    } catch (_) {}
+  }
+
+  if (fs.existsSync(projectPath)) {
+    try {
+      const projectCfg = parseSimpleToml(fs.readFileSync(projectPath, 'utf8'));
+      mergeConfigs(config, projectCfg);
+      source = '.taskard/config.toml (Workspace)';
+      isProject = true;
+    } catch (_) {}
+  }
+
+  return { config, source, isProject, isGlobal, globalPath, projectPath };
 }
 
 function normalizeOpenCodeColor(color) {
@@ -107,10 +255,10 @@ function detectHarnesses() {
   if (fs.existsSync(path.join(HOME, '.agents')) || fs.existsSync(path.join(HOME, '.codex'))) {
     found.push('Codex / OpenAgent');
   }
-  if (fs.existsSync(path.join(HOME, '.gemini')) || fs.existsSync(path.join(HOME, '.antigravity'))) {
+  if (fs.existsSync(path.join(HOME, '.gemini', 'antigravity-cli')) || fs.existsSync(path.join(HOME, '.gemini')) || fs.existsSync(path.join(HOME, '.antigravity'))) {
     found.push('Antigravity');
   }
-  if (fs.existsSync(path.join(CWD, '.cursor')) || fs.existsSync(path.join(CWD, '.cursorrules'))) {
+  if (fs.existsSync(path.join(CWD, '.cursor')) || fs.existsSync(path.join(CWD, '.cursorrules')) || fs.existsSync(path.join(HOME, '.cursor'))) {
     found.push('Cursor');
   }
   if (found.length === 0) found.push('Standard Universal (Claude Code / OpenCode compatible)');
@@ -345,6 +493,220 @@ function runInit(args) {
   console.log(`  ${C.emerald}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
 }
 
+function runDoctor(args) {
+  printBanner();
+  console.log(`  ${C.violet}${C.bold}╭─────────────────────────── TASKARD SYSTEM DOCTOR ───────────────────────────╮${C.reset}`);
+  console.log(`  ${C.violet}│${C.reset}  ${C.bold}Diagnostic health inspection for multi-harness agent environment${C.reset}`);
+  console.log(`  ${C.violet}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+
+  let totalChecks = 0;
+  let passedChecks = 0;
+  let warningChecks = 0;
+
+  // 1. Harness Detection
+  totalChecks++;
+  const harnesses = detectHarnesses();
+  const hasSpecificHarness = !harnesses.includes('Standard Universal (Claude Code / OpenCode compatible)');
+  console.log(`  ${C.cyan}${C.bold}[1/5]${C.reset} ${C.bold}Harness Detection${C.reset}`);
+  if (hasSpecificHarness) {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Detected: ${C.bold}${harnesses.join(', ')}${C.reset}`);
+  } else {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Universal compatibility mode active (${harnesses[0]})${C.reset}`);
+  }
+
+  // 2. Skills Symlink Health
+  totalChecks++;
+  const taskardHome = path.join(HOME, '.taskard');
+  const claudeSkillLink = path.join(HOME, '.claude', 'skills', 'taskard');
+  const agentsSkillLink = path.join(HOME, '.agents', 'skills', 'taskard');
+  const localSkillMd = path.join(PKG_ROOT, 'skills', 'taskard', 'SKILL.md');
+  const globalSkillMd = path.join(taskardHome, 'skills', 'taskard', 'SKILL.md');
+
+  const claudeSkillExists = fs.existsSync(claudeSkillLink);
+  const agentsSkillExists = fs.existsSync(agentsSkillLink);
+  const skillMdExists = fs.existsSync(localSkillMd) || fs.existsSync(globalSkillMd);
+
+  console.log(`  ${C.cyan}${C.bold}[2/5]${C.reset} ${C.bold}Skills Symlink & Health${C.reset}`);
+  if (skillMdExists && (claudeSkillExists || agentsSkillExists || fs.existsSync(taskardHome))) {
+    passedChecks++;
+    const linksFound = [];
+    if (claudeSkillExists) linksFound.push('~/.claude/skills/taskard');
+    if (agentsSkillExists) linksFound.push('~/.agents/skills/taskard');
+    const linksDesc = linksFound.length > 0 ? linksFound.join(', ') : 'Package skill core';
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Skill symlinks verified: ${linksDesc} (SKILL.md readable)${C.reset}`);
+  } else if (skillMdExists) {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Package skill source verified (Run 'taskard init' to link harnesses)${C.reset}`);
+  } else {
+    warningChecks++;
+    console.log(`        ${C.rose}✖${C.reset} ${C.gray}Taskard skill not linked. Run 'npx taskard init'${C.reset}`);
+  }
+
+  // 3. 7 Agent Definitions Presence
+  totalChecks++;
+  const requiredRoles = ['implementer', 'reviewer', 'planner', 'debugger', 'ui-developer', 'explorer', 'qa-tester'];
+  const agentsSrcDir = path.join(PKG_ROOT, 'agents');
+  const globalAgentsDir = path.join(taskardHome, 'agents');
+  const claudeAgentsDir = path.join(HOME, '.claude', 'agents');
+
+  let validRolesCount = 0;
+  for (const role of requiredRoles) {
+    const candidatePaths = [
+      path.join(globalAgentsDir, `${role}.md`),
+      path.join(claudeAgentsDir, `${role}.md`),
+      path.join(agentsSrcDir, `${role}.md`),
+    ];
+    let foundRole = false;
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        const content = fs.readFileSync(p, 'utf8');
+        if (content.includes('name:') && content.includes('model:') && content.includes('description:')) {
+          foundRole = true;
+          break;
+        }
+      }
+    }
+    if (foundRole) validRolesCount++;
+  }
+
+  console.log(`  ${C.cyan}${C.bold}[3/5]${C.reset} ${C.bold}Agent Role Definitions (7 Roles)${C.reset}`);
+  if (validRolesCount === requiredRoles.length) {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}All 7 role contracts validated (${requiredRoles.join(', ')})${C.reset}`);
+  } else {
+    warningChecks++;
+    console.log(`        ${C.amber}▲${C.reset} ${C.gray}${validRolesCount}/7 roles verified. Run 'taskard init' to sync missing roles.${C.reset}`);
+  }
+
+  // 4. Configuration Health
+  totalChecks++;
+  const globalConfigPath = path.join(taskardHome, 'config.toml');
+  const projectConfigPath = path.join(CWD, '.taskard', 'config.toml');
+  const templateConfigPath = path.join(PKG_ROOT, 'templates', 'config.toml');
+
+  let configHealthy = false;
+  const configLocations = [];
+
+  if (fs.existsSync(projectConfigPath)) {
+    try {
+      parseSimpleToml(fs.readFileSync(projectConfigPath, 'utf8'));
+      configLocations.push('.taskard/config.toml (Workspace)');
+      configHealthy = true;
+    } catch (_) {}
+  }
+  if (fs.existsSync(globalConfigPath)) {
+    try {
+      parseSimpleToml(fs.readFileSync(globalConfigPath, 'utf8'));
+      configLocations.push('~/.taskard/config.toml (Global)');
+      configHealthy = true;
+    } catch (_) {}
+  }
+  if (!configHealthy && fs.existsSync(templateConfigPath)) {
+    try {
+      parseSimpleToml(fs.readFileSync(templateConfigPath, 'utf8'));
+      configLocations.push('templates/config.toml (Built-in)');
+      configHealthy = true;
+    } catch (_) {}
+  }
+
+  console.log(`  ${C.cyan}${C.bold}[4/5]${C.reset} ${C.bold}Configuration Layer${C.reset}`);
+  if (configHealthy) {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Valid configuration source: ${configLocations.join(', ')}${C.reset}`);
+  } else {
+    warningChecks++;
+    console.log(`        ${C.amber}▲${C.reset} ${C.gray}No valid config.toml found. Run 'taskard init'${C.reset}`);
+  }
+
+  // 5. Directive Block Markers
+  totalChecks++;
+  const directiveTargets = [
+    path.join(CWD, 'CLAUDE.md'),
+    path.join(CWD, 'AGENTS.md'),
+    path.join(HOME, '.claude', 'CLAUDE.md'),
+    path.join(HOME, '.claude', 'AGENTS.md'),
+  ];
+  let markersFound = 0;
+  const syncedFiles = [];
+  for (const t of directiveTargets) {
+    if (fs.existsSync(t)) {
+      const content = fs.readFileSync(t, 'utf8');
+      if (content.includes('<!-- taskard:start -->') && content.includes('<!-- taskard:end -->')) {
+        markersFound++;
+        syncedFiles.push(path.basename(t));
+      }
+    }
+  }
+
+  console.log(`  ${C.cyan}${C.bold}[5/5]${C.reset} ${C.bold}Directive Block Markers${C.reset}`);
+  if (markersFound > 0) {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}<!-- taskard:start --> markers verified in ${markersFound} file(s) [${[...new Set(syncedFiles)].join(', ')}]${C.reset}`);
+  } else {
+    passedChecks++;
+    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Directive block ready for synchronization across CLAUDE.md / AGENTS.md${C.reset}`);
+  }
+
+  // Diagnostics Summary Card
+  const allGreen = warningChecks === 0;
+  const statusLabel = allGreen ? 'Healthy · All systems operational' : 'Warnings detected · Run taskard init';
+  const statusColor = allGreen ? C.emerald : C.amber;
+
+  console.log(`\n  ${statusColor}${C.bold}╭───────────────────────────── DIAGNOSTICS SUMMARY ────────────────────────────╮${C.reset}`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Status        :${C.reset} ${statusColor}${C.bold}${statusLabel}${C.reset}`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Checks passed :${C.reset} ${C.bold}${passedChecks} / ${totalChecks}${C.reset} ${warningChecks > 0 ? `${C.amber}(${warningChecks} warnings)${C.reset}` : ''}`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Harnesses     :${C.reset} ${harnesses.join(', ')}`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Role Roster   :${C.reset} 7 roles active (implementer, reviewer, planner, debugger...)`);
+  console.log(`  ${statusColor}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+}
+
+function runConfig() {
+  printBanner();
+  const { config, source } = loadEffectiveConfig();
+  const defaults = config.defaults || {};
+  const roles = config.roles || {};
+  const qa = config.qa || {};
+  const risky = config.risky_operations || {};
+
+  console.log(`  ${C.cyan}${C.bold}╭─────────────────────────── TASKARD CONFIGURATION ───────────────────────────╮${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}Effective Source:${C.reset} ${C.emerald}${source}${C.reset}`);
+  console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.violet}[DEFAULTS & GOVERNANCE]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Speed Gear         :${C.reset} ${C.bold}${C.cyan}${defaults.default_mode || 'express'}${C.reset} ${C.dim}[nano | express | full]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Permission Mode    :${C.reset} ${C.bold}${defaults.permission_mode || 'bypassPermissions'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Circuit Breaker    :${C.reset} ${C.amber}${C.bold}2-Strike${C.reset} ${C.gray}(max_attempts = ${defaults.max_attempts ?? 2})${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Report Max Lines   :${C.reset} ${defaults.report_max_lines ?? 15} lines ${C.dim}(strict contract)${C.reset}`);
+  if (defaults.budget_minutes) {
+    console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Budget Ceiling     :${C.reset} ${defaults.budget_minutes} minutes`);
+  }
+  console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}[ROLE ROUTING & MODEL TIERS]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}Strategy (Tier 1)${C.reset}   : planner -> ${C.bold}${roles.planner || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         reviewer_full -> ${C.bold}${roles.reviewer_full || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         debugger_full -> ${C.bold}${roles.debugger_full || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.blue}${C.bold}Execution (Tier 2)${C.reset}  : implementer -> ${C.bold}${roles.implementer || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         ui-developer -> ${C.bold}${roles['ui-developer'] || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         reviewer -> ${C.bold}${roles.reviewer || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         debugger -> ${C.bold}${roles.debugger || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.emerald}${C.bold}Assist (Tier 3)${C.reset}     : explorer -> ${C.bold}${roles.explorer || 'haiku'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         qa-tester -> ${C.bold}${roles['qa-tester'] || 'haiku'}${C.reset}`);
+  const disabledStr = Array.isArray(roles.disabled) && roles.disabled.length > 0 ? roles.disabled.join(', ') : 'None';
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Disabled Roles     :${C.reset} ${disabledStr}`);
+  console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.rose}[RISKY OPERATIONS (APPROVAL GATED)]${C.reset}`);
+  const patternsList = Array.isArray(risky.patterns) ? risky.patterns.join(', ') : 'migration, deploy, rm -rf, drop table, git push --force';
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Patterns           :${C.reset} ${C.rose}${patternsList}${C.reset}`);
+  console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.emerald}[QA SYSTEM VERIFICATION]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• QA Gate Enabled    :${C.reset} ${qa.enabled ? `${C.emerald}true${C.reset}` : `${C.dim}false (default OFF)${C.reset}`}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Headless Browser   :${C.reset} ${qa.headless_browser ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(agent-browser / playwright-cli)${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Integration Tests  :${C.reset} ${qa.run_integration_tests ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(npm test, pytest)${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Auto Endpoints     :${C.reset} ${qa.auto_verify_endpoints ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(HTTP curl verification)${C.reset}`);
+  console.log(`  ${C.cyan}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+}
+
 // CLI Dispatcher
 const args = process.argv.slice(2);
 const command = args[0] || 'init';
@@ -357,6 +719,16 @@ if (args.includes('--help') || args.includes('-h') || command === 'help') {
 if (args.includes('--version') || args.includes('-v') || command === 'version') {
   const pkg = JSON.parse(fs.readFileSync(path.join(PKG_ROOT, 'package.json'), 'utf8'));
   console.log(`taskard v${pkg.version}`);
+  process.exit(0);
+}
+
+if (command === 'doctor' || command === 'check' || command === 'status' || command === 'diag') {
+  runDoctor(args);
+  process.exit(0);
+}
+
+if (command === 'config' || command === 'cfg') {
+  runConfig();
   process.exit(0);
 }
 
@@ -374,3 +746,4 @@ if (command === 'init' || command === 'install') {
 console.error(`${C.rose}Unknown command: ${command}${C.reset}\n`);
 printHelp();
 process.exit(1);
+

@@ -61,6 +61,39 @@ try {
   } else {
     fail(`CLI roles command did not produce expected output`);
   }
+
+  // CLI Doctor Command Test
+  const doctorOut = execSync('node bin/taskard.js doctor', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (doctorOut.includes('TASKARD SYSTEM DOCTOR') && doctorOut.includes('Harness Detection') && doctorOut.includes('Checks passed')) {
+    pass('CLI doctor command executed successfully with health diagnosis');
+  } else {
+    fail(`CLI doctor command unexpected output: ${doctorOut}`);
+  }
+
+  // CLI Doctor aliases (check, status, diag)
+  const checkOut = execSync('node bin/taskard.js check', { cwd: ROOT, stdio: 'pipe' }).toString();
+  const statusOut = execSync('node bin/taskard.js status', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (checkOut.includes('TASKARD SYSTEM DOCTOR') && statusOut.includes('TASKARD SYSTEM DOCTOR')) {
+    pass('CLI doctor aliases (check, status) executed successfully');
+  } else {
+    fail('CLI doctor aliases did not produce expected output');
+  }
+
+  // CLI Config Command Test
+  const configOut = execSync('node bin/taskard.js config', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (configOut.includes('TASKARD CONFIGURATION') && configOut.includes('Speed Gear') && configOut.includes('implementer') && configOut.includes('Effective Source')) {
+    pass('CLI config command executed successfully with effective config inspection');
+  } else {
+    fail(`CLI config command unexpected output: ${configOut}`);
+  }
+
+  // CLI Config alias (cfg)
+  const cfgOut = execSync('node bin/taskard.js cfg', { cwd: ROOT, stdio: 'pipe' }).toString();
+  if (cfgOut.includes('TASKARD CONFIGURATION') && cfgOut.includes('Speed Gear')) {
+    pass('CLI config alias (cfg) executed successfully');
+  } else {
+    fail('CLI config alias did not produce expected output');
+  }
 } catch (err) {
   fail(`CLI command execution failed: ${err.message}`);
 }

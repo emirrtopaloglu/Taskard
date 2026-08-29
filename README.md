@@ -102,6 +102,14 @@ cd Taskard
 ./install.sh
 ```
 
+### Useful CLI Commands
+
+```bash
+taskard doctor    # Diagnose harness bridges, skills symlinks & config health
+taskard config    # Inspect effective configuration and 7-role routing table
+taskard roles     # Display the 7-role tier roster matrix
+```
+
 ---
 
 ## 🕹️ How to Use
