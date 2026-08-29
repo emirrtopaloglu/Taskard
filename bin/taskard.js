@@ -560,14 +560,14 @@ async function runInteractiveInit(args) {
 
   // 1. Speed Gear
   console.log(`  ${C.cyan}${C.bold}[1/3] Default Speed Gear:${C.reset}`);
-  console.log(`        ${C.bold}1)${C.reset} ${C.cyan}🚀 Express${C.reset}  ${C.gray}(Default - 5-10m, lightweight brief + review gate)${C.reset}`);
-  console.log(`        ${C.bold}2)${C.reset} ${C.amber}⚡ Nano${C.reset}     ${C.gray}(Fast - <2m, zero overhead, single fix)${C.reset}`);
-  console.log(`        ${C.bold}3)${C.reset} ${C.purple}🏛️ Full${C.reset}     ${C.gray}(Rigor - 15-30m, worktree DAG, QA & opus review)${C.reset}`);
+  console.log(`        ${C.bold}1)${C.reset} ${C.cyan}🚀 Pro${C.reset}     ${C.gray}(Default - 5-10m, point-to-range brief + review gate)${C.reset}`);
+  console.log(`        ${C.bold}2)${C.reset} ${C.amber}⚡ Fast${C.reset}    ${C.gray}(Fast - <2m, zero overhead, single fix)${C.reset}`);
+  console.log(`        ${C.bold}3)${C.reset} ${C.purple}🏛️ Max${C.reset}     ${C.gray}(Rigor - 15-30m, worktree DAG, QA & opus review)${C.reset}`);
   const gearAns = (await question(`        ${C.bold}Selection [1-3] (1): ${C.reset}`)).trim() || '1';
 
-  let selectedGear = 'express';
-  if (gearAns === '2' || gearAns.toLowerCase() === 'nano' || gearAns.toLowerCase() === 'fast') selectedGear = 'nano';
-  else if (gearAns === '3' || gearAns.toLowerCase() === 'full' || gearAns.toLowerCase() === 'max') selectedGear = 'full';
+  let selectedGear = 'pro';
+  if (gearAns === '2' || gearAns.toLowerCase() === 'fast' || gearAns.toLowerCase() === 'nano') selectedGear = 'fast';
+  else if (gearAns === '3' || gearAns.toLowerCase() === 'max' || gearAns.toLowerCase() === 'full') selectedGear = 'max';
 
   // 2. Primary Harness
   console.log(`\n  ${C.cyan}${C.bold}[2/3] Primary AI CLI Harness:${C.reset}`);
