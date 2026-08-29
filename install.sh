@@ -121,7 +121,7 @@ fi
 # 4. Dış Disiplin Skill'leri
 ensure_external_skills() {
   local missing=0
-  for s in test-driven-development grilling using-superpowers; do
+  for s in grilling using-superpowers; do
     if [ ! -d "$HOME/.agents/skills/$s" ] && [ ! -d "$HOME/.claude/skills/$s" ]; then
       missing=1
     fi
@@ -178,9 +178,9 @@ fi
 # --- 1. Rol Roster Kartı ---
 echo -e "\n  ${C_VIOLET}${BOLD}╭────────────────────────────── ROLE ROSTER ──────────────────────────────╮${RESET}"
 echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}${BOLD}STRATEGY (Tier 1)${RESET}       ${C_BLUE}${BOLD}EXECUTION (Tier 2)${RESET}      ${C_EMERALD}${BOLD}ASSIST (Tier 3)${RESET}        ${C_VIOLET}│${RESET}"
-echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} planner     ${DIM}[opus]${RESET}    ${C_BLUE}●${RESET} implementer  ${DIM}[sonnet]${RESET} ${C_EMERALD}●${RESET} explorer  ${DIM}[haiku]${RESET}    ${C_VIOLET}│${RESET}"
-echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} debugger    ${DIM}[opus]${RESET}    ${C_BLUE}●${RESET} ui-developer ${DIM}[sonnet]${RESET} ${C_EMERALD}●${RESET} qa-tester ${DIM}[haiku]${RESET}    ${C_VIOLET}│${RESET}"
-echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} reviewer    ${DIM}[opus]${RESET}                                                   ${C_VIOLET}│${RESET}"
+echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} planner  ${DIM}[opus]${RESET}        ${C_BLUE}●${RESET} implementer  ${DIM}[sonnet]${RESET} ${C_EMERALD}●${RESET} explorer  ${DIM}[haiku]${RESET}    ${C_VIOLET}│${RESET}"
+echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} reviewer ${DIM}[sonnet/opus]${RESET} ${C_BLUE}●${RESET} ui-developer ${DIM}[sonnet]${RESET} ${C_EMERALD}●${RESET} qa-tester ${DIM}[haiku]${RESET}    ${C_VIOLET}│${RESET}"
+echo -e "  ${C_VIOLET}│${RESET}  ${C_PURPLE}●${RESET} debugger ${DIM}[sonnet/opus]${RESET}                                                   ${C_VIOLET}│${RESET}"
 echo -e "  ${C_VIOLET}${BOLD}╰─────────────────────────────────────────────────────────────────────────╯${RESET}"
 
 # --- 2. Başarı & Hızlı Başlatma Kartı (Dinamik Hizalama) ---

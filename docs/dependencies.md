@@ -4,6 +4,8 @@ Taskard bu skill'leri PAKETE GÖMEZ — makinende kurulu olanları referans veri
 
 Kaynaklar: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills)
 
+*(Not: `test-driven-development` ve `verification-before-completion` kuralları doğrudan `implementer` rol tanımına yerleşik olarak gömülmüştür; dış skill yüklemesi gerektirmez.)*
+
 ## Bağlama tablosu
 
 | Skill | Kaynak | Tetik fazı | Yoksa |
@@ -24,9 +26,7 @@ Kaynaklar: [obra/superpowers](https://github.com/obra/superpowers) · [mattpococ
 | resolving-merge-conflicts | superpowers | Worktree merge çakışması | Çakışma kullanıcıya eskalasyon |
 | requesting-code-review | superpowers | Gate 1 kalibrasyonu (reviewer agent) | Reviewer tanımındaki kalibrasyon metni |
 | receiving-code-review | superpowers | Fix delegate'i bulgu aldığında | Doğrula-sonra-uygula kuralı SKILL.md'de |
-| test-driven-development | superpowers | Implementer: her davranış değişikliği | Implementer tanımındaki iron law metni |
 | systematic-debugging | superpowers | 2. başarısız denemede teşhis | Kök-neden soruları elle sorulur |
-| verification-before-completion | superpowers | Her kapanışta kanıt kontrolü | Kanıt zorunluluğu SKILL.md iron law 4 |
 | finishing-a-development-branch | superpowers | Yeşil suite sonrası merge menüsü | Merge kararı doğrudan kullanıcıya |
 | improve-codebase-architecture | mattpocock | Periyodik bakım / refactor turu | Ayrı istekle manuel |
 
@@ -43,8 +43,6 @@ Aşağıdakiler agent tanımlarındaki **zorunlu skill sözleşmelerinde** geçe
 | webapp-testing · agent-browser | qa-tester (web end-state testi) | lokal kurulu |
 | frontend-design | ui-developer (web) | anthropics/claude-code plugin'i |
 | expo-* (project-structure, native-ui, router, data-fetching, ui, tailwind-setup) | ui-developer (mobil) | Expo OSS skill koleksiyonu |
-
-> v0.5 notu: bu tablodaki kaynakların `npx skills` kurulum adresleri install.sh'e bağlanacak.
 
 ## Kurulum
 

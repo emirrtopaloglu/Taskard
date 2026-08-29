@@ -4,15 +4,15 @@
 
 Çoklu-harness agent orchestration **konvansiyon paketi** — saf konvansiyon, sıfır çalışma zamanı kodu.
 
-Felsefe: her harness'ın (Claude Code, Codex, OpenCode...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, lane disiplini, brief kalitesi, rapor sözleşmesi, insan onay kapıları.
+Felsefe: her harness'ın (Claude Code, Codex, OpenCode, Antigravity...) kendi subagent yeteneği zaten vardır. Taskard o yeteneğin üstüne **doktrin** ekler: adlandırılmış roller, point-to-range brief standardı, lean şanzıman, yerleşik TDD/kanıt sözleşmesi ve insan onay kapıları.
 
-- Main agent (pahalı akıl) asla kod yazmaz: spec yazar, böler, delegate açar, yargı verir
+- Main agent (pahalı akıl) asla kod yazmaz: görevi sınıflandırır, point-to-range brief yazar, delegate açar, yargı verir
 - Her delegate **adlandırılmış** rolle açılır (implementer, reviewer, ui-developer, qa-tester, explorer, planner, debugger) — isimsiz agent yasak
-- Her rolün **zorunlu skill sözleşmesi** vardır: Superpowers / Matt Pocock / Expo skill'leri kuruluysa ilgili rolde kullanmak mecburidir — skill'ler kalibrasyon katmanıdır
-- Kapanış raporu her zaman **elle test listesi** taşır: senin bizzat denemen gerekenler; her satır tek eylem + beklenen sonuç, günlük dilde
-- Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil override
-- Dört hafıza katmanı `.taskard/` markdown konvansiyonunda taşınır
-- Cross-harness ihtiyaçlar skill içindeki headless bash tarifleriyle karşılanır
+- **Yerleşik TDD & Kanıt:** `implementer` Red-Green-Refactor döngüsünü ve komut çıktısı kanıtını yerleşik yürütür; dış skill yükü taşımaz
+- **Point-to-Range Brief:** Brief'e asla kod kopyalanmaz; yalnızca hedef dosya ve satır aralığı verilir (`path/file.ts#L40-L65`)
+- **Akıllı Model Tiering:** Express modda reviewer ve debugger orta model (`sonnet`); Full modda derin analiz için ağır model (`opus`)
+- Kapanış raporu her zaman **elle test listesi** taşır: senin bizzat denemen gerekenler (günlük dilde tek eylem + beklenen sonuç)
+- Model seçimi kullanıcıdadır: `config.toml` tablosu + doğal dil oturum override
 
 ## Kurulum
 
@@ -41,9 +41,9 @@ Taskard akışıyla <görev>
 ```
 
 Taskard görevi uygun hız kademesine sınıflandırır ve yürütür:
-- ⚡ **Nano (<2-3 dk):** 1 dosya, typo veya CSS/stil fix'i için hızlı şerit. Sıfır dosya; tek implementer + doğrudan doğrulama.
-- 🚀 **Express (Varsayılan, 5-10 dk):** 2-4 dosyalık net özellikler ve bileşen eklemeleri. Self-priming brief (`brief.md`) + implementer + scoped mini-review gate. Ağır grilling/spec dosyası yok.
-- 🏛️ **Full (15-30 dk):** Karmaşık mimari, paralel worktree'ler ve kritik veri/auth değişiklikleri. Tam grilling → spec → tasks → DAG → QA → final review.
+- ⚡ **Nano (< 1-2 dk - Agresif Tercih):** 1 dosya, typo, stil/CSS veya tek fonksiyonluk fix. Sıfır `.taskard/` dosyası; tek implementer + ana döngüde anında doğrulama.
+- 🚀 **Express (Varsayılan, 5-10 dk):** 2-4 dosyalık net özellikler ve bileşenler. Point-to-range `brief.md` + implementer + sonnet mini-review gate.
+- 🏛️ **Full (15-30 dk):** Karmaşık mimari, paralel worktree'ler ve kritik veri/auth değişiklikleri. Grilling → spec → tasks → DAG → QA → opus final review.
 
 Senin karar noktaların:
 - **Mod & Model override** — *"bu işi full modda ve implementer'da opus ile yap"* demen yeterli
@@ -63,17 +63,18 @@ default_mode = "express"    # "nano" | "express" (varsayılan) | "full"
 max_attempts = 2            # 2-Strike circuit breaker
 
 [roles]
-# Tier 1: Ağır Beyinler (Derin Strateji, Planlama & Final Yargı)
-planner = "opus"
-debugger = "opus"
-reviewer = "opus"
-
-# Tier 2: Hızlı & Güvenilir İşçiler (Aktif Kodlama & Arayüz)
+# Express Mod Varsayılanları (Tier 2 Hızlı & Dengeli):
 implementer = "sonnet"
 ui-developer = "sonnet"
+reviewer = "sonnet"         # Express modda hızlı mini-review
+debugger = "sonnet"         # Express modda hedefli hata teşhisi
 
-# Tier 3: Işık Hızında Asistanlar (Geniş Keşif & Doğrulama)
-# Not: model adları harness'a göre değişir; Tier 3 = o harness'ta karşılığı olan en ucuz/hızlı model.
+# Full Mod Ağır Beyinleri (Tier 1 Derinlik & Mimari):
+planner = "opus"
+reviewer_full = "opus"      # Full modda derin mimari/güvenlik incelemesi
+debugger_full = "opus"      # Full modda karmaşık/flaky kök neden analizi
+
+# Tier 3: Işık Hızında Asistanlar (Geniş Keşif & Hızlı Doğrulama):
 explorer = "haiku"
 qa-tester = "haiku"
 
@@ -91,19 +92,9 @@ patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 
 Global: `~/.taskard/config.toml` · Proje bazlı: `<proje>/.taskard/config.toml` · Session: doğal dilin sözü en güçlüsü.
 
-Bir rol istemiyor musun? `disabled` listesine yaz — proje listesi global listeyi komple değiştirir, oturumdaki sözlerin ikisini de geçer. İş en yakın yetkili ele düşer; kapı rolü (reviewer / qa-tester) devre dışı bırakılırsa bu plan onayında açıkça söylenir, sessizce atlanmaz.
+## Mimari İlkeler (Kısa)
 
-## Proje kurulumu (proje başına bir kez)
-
-Main agent skill'deki tarifi izler: `.taskard/` ağacını kurar, proje CLAUDE.md/AGENTS.md'ine direktif bloğunu ekler. Elle yapmak istersen skill'in "Kurulum tarifi" bölümüne bak.
-
-## Yeni rol ekleme
-
-Domain uzmanı gerekiyorsa (örn. mobile-developer, data-engineer): `agents/` altına yeni `<rol>.md` tanımı ekle, `./install.sh` çalıştır — ya da sadece projeye `.claude/agents/<rol>.md` olarak koy.
-
-## Mimari ilkeler (kısa)
-
-1. Ana döngü asla kod yazmaz — spec, dispatch, yargı; gerisi delegate
+1. Ana döngü asla kod yazmaz — spec, point-to-range brief, dispatch, yargı; gerisi delegate
 2. İsimsiz subagent yasak — her elin bir rolü ve adı var
 3. Damıtma sözleşmesi: delegate ≤15 satırla kanıtlı rapor verir
 4. Config çalışma anında asla değiştirilmez
