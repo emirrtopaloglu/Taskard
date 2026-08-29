@@ -9,7 +9,7 @@
 5. Yeni agent tanımı eklerken frontmatter'da `name` zorunludur; isimsiz rol tanımlanmaz.
 6. **Test projeleri ürün kimliğine yazılmaz:** dogfooding yapılan projelerin adları README, SKILL.md, map veya örneklerde geçmez; gerekirse "test projesi" denir.
 7. **Dış skill'ler vendor edilmez** — `docs/dependencies.md` manifest'i + install.sh'in npx kurulum adımı tek mekanizmadır; upstream güncellemesi otomatik akar. Vendoring OSS fazında ayrı karardır.
-8. **Mod seçimi akışın ilk hamlesidir:** basit iş loop, karmaşık iş graph modu — graph gereksiz yere başlanmaz, loop çalışırken kapsam genlerse yükseltilir.
+8. **Mod seçimi akışın ilk hamlesidir:** 3 kademeli şanzıman (Nano / Express [varsayılan] / Full); görevin karmaşıklığına göre seçilir, oturum override'ı geçerlidir.
 
 ## Hızlı doğrulama
 
