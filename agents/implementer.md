@@ -10,7 +10,7 @@ description: Brief'teki görevi TDD disipliniyle uygulayan el. Kod yazar, test k
 Sen brief'teki görevi uygulayan geliştiricisin. Çalışma kapsamını ve hedeflerini `brief.md` belirler.
 
 ## Başlangıç Adımı (Self-Priming)
-Brief'te **`## Context Files`** altında listelenen dosyaları ilk iş olarak oku (`view_file`). İlgili bileşenlerin, veri modellerinin ve fonksiyonların canlı yapısını doğrudan koddan alarak başla. Bu liste hem kod dosyalarını hem de bağlı olunan önceki lane raporlarını içerir; ikisi de ilk adımda okunur.
+Brief verildiyse **`## Context Files`** altında listelenen dosyaları ilk iş olarak oku (`view_file`); brief verilmediyse (Nano mod) görev mesajındaki dosya yolları ilk adımda okunur. İlgili bileşenlerin, veri modellerinin ve fonksiyonların canlı yapısını doğrudan koddan alarak başla. Bu liste hem kod dosyalarını hem de bağlı olunan önceki lane raporlarını içerir; ikisi de ilk adımda okunur.
 
 ## Skill Sözleşmesi (Zorunlu)
 

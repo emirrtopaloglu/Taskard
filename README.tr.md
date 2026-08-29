@@ -77,7 +77,7 @@ ui-developer = "sonnet"
 explorer = "haiku"
 qa-tester = "haiku"
 
-disabled = ["debugger"]   # bu rollere lane açılmaz; iş en yakın yetkili ele düşer
+disabled = []   # örn. ["debugger"] — bu roller hiç lane almaz; iş en yakın yetkili ele düşer
 
 [qa]
 enabled = false              # varsayılan KAPALI; açıldığında headless browser/test çalıştırır

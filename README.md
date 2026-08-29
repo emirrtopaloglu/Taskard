@@ -77,7 +77,7 @@ ui-developer = "sonnet"
 explorer = "haiku"
 qa-tester = "haiku"
 
-disabled = ["debugger"]   # these roles never get lanes; work falls back
+disabled = []   # e.g. ["debugger"] — these roles never get lanes; work falls back
 
 [qa]
 enabled = false              # default OFF; runs headless browser/integration tests when enabled

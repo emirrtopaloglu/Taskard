@@ -101,7 +101,7 @@ Full modda: Görev büyük/riskliyse grilling yap (`grill-with-docs` / `grill-me
 Her lane için:
 1. **Ön kabul doğrulaması:** görevin dayandığı iddiaları brief yazmadan DOĞRULA (`ls`/`grep`). İddia yanlışsa uydurma, kullanıcıya sor.
 2. **Self-Priming Brief hazırla:** `.taskard/lanes/<ts>-<slug>-<id>/brief.md` doldur (lane ID sonuna 4 karakterlik rastgele suffix ekle: örn. `-a3f2`).
-   * **`## Context Files` (ZORUNLU):** Delegenin ilk adımda okuyacağı yollar — (a) 2-4 kritik kod dosyası, (b) bu lane'in bağlı olduğu **önceki lane raporlarının** ve ilgili **karar/spec dosyalarının** yolları. Ana döngü önceki lane'i brief'te nesirle ANLATMAZ, yolunu verir: özetin özeti bilgi kaybeder, işaretçi kaybetmez. Brief'e uzun kod veya önceki iş anlatısı kopyalanmaz.
+   * **`## Context Files` (ZORUNLU):** Delegenin ilk adımda okuyacağı yollar — (a) 2-4 kritik kod dosyası, (b) bu lane'in bağlı olduğu **önceki lane raporlarının** ve ilgili **karar/spec dosyalarının** yolları. Ana döngü önceki lane'i brief'te nesirle ANLATMAZ, yolunu verir: özetin özeti bilgi kaybeder, işaretçi kaybetmez. Brief'e uzun kod veya önceki iş anlatısı kopyalanmaz. Bu zorunluluk brief yazılan modlar (Express/Full) içindir; Nano'da brief yoktur, ana döngü okunacak dosya yolunu doğrudan delegate mesajına yazar.
    * **Bütçe & Disiplinler:** `Bütçe: max 1 retry (2-Strike)` · `Disiplinler: TDD zorunlu · verification-before-completion`.
    * **Kabul Kriterleri & Kapsam Dışı:** Net kanıtlanabilir maddeler.
 3. **Model Seçimi (Katmanlı Tiering):**
@@ -109,7 +109,8 @@ Her lane için:
    * **Tier 2 (Hızlı İşçiler):** `implementer = "sonnet"`, `ui-developer = "sonnet"`
    * **Tier 3 (Işık Hızında):** `explorer = "haiku"`, `qa-tester = "haiku"` — *model adları harness'a göre değişir; Tier 3 = o harness'ta karşılığı olan en ucuz/hızlı model.*
    * `config.toml` `[roles]` tablosu okunur; session'da söylenen sözler (`"bu implementer'da opus kullan"`) override eder.
-   * **Öncelik sırası:** frontmatter varsayılan < config.toml < oturumda söylenen söz.
+   * **Öncelik sırası:** `agents/*.md` frontmatter varsayılanı < `~/.taskard/config.toml` (global) < `.taskard/config.toml` (proje) < oturumda söylenen söz.
+   * **Devre dışı roller:** istenmeyen rolün lane'i açılmaz; iş en yakın yetkili ele düşer, kapı rolü (reviewer/qa-tester) devre dışıysa bu plan onayında duyurulur — sessizce atlanmaz.
 4. **Native Subagent Aç:** Rol tanımı ve modelle subagent başlat.
 5. **Raporu Oku (Sıkı Format):** `report.md` okunur (≤15 satır):
    ```
@@ -119,7 +120,7 @@ Her lane için:
    HASH: commit-hash (varsa)
    ```
 
-   > **Rapor kapısı (ana döngü doğrular):** Dört alan (`STATUS`, `DIFF_SUMMARY`, `EVIDENCE`, `HASH`) prefix'iyle ve bu sırayla yoksa rapor KABUL EDİLMEZ. Ana döngü delegate'e tek satırlık *"raporu sözleşme formatında yeniden yaz"* turu döner; bu tur 2-Strike sayacına yazılmaz (iş değil, format hatasıdır). `HASH` yalnızca commit oluşmadıysa boş bırakılabilir. Deterministik doğrulama runtime'da değil ana döngüdedir — bu yüzden kapı atlanamaz.
+   > **Rapor kapısı (ana döngü doğrular):** Dört alan (`STATUS`, `DIFF_SUMMARY`, `EVIDENCE`, `HASH`) prefix'iyle ve bu sırayla yoksa rapor KABUL EDİLMEZ. Ana döngü delegate'e tek satırlık *"raporu sözleşme formatında yeniden yaz"* turu döner; bu tur 2-Strike sayacına yazılmaz (iş değil, format hatasıdır). `HASH` yalnızca commit oluşmadıysa boş bırakılabilir. Deterministik doğrulama runtime'da değil ana döngüdedir — bu yüzden kapı atlanamaz. Kapsam: bu kapı **iş üreten delegate raporları** içindir (implementer, ui-developer, debugger). Kapı rolleri ve keşif rolleri (reviewer, qa-tester, explorer, planner) kendi tanımlarındaki rapor sözleşmesine tabidir; ana döngü onları kendi sözleşmelerine göre doğrular.
 
 ## 4. 2-Strike Hızlı Müdahale ve Çevik Eskalasyon (Circuit Breaker)
 
@@ -134,7 +135,7 @@ Delege takıldığında veya hata aldığında sonsuz düzeltme turuna GİRİLME
 ## 5. Kalite Kapıları (Gates) & QA Yapılandırması
 
 * **Nano Mod:** Ayrı review subagent açılmaz; ana döngü diff'i doğrular.
-* **Express Mod:** Tek scoped `reviewer` (mini-review, ≤5 satır bulgu, standartlar + diff kontrolü). Bu ayrı bir rol DEĞİLDİR — `reviewer` rolünün scoped (mini-review) koşumudur, Tier 3 modeliyle açılır.
+* **Express Mod:** Tek scoped `reviewer` (mini-review, ≤5 satır bulgu, standartlar + diff kontrolü). Bu ayrı bir rol DEĞİLDİR — `reviewer` rolünün scoped koşumudur; daralan şey KAPSAMDIR (yalnızca lane diff'i ve ≤5 satır bulgu), model değil. Modeli normal zincirden gelir (frontmatter < config < oturum); ucuz koşmak isteyen oturumda söyler.
 * **Full Mod:**
   1. `reviewer` gate (standartlar + spec uyumu).
   2. `qa-tester` gate (harici-etkili işlerde).
