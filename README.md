@@ -115,11 +115,16 @@ cd Taskard
 
 ```bash
 taskard lanes             # List active, completed, and blocked taskard lanes (--global, --active, --completed)
-taskard clean             # Clean workspace lanes, diffs, and temp files (--dry-run, --yes, --completed)
-taskard doctor            # Check installed bridge/config files; unhealthy installs exit nonzero
+taskard clean             # Archive eligible completed lanes by default; leaves tmp files and diffs alone
+taskard clean --all       # Confirmed cleanup of all live lanes, tmp files, and diffs
+taskard clean --purge     # Permanently remove eligible completed archives (requires confirmation)
+taskard verify            # Check lane contracts and Git/evidence metadata; does not prove commands ran
+taskard doctor            # Check required harness bridges and config; unhealthy installs exit nonzero
 taskard config            # Inspect effective configuration and 7-role routing table
 taskard roles             # Display the 7-role tier roster matrix
 ```
+
+Use `taskard clean --dry-run` to preview targets. `--all` requires an interactive confirmation or `--yes`; `--purge` removes eligible lanes already in `.taskard/archive/lanes/`.
 
 ---
 

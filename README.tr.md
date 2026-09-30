@@ -115,11 +115,16 @@ cd Taskard
 
 ```bash
 taskard lanes             # Aktif, tamamlanan ve bloklanan lane'leri listele (--global, --active, --completed)
-taskard clean             # Çalışma alanındaki lane'leri, diff'leri ve geçici dosyaları temizle (--dry-run, --yes, --completed)
-taskard doctor            # Kurulu bridge/konfigürasyonu denetle; sağlıksız kurulum sıfır dışı çıkar
+taskard clean             # Varsayılan olarak uygun tamamlanmış lane'leri arşivler; tmp ve diff'lere dokunmaz
+taskard clean --all       # Tüm etkin lane, tmp ve diff dosyaları için onaylı temizlik
+taskard clean --purge     # Uygun tamamlanmış arşivleri kalıcı siler (onay gerekir)
+taskard verify            # Lane sözleşmeleri ve Git/kanıt metadata'sını denetler; komutları kanıtlamaz
+taskard doctor            # Gerekli harness köprüleri ve yapılandırmayı denetler; sağlıksızsa sıfır dışı çıkar
 taskard config            # Etkin yapılandırmayı ve 7 rolün model yönlendirme tablosunu incele
 taskard roles             # 7 rollü kademe matrisini göster
 ```
+
+Hedefleri önizlemek için `taskard clean --dry-run` kullanın. `--all` etkileşimli onay veya `--yes` ister; `--purge`, `.taskard/archive/lanes/` içindeki uygun lane'leri kalıcı olarak siler.
 
 ---
 

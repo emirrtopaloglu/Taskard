@@ -69,8 +69,9 @@ function printHelp() {
   console.log(`${C.bold}USAGE:${C.reset}
   npx taskard init [options]     Initialize Taskard in current workspace or globally
   taskard lanes [options]        List active, completed, and blocked taskard lanes
-  taskard clean [options]        Clean workspace lanes, diffs, and temporary files
-  taskard doctor                 Check installed bridge and config files (not live agent behavior)
+  taskard clean [options]        Archive completed lanes; --all and --purge require confirmation
+  taskard verify [options]       Check lane briefs, reports, dependencies, and evidence metadata
+  taskard doctor                 Check required harness bridges and configuration health
   taskard config                 Display effective configuration and role routing
   taskard roles                  Display the 7-role tier matrix
   taskard --version              Show installed Taskard version
@@ -91,8 +92,13 @@ ${C.bold}LANES OPTIONS:${C.reset}
 ${C.bold}CLEAN OPTIONS:${C.reset}
   --dry-run                      Simulate cleanup without deleting any files
   -y, --yes, -f, --force         Clean without interactive confirmation prompt
-  --completed                    Clean only completed lanes (preserve active/blocked)
+  --completed                    Archive only eligible completed lanes (default)
+  -a, --all                      Confirmed cleanup of all live lanes, tmp files, and diffs
+  --purge                        Permanently remove eligible lanes already archived
   -g, --global                   Clean global ~/.taskard instead of workspace
+
+VERIFY OPTIONS:
+  -g, --global                   Verify global ~/.taskard lanes against this Git workspace
 
 ${C.bold}ALIASES:${C.reset}
   lane, ls, list-lanes           Aliases for 'taskard lanes'
@@ -915,26 +921,9 @@ function promptConfirm(question) {
 }
 
 function getItemSize(targetPath) {
-  let size = 0;
-  try {
-    const stat = fs.lstatSync(targetPath);
-    if (stat.isSymbolicLink()) {
-      return 0;
-    }
-    if (!stat.isDirectory()) {
-      return stat.size;
-    }
-    const entries = fs.readdirSync(targetPath, { withFileTypes: true });
-    for (const e of entries) {
-      const full = path.join(targetPath, e.name);
-      if (e.isDirectory()) {
-        size += getItemSize(full);
-      } else if (e.isFile()) {
-        size += fs.statSync(full).size;
-      }
-    }
-  } catch (_) {}
-  return size;
+  const stat = fs.lstatSync(targetPath);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) return stat.size;
+  return fs.readdirSync(targetPath).reduce((size, name) => size + getItemSize(path.join(targetPath, name)), 0);
 }
 
 function formatBytes(bytes) {
@@ -945,165 +934,237 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+const LANE_STATUSES = ['ACTIVE', 'BLOCKED', 'DONE', 'DONE_WITH_CONCERNS', 'NEEDS_CONTEXT'];
+const REVIEW_VERDICTS = ['FAIL', 'PASS', 'PASS_WITH_NOTES'];
+
+function lstatOrNull(targetPath) {
+  try {
+    return fs.lstatSync(targetPath);
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+function assertDirectoryScope(targetPath) {
+  const stat = lstatOrNull(targetPath);
+  if (!stat) return false;
+  if (stat.isSymbolicLink()) throw new Error(`Refusing symlinked cleanup scope: ${targetPath}`);
+  if (!stat.isDirectory()) throw new Error(`Cleanup scope is not a directory: ${targetPath}`);
+  return true;
+}
+
+function readRegularFile(targetPath) {
+  const stat = lstatOrNull(targetPath);
+  if (!stat || stat.isSymbolicLink() || !stat.isFile()) return null;
+  return fs.readFileSync(targetPath, 'utf8');
+}
+
+function hasSymlinkComponent(rootPath, relativePath) {
+  let current = rootPath;
+  for (const component of relativePath.split(path.sep).filter(Boolean)) {
+    current = path.join(current, component);
+    const stat = lstatOrNull(current);
+    if (stat && stat.isSymbolicLink()) return true;
+  }
+  return false;
+}
+
+function exactField(content, key, allowedValues) {
+  const pattern = new RegExp(`^${key}:\\s*([^\\r\\n]*?)\\s*$`);
+  const matches = content.split(/\r?\n/).map((line) => line.match(pattern)).filter(Boolean);
+  if (matches.length !== 1) return 'UNKNOWN';
+  return allowedValues.includes(matches[0][1]) ? matches[0][1] : 'UNKNOWN';
+}
+
+function fieldAtPosition(content, key, allowedValues, position) {
+  const lines = content.split(/\r?\n/).filter((line) => line.trim());
+  const line = position === 'last' ? lines[lines.length - 1] : lines[0];
+  const match = line && line.match(new RegExp(`^${key}:\\s*([^\\r\\n]*?)\\s*$`));
+  return match && allowedValues.includes(match[1]) ? match[1] : 'UNKNOWN';
+}
+
+function parseLaneState(lanePath) {
+  const reportPath = path.join(lanePath, 'report.md');
+  const report = readRegularFile(reportPath);
+  let status = report === null ? (lstatOrNull(reportPath) ? 'UNKNOWN' : 'ACTIVE')
+    : fieldAtPosition(report, 'STATUS', LANE_STATUSES, 'first');
+
+  let verdict = 'Pending';
+  try {
+    const reviews = fs.readdirSync(lanePath).filter((name) => name.startsWith('review') && name.endsWith('.md')).sort();
+    if (reviews.length) {
+      const review = readRegularFile(path.join(lanePath, reviews[reviews.length - 1]));
+      verdict = review === null ? 'UNKNOWN' : fieldAtPosition(review, 'VERDICT', REVIEW_VERDICTS, 'last');
+    }
+  } catch (_) {
+    verdict = 'UNKNOWN';
+  }
+
+  if (verdict === 'FAIL') status = 'BLOCKED';
+  else if (verdict === 'UNKNOWN' && (status === 'DONE' || status === 'DONE_WITH_CONCERNS')) status = 'UNKNOWN';
+
+  return { status, verdict };
+}
+
+function isCompletedStatus(status) {
+  return status === 'DONE' || status === 'DONE_WITH_CONCERNS';
+}
+
+function isCleanupEligible(state) {
+  return isCompletedStatus(state.status) && state.verdict !== 'FAIL' && state.verdict !== 'UNKNOWN';
+}
+
 async function runClean(args) {
   printBanner();
   const dryRun = args.includes('--dry-run');
   const yesFlag = args.includes('--yes') || args.includes('-y') || args.includes('--force') || args.includes('-f');
   const cleanAll = args.includes('--all') || args.includes('-a');
-  const completedOnly = args.includes('--completed') || !cleanAll;
+  const purge = args.includes('--purge');
   const isGlobal = args.includes('--global') || args.includes('-g');
-
-  const baseDir = isGlobal
-    ? path.join(HOME, '.taskard')
-    : (fs.existsSync(path.join(CWD, '.taskard')) ? path.join(CWD, '.taskard') : path.join(CWD, '.taskard'));
+  const baseDir = path.join(isGlobal ? HOME : CWD, '.taskard');
   const displayBase = isGlobal ? '~/.taskard' : '.taskard';
-
   const lanesDir = path.join(baseDir, 'lanes');
   const tmpDir = path.join(baseDir, 'tmp');
   const diffsDir = path.join(baseDir, 'diffs');
-
+  const archiveDir = path.join(baseDir, 'archive');
+  const archiveLanesDir = path.join(archiveDir, 'lanes');
   const targets = [];
+  if (!assertDirectoryScope(baseDir)) {
+    console.log(`  ${C.violet}${C.bold}╭─────────────────────────── TASKARD WORKSPACE CLEANUP ───────────────────────────╮${C.reset}`);
+    console.log(`  ${C.violet}│${C.reset}  ${C.bold}Target Scope:${C.reset} ${displayBase}${cleanAll ? ' (all live lanes, tmp, and diffs)' : ' (completed lanes only)'}`);
+    console.log(`  ${C.violet}│${C.reset}  ${C.emerald}0 items${C.reset} · No completed lanes to archive; workspace is clean.`);
+    console.log(`  ${C.violet}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}`);
+    if (dryRun) console.log(`\n  ${C.amber}${C.bold}[DRY-RUN]${C.reset} ${C.gray}Simulation only. No items would be removed.${C.reset}`);
+    console.log('');
+    return true;
+  }
+  assertDirectoryScope(lanesDir);
+  if (cleanAll) {
+    assertDirectoryScope(tmpDir);
+    assertDirectoryScope(diffsDir);
+  }
+  if (!cleanAll || purge) {
+    assertDirectoryScope(archiveDir);
+    assertDirectoryScope(archiveLanesDir);
+  }
 
-  // 1. Lanes
-  if (fs.existsSync(lanesDir)) {
-    const entries = fs.readdirSync(lanesDir, { withFileTypes: true })
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name);
+  const addTarget = (type, name, targetPath, isCompleted = false) => {
+    const size = getItemSize(targetPath);
+    const rel = path.relative(isGlobal ? HOME : CWD, targetPath);
+    targets.push({ type, name, path: targetPath, relPath: isGlobal ? `~/${rel}` : (rel || `.taskard/${name}`), size, sizeStr: formatBytes(size), isCompleted });
+  };
 
-    for (const name of entries) {
-      const lanePath = path.join(lanesDir, name);
-      const reportPath = path.join(lanePath, 'report.md');
-      let isCompleted = false;
-
-      if (fs.existsSync(reportPath)) {
-        try {
-          const report = fs.readFileSync(reportPath, 'utf8');
-          if (
-            report.includes('STATUS: DONE') ||
-            report.includes('STATUS: DONE_WITH_CONCERNS') ||
-            report.includes('STATUS: PASS') ||
-            report.includes('STATUS: PASS_WITH_NOTES')
-          ) {
-            isCompleted = true;
-          }
-        } catch (_) {}
-      } else {
-        const reviewPath = path.join(lanePath, 'review.md');
-        if (fs.existsSync(reviewPath)) {
-          try {
-            const rev = fs.readFileSync(reviewPath, 'utf8');
-            if (rev.includes('PASS')) isCompleted = true;
-          } catch (_) {}
-        }
+  if (purge && !cleanAll) {
+    if (lstatOrNull(archiveLanesDir)) {
+      for (const entry of fs.readdirSync(archiveLanesDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const lanePath = path.join(archiveLanesDir, entry.name);
+        if (isCleanupEligible(parseLaneState(lanePath))) addTarget('archive', entry.name, lanePath, true);
       }
-
-      if (cleanAll || isCompleted) {
-        const size = getItemSize(lanePath);
-        targets.push({
-          type: 'lane',
-          name,
-          path: lanePath,
-          relPath: isGlobal ? `~/.taskard/lanes/${name}` : (path.relative(CWD, lanePath) || `.taskard/lanes/${name}`),
-          size,
-          sizeStr: formatBytes(size),
-          isCompleted,
-        });
+    }
+  } else if (lstatOrNull(lanesDir)) {
+    for (const entry of fs.readdirSync(lanesDir, { withFileTypes: true })) {
+      if (!cleanAll && !entry.isDirectory()) continue;
+      const lanePath = path.join(lanesDir, entry.name);
+      if (entry.isSymbolicLink()) {
+        if (cleanAll) addTarget('lane', entry.name, lanePath, false);
+        continue;
       }
+      const state = entry.isDirectory() ? parseLaneState(lanePath) : { status: 'UNKNOWN', verdict: 'UNKNOWN' };
+      if (cleanAll || isCleanupEligible(state)) addTarget('lane', entry.name, lanePath, isCleanupEligible(state));
     }
   }
 
-  // 2. Tmp directory
-  if (fs.existsSync(tmpDir)) {
-    const entries = fs.readdirSync(tmpDir);
-    for (const name of entries) {
-      const itemPath = path.join(tmpDir, name);
-      const size = getItemSize(itemPath);
-      targets.push({
-        type: 'tmp',
-        name,
-        path: itemPath,
-        relPath: isGlobal ? `~/.taskard/tmp/${name}` : (path.relative(CWD, itemPath) || `.taskard/tmp/${name}`),
-        size,
-        sizeStr: formatBytes(size),
-        isCompleted: false,
-      });
+  if (cleanAll) {
+    for (const [type, dir] of [['tmp', tmpDir], ['diff', diffsDir]]) {
+      if (!lstatOrNull(dir)) continue;
+      for (const name of fs.readdirSync(dir)) addTarget(type, name, path.join(dir, name));
     }
   }
 
-  // 3. Diffs directory
-  if (fs.existsSync(diffsDir)) {
-    const entries = fs.readdirSync(diffsDir);
-    for (const name of entries) {
-      const itemPath = path.join(diffsDir, name);
-      const size = getItemSize(itemPath);
-      targets.push({
-        type: 'diff',
-        name,
-        path: itemPath,
-        relPath: isGlobal ? `~/.taskard/diffs/${name}` : (path.relative(CWD, itemPath) || `.taskard/diffs/${name}`),
-        size,
-        sizeStr: formatBytes(size),
-        isCompleted: false,
-      });
+  if (purge && cleanAll && lstatOrNull(archiveLanesDir)) {
+    for (const entry of fs.readdirSync(archiveLanesDir, { withFileTypes: true })) {
+      if (entry.isDirectory() || entry.isSymbolicLink()) addTarget('archive', entry.name, path.join(archiveLanesDir, entry.name));
     }
   }
 
   const totalBytes = targets.reduce((acc, t) => acc + t.size, 0);
   const totalSizeStr = formatBytes(totalBytes);
-  const scopeStr = cleanAll ? ' (all lanes)' : ' (completed lanes only)';
+  const scopeStr = cleanAll ? (purge ? ' (all workspace items, including archive)' : ' (all live lanes, tmp, and diffs)')
+    : purge ? ' (completed archive purge)' : ' (completed lanes, reversible archive)';
 
   console.log(`  ${C.violet}${C.bold}╭─────────────────────────── TASKARD WORKSPACE CLEANUP ───────────────────────────╮${C.reset}`);
   console.log(`  ${C.violet}│${C.reset}  ${C.bold}Target Scope:${C.reset} ${C.emerald}${displayBase}/${scopeStr}${C.reset}`);
-  console.log(`  ${C.violet}│${C.reset}  ${C.bold}Items Found :${C.reset} ${targets.length === 0 ? `${C.emerald}0 items (Workspace is clean)${C.reset}` : `${C.amber}${targets.length} item(s)${C.reset} ${C.dim}(reclaimable: ${totalSizeStr})${C.reset}`}`);
+  console.log(`  ${C.violet}│${C.reset}  ${C.bold}Items Found :${C.reset} ${targets.length === 0 ? `${C.emerald}0 items (Workspace is clean)${C.reset}` : `${C.amber}${targets.length} item(s)${C.reset} ${C.dim}(logical size: ${totalSizeStr})${C.reset}`}`);
   console.log(`  ${C.violet}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
 
   if (targets.length === 0) {
-    if (completedOnly) {
-      console.log(`  ${C.emerald}✔${C.reset} ${C.gray}No completed lanes or temporary files found to clean in ${displayBase}/${C.reset}\n`);
-    } else {
-      console.log(`  ${C.emerald}✔${C.reset} ${C.gray}Workspace is clean. No lanes or temporary files found to clean in ${displayBase}/${C.reset}\n`);
-    }
-    return;
+    console.log(`  ${C.emerald}✔${C.reset} ${C.gray}No eligible items found to clean in ${displayBase}/${C.reset}\n`);
+    return true;
   }
 
   console.log(`  ${C.bold}Target Items (${targets.length}):${C.reset}`);
   for (const t of targets) {
-    const tag = t.isCompleted ? ` ${C.emerald}[DONE]${C.reset}` : '';
+    const tag = t.type === 'archive' ? ` ${C.amber}[ARCHIVE]${C.reset}` : t.isCompleted ? ` ${C.emerald}[DONE]${C.reset}` : '';
     console.log(`    ${C.rose}✖${C.reset} ${C.gray}${t.relPath}${C.reset} ${C.dim}(${t.sizeStr})${C.reset}${tag}`);
   }
 
   if (dryRun) {
-    console.log(`\n  ${C.amber}${C.bold}[DRY-RUN]${C.reset} ${C.gray}Simulation only. ${targets.length} item(s) (${totalSizeStr}) would be removed.${C.reset}\n`);
-    return;
+    console.log(`\n  ${C.amber}${C.bold}[DRY-RUN]${C.reset} ${C.gray}Simulation only. ${targets.length} item(s) (${totalSizeStr}) would be archived or removed.${C.reset}\n`);
+    return true;
   }
 
   if (!yesFlag) {
     const isInteractive = Boolean(process.stdout.isTTY && process.stdin.isTTY);
     if (!isInteractive) {
-      console.error(`\n  ${C.rose}✖ Error:${C.reset} Confirmation required in non-interactive mode. Use ${C.bold}--yes (-y)${C.reset} or ${C.bold}--force (-f)${C.reset} to clean.\n`);
-      process.exit(1);
+      throw new Error('Confirmation required in non-interactive mode. Use --yes (-y) or --force (-f) to clean.');
     }
 
-    const answer = await promptConfirm(`\n  ${C.amber}?${C.reset} ${C.bold}Are you sure you want to permanently delete these ${targets.length} item(s) (${totalSizeStr})? [y/N] ${C.reset}`);
+    const action = cleanAll || purge ? 'permanently remove' : 'archive';
+    const answer = await promptConfirm(`\n  ${C.amber}?${C.reset} ${C.bold}Are you sure you want to ${action} these ${targets.length} item(s) (${totalSizeStr})? [y/N] ${C.reset}`);
     if (answer !== 'y' && answer !== 'yes') {
       console.log(`\n  ${C.gray}✖ Cleanup aborted by user.${C.reset}\n`);
-      return;
+      return true;
     }
   }
 
   let deletedCount = 0;
+  let archivedCount = 0;
+  let freedBytes = 0;
+  let failedCount = 0;
   for (const t of targets) {
     try {
-      if (fs.existsSync(t.path)) {
-        fs.rmSync(t.path, { recursive: true, force: true });
+      if (!lstatOrNull(t.path)) continue;
+      if (t.type === 'lane' && !cleanAll && !purge) {
+        fs.mkdirSync(archiveLanesDir, { recursive: true });
+        assertDirectoryScope(archiveDir);
+        assertDirectoryScope(archiveLanesDir);
+        const archivedPath = path.join(archiveLanesDir, t.name);
+        if (lstatOrNull(archivedPath)) throw new Error('archive destination already exists');
+        fs.renameSync(t.path, archivedPath);
+        archivedCount++;
+      } else {
+        fs.rmSync(t.path, { recursive: true, force: false });
         deletedCount++;
+        freedBytes += t.size;
       }
     } catch (err) {
-      console.error(`  ${C.rose}Failed to remove ${t.relPath}: ${err.message}${C.reset}`);
+      console.error(`  ${C.rose}Failed to process ${t.relPath}: ${err.message}${C.reset}`);
+      if (t.type !== 'lane' || cleanAll || purge) {
+        try {
+          const remaining = lstatOrNull(t.path) ? getItemSize(t.path) : 0;
+          freedBytes += Math.max(0, t.size - remaining);
+        } catch (_) {}
+      }
+      failedCount++;
     }
   }
 
-  console.log(`\n  ${C.emerald}✔${C.reset} ${C.bold}Cleanup complete:${C.reset} ${C.emerald}${deletedCount} item(s) removed${C.reset}, ${C.bold}${totalSizeStr}${C.reset} ${C.gray}freed.${C.reset}\n`);
+  const summaryColor = failedCount ? C.rose : C.emerald;
+  console.log(`\n  ${summaryColor}${failedCount ? '✖' : '✔'}${C.reset} ${C.bold}Cleanup ${failedCount ? 'finished with errors' : 'complete'}:${C.reset} ${C.emerald}${archivedCount} item(s) archived, ${deletedCount} removed${C.reset}, ${C.bold}${formatBytes(freedBytes)}${C.reset} ${C.gray}logical file bytes freed.${C.reset}${failedCount ? ` ${failedCount} item(s) failed.` : ''}\n`);
+  if (failedCount) throw new Error(`Cleanup failed for ${failedCount} item(s)`);
+  return true;
 }
 
 function runLanes(args) {
@@ -1146,6 +1207,7 @@ function runLanes(args) {
   let activeCount = 0;
   let blockedCount = 0;
   let needsContextCount = 0;
+  let unknownCount = 0;
 
   for (const name of entries) {
     const lanePath = path.join(lanesDir, name);
@@ -1168,66 +1230,35 @@ function runLanes(args) {
       } catch (_) {}
     }
 
-    let status = 'ACTIVE';
+    const laneState = parseLaneState(lanePath);
+    const status = laneState.status;
     let diffSummary = 'None';
     let attempts = '1';
 
-    if (fs.existsSync(reportPath)) {
-      try {
-        const reportContent = fs.readFileSync(reportPath, 'utf8');
-        const statusMatch = reportContent.match(/^STATUS:\s*([^\r\n]+)/m);
-        if (statusMatch) {
-          const raw = statusMatch[1].trim().toUpperCase();
-          if (raw.includes('DONE') || raw.includes('PASS')) {
-            status = 'DONE';
-          } else if (raw.includes('BLOCK') || raw.includes('FAIL')) {
-            status = 'BLOCKED';
-          } else if (raw.includes('CONTEXT')) {
-            status = 'NEEDS_CONTEXT';
-          } else {
-            status = 'ACTIVE';
-          }
-        }
-
-        const diffMatch = reportContent.match(/^DIFF_SUMMARY:\s*([^\r\n]+)/m);
-        if (diffMatch) {
-          diffSummary = diffMatch[1].trim();
-        }
-
-        const attemptsMatch = reportContent.match(/^ATTEMPTS:\s*([^\r\n]+)/m);
-        if (attemptsMatch) {
-          attempts = attemptsMatch[1].trim();
-        }
-      } catch (_) {
-        status = 'ACTIVE';
-      }
+    const reportContent = readRegularFile(reportPath);
+    if (reportContent !== null) {
+      const exactValue = (key) => {
+        const pattern = new RegExp(`^${key}:\\s*([^\\r\\n]*?)\\s*$`);
+        const matches = reportContent.split(/\r?\n/).map((line) => line.match(pattern)).filter(Boolean);
+        return matches.length === 1 ? matches[0][1] : null;
+      };
+      diffSummary = exactValue('DIFF_SUMMARY') || 'None';
+      const attemptsValue = exactValue('ATTEMPTS');
+      attempts = attemptsValue && /^[1-9]\d*$/.test(attemptsValue) ? attemptsValue : '?';
+    } else if (lstatOrNull(reportPath)) {
+      attempts = '?';
     }
 
-    let verdict = 'Pending';
-    try {
-      const laneFiles = fs.readdirSync(lanePath);
-      const reviewFiles = laneFiles.filter((f) => f.startsWith('review') && f.endsWith('.md')).sort();
-      if (reviewFiles.length > 0) {
-        const latestReview = reviewFiles[reviewFiles.length - 1];
-        const revContent = fs.readFileSync(path.join(lanePath, latestReview), 'utf8');
-        const verdictMatch = revContent.match(/^VERDICT:\s*([^\r\n]+)/m);
-        if (verdictMatch) {
-          verdict = verdictMatch[1].trim().toUpperCase();
-        } else {
-          verdict = 'REVIEWED';
-        }
-      } else if (status === 'DONE') {
-        verdict = 'N/A';
-      }
-    } catch (_) {}
+    const verdict = laneState.verdict;
 
-    if (status === 'DONE') completedCount++;
+    if (isCompletedStatus(status)) completedCount++;
     else if (status === 'BLOCKED') blockedCount++;
     else if (status === 'NEEDS_CONTEXT') needsContextCount++;
-    else activeCount++;
+    else if (status === 'ACTIVE') activeCount++;
+    else unknownCount++;
 
-    if (showActive && status === 'DONE') continue;
-    if (showCompleted && status !== 'DONE') continue;
+    if (showActive && isCompletedStatus(status)) continue;
+    if (showCompleted && !isCompletedStatus(status)) continue;
 
     laneData.push({
       name,
@@ -1244,13 +1275,15 @@ function runLanes(args) {
   for (let i = 0; i < laneData.length; i++) {
     const lane = laneData[i];
     const statusBadge = lane.status === 'DONE' ? `${C.emerald}${C.bold}[DONE]${C.reset}`
+      : lane.status === 'DONE_WITH_CONCERNS' ? `${C.amber}${C.bold}[DONE_WITH_CONCERNS]${C.reset}`
       : lane.status === 'BLOCKED' ? `${C.rose}${C.bold}[BLOCKED]${C.reset}`
       : lane.status === 'NEEDS_CONTEXT' ? `${C.amber}${C.bold}[NEEDS_CONTEXT]${C.reset}`
+      : lane.status === 'UNKNOWN' ? `${C.rose}${C.bold}[UNKNOWN]${C.reset}`
       : `${C.cyan}${C.bold}[ACTIVE]${C.reset}`;
 
     const verdictColor = lane.verdict === 'PASS' ? C.emerald
-      : lane.verdict.includes('CONCERNS') ? C.amber
-      : (lane.verdict === 'FAIL' || lane.verdict === 'BLOCKED') ? C.rose
+      : lane.verdict === 'PASS_WITH_NOTES' ? C.amber
+      : lane.verdict === 'FAIL' ? C.rose
       : C.gray;
 
     console.log(`  ${C.bold}${C.purple}●${C.reset} ${C.bold}${lane.name}${C.reset} ${statusBadge}`);
@@ -1274,9 +1307,293 @@ function runLanes(args) {
   ];
   if (blockedCount > 0) summaryParts.push(`${C.rose}${C.bold}${blockedCount} blocked${C.reset}`);
   if (needsContextCount > 0) summaryParts.push(`${C.amber}${C.bold}${needsContextCount} needs context${C.reset}`);
+  if (unknownCount > 0) summaryParts.push(`${C.rose}${C.bold}${unknownCount} unknown${C.reset}`);
 
   console.log(`  ${C.violet}│${C.reset}  ${C.bold}Total Lanes :${C.reset} ${C.bold}${entries.length}${C.reset}  (${summaryParts.join(', ')})`);
   console.log(`  ${C.violet}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+}
+
+const VALID_ROLES = ['debugger', 'explorer', 'implementer', 'planner', 'qa-tester', 'reviewer', 'ui-developer'];
+const VERIFY_REPORT_FIELDS = ['STATUS', 'DIFF_SUMMARY', 'BASE_COMMIT', 'HEAD_COMMIT', 'ATTEMPTS', 'EVIDENCE_COMMAND', 'EVIDENCE_EXIT_STATUS', 'EVIDENCE_FILE', 'EVIDENCE_SHA256', 'HASH'];
+
+function gitResult(cwd, args) {
+  return spawnSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' });
+}
+
+function gitOutput(cwd, args) {
+  const result = gitResult(cwd, args);
+  if (result.status !== 0) throw new Error((result.stderr || 'git command failed').trim());
+  return result.stdout.trim();
+}
+
+function sectionBody(content, title) {
+  const lines = content.split(/\r?\n/);
+  const start = lines.findIndex((line) => new RegExp(`^##\\s+${title}\\s*$`, 'i').test(line));
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^#{1,6}\s+/.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start + 1, end);
+}
+
+function oneMetadataValue(lines, key) {
+  const pattern = new RegExp(`^${key}:\\s*([^\\r\\n]*?)\\s*$`);
+  const matches = lines.map((line) => line.match(pattern)).filter(Boolean);
+  return matches.length === 1 ? matches[0][1] : null;
+}
+
+function resolveCommit(cwd, value) {
+  if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(value || '')) return null;
+  try {
+    const resolved = gitOutput(cwd, ['rev-parse', '--verify', `${value}^{commit}`]).toLowerCase();
+    return resolved === value.toLowerCase() ? resolved : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function isAncestor(cwd, ancestor, descendant) {
+  return gitResult(cwd, ['merge-base', '--is-ancestor', ancestor, descendant]).status === 0;
+}
+
+function parseLaneBrief(brief, laneId, repoRoot, issues) {
+  const headings = ['Objective', 'Context Files', 'Acceptance Criteria', 'Non-Goals', 'Lane Metadata'];
+  const sections = {};
+  for (const heading of headings) {
+    sections[heading] = sectionBody(brief, heading);
+    if (!sections[heading]) issues.push(`brief is missing ## ${heading}`);
+    else if (!sections[heading].some((line) => line.trim())) issues.push(`brief ## ${heading} is empty`);
+  }
+
+  const metadataLines = sections['Lane Metadata'] || [];
+  const keys = ['ROLE', 'GEAR', 'ATTEMPT_BUDGET', 'BASE_COMMIT', 'SOURCE_COMMIT', 'BLOCKED_BY', 'REQUIRES_REVIEW', 'REQUIRES_QA'];
+  const indexes = keys.map((key) => metadataLines.findIndex((line) => line.startsWith(`${key}:`)));
+  if (indexes.some((index) => index < 0) || indexes.some((index, i) => i > 0 && index <= indexes[i - 1])) {
+    issues.push(`brief metadata fields must appear once in order: ${keys.join(', ')}`);
+  }
+  const metadata = Object.fromEntries(keys.map((key) => [key, oneMetadataValue(metadataLines, key)]));
+  for (const key of keys) if (metadata[key] === null) issues.push(`brief metadata ${key} is missing or duplicated`);
+  if (!VALID_ROLES.includes(metadata.ROLE)) issues.push(`invalid or missing ROLE: ${metadata.ROLE || 'missing'}`);
+  if (!['FAST', 'PRO', 'MAX'].includes(metadata.GEAR)) issues.push(`invalid or missing GEAR: ${metadata.GEAR || 'missing'}`);
+  const budget = Number(metadata.ATTEMPT_BUDGET);
+  if (!/^[12]$/.test(metadata.ATTEMPT_BUDGET || '')) issues.push('ATTEMPT_BUDGET must be 1 or 2 total attempts');
+  if (!['YES', 'NO'].includes(metadata.REQUIRES_REVIEW)) issues.push('REQUIRES_REVIEW must be YES or NO');
+  if (!['YES', 'NO'].includes(metadata.REQUIRES_QA)) issues.push('REQUIRES_QA must be YES or NO');
+
+  const baseCommit = resolveCommit(repoRoot, metadata.BASE_COMMIT);
+  const sourceCommit = resolveCommit(repoRoot, metadata.SOURCE_COMMIT);
+  if (!baseCommit) issues.push('BASE_COMMIT is missing or does not resolve to a commit');
+  if (!sourceCommit) issues.push('SOURCE_COMMIT is missing or does not resolve to a commit');
+  if (baseCommit && sourceCommit && !isAncestor(repoRoot, sourceCommit, baseCommit)) issues.push('SOURCE_COMMIT must be an ancestor of BASE_COMMIT');
+
+  let blockedBy = [];
+  if (metadata.BLOCKED_BY === 'NONE') {
+    blockedBy = [];
+  } else if (/^[A-Za-z0-9][A-Za-z0-9._-]*(?:\s*,\s*[A-Za-z0-9][A-Za-z0-9._-]*)*$/.test(metadata.BLOCKED_BY || '')) {
+    blockedBy = metadata.BLOCKED_BY.split(',').map((value) => value.trim());
+    if (new Set(blockedBy).size !== blockedBy.length) issues.push('BLOCKED_BY contains duplicate lane references');
+    if (blockedBy.includes(laneId)) issues.push('BLOCKED_BY cannot reference its own lane');
+  } else {
+    issues.push('BLOCKED_BY must be NONE or comma-separated lane directory names');
+  }
+
+  const contextLines = sections['Context Files'] || [];
+  const pointerPattern = /^\s*[-*]\s+`?([^`\s]+)`?#L(\d+)-L(\d+)(?:\s+\(symbol:\s*[^)]+\))?\s*$/;
+  const pointers = [];
+  for (const line of contextLines) {
+    if (!line.trim()) continue;
+    const match = line.match(pointerPattern);
+    if (!match) {
+      issues.push(`invalid Context Files pointer: ${line.trim()}`);
+      continue;
+    }
+    const [, fileName, startText, endText] = match;
+    const start = Number(startText);
+    const end = Number(endText);
+    const resolvedPath = path.resolve(repoRoot, fileName);
+    const relativePath = path.relative(repoRoot, resolvedPath);
+    if (path.isAbsolute(fileName) || relativePath === '..' || relativePath.startsWith(`..${path.sep}`)) {
+      issues.push(`pointer escapes repository scope: ${fileName}`);
+      continue;
+    }
+    if (!start || end < start) {
+      issues.push(`invalid line range for ${fileName}`);
+      continue;
+    }
+    pointers.push({ fileName: relativePath.split(path.sep).join('/'), start, end, sourceCommit, baseCommit });
+  }
+  if (!pointers.length) issues.push('brief needs at least one scoped Context Files pointer');
+  for (const pointer of pointers) {
+    if (!pointer.sourceCommit || !pointer.baseCommit) continue;
+    const blob = gitResult(repoRoot, ['show', `${pointer.sourceCommit}:${pointer.fileName}`]);
+    if (blob.status !== 0) {
+      issues.push(`pointer missing at SOURCE_COMMIT: ${pointer.fileName}`);
+      continue;
+    }
+    const sourceLines = blob.stdout.split(/\r?\n/);
+    if (sourceLines[sourceLines.length - 1] === '') sourceLines.pop();
+    if (pointer.end > sourceLines.length) issues.push(`pointer line range exceeds SOURCE_COMMIT file: ${pointer.fileName}`);
+    const stale = gitResult(repoRoot, ['diff', '--quiet', pointer.sourceCommit, pointer.baseCommit, '--', pointer.fileName]);
+    if (stale.status === 1) issues.push(`stale context: ${pointer.fileName} changed between SOURCE_COMMIT and BASE_COMMIT`);
+    else if (stale.status !== 0) issues.push(`could not compare pointer revisions for ${pointer.fileName}`);
+    const working = gitResult(repoRoot, ['diff', '--quiet', 'HEAD', '--', pointer.fileName]);
+    if (working.status === 1) issues.push(`stale evidence: pointed file has uncommitted changes: ${pointer.fileName}`);
+    else if (working.status !== 0) issues.push(`could not compare pointed file with HEAD: ${pointer.fileName}`);
+  }
+  return { metadata, budget, baseCommit, sourceCommit, blockedBy };
+}
+
+function validateLaneReport(lanePath, metadata, budget, headCommit, repoRoot, issues) {
+  const report = readRegularFile(path.join(lanePath, 'report.md'));
+  if (report === null) {
+    issues.push('report.md is missing or is not a regular file');
+    return;
+  }
+  const lines = report.split(/\r?\n/);
+  if (lines.filter(Boolean).length > 15) issues.push('report.md must stay within 15 nonempty lines');
+  for (const key of VERIFY_REPORT_FIELDS) {
+    if (lines.filter((line) => line.startsWith(`${key}:`)).length !== 1) issues.push(`report field ${key} must appear exactly once`);
+  }
+  const ordered = lines.slice(0, VERIFY_REPORT_FIELDS.length).map((line) => line.match(/^([A-Z0-9_]+):\s*(.*?)\s*$/));
+  const actualOrder = ordered.map((match) => match && match[1]);
+  if (actualOrder.some((key, index) => key !== VERIFY_REPORT_FIELDS[index])) issues.push(`report fields must appear in order: ${VERIFY_REPORT_FIELDS.join(', ')}`);
+  const fields = Object.fromEntries(ordered.filter(Boolean).map((match) => [match[1], match[2]]));
+  for (const key of VERIFY_REPORT_FIELDS) if (!fields[key]) issues.push(`report field ${key} is empty or misplaced`);
+  if (!['DONE', 'DONE_WITH_CONCERNS', 'BLOCKED', 'NEEDS_CONTEXT', 'ACTIVE'].includes(fields.STATUS)) issues.push(`invalid report STATUS: ${fields.STATUS || 'missing'}`);
+  if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(fields.BASE_COMMIT || '')) issues.push('report BASE_COMMIT is invalid');
+  if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(fields.HEAD_COMMIT || '')) issues.push('report HEAD_COMMIT is invalid');
+  if (fields.BASE_COMMIT && fields.BASE_COMMIT.toLowerCase() !== String(metadata.BASE_COMMIT).toLowerCase()) issues.push('report BASE_COMMIT does not match brief metadata');
+  if (fields.HEAD_COMMIT && fields.HEAD_COMMIT.toLowerCase() !== headCommit) issues.push('stale report: HEAD_COMMIT does not match current Git HEAD');
+  if (fields.BASE_COMMIT) {
+    const resolvedBase = resolveCommit(repoRoot, fields.BASE_COMMIT);
+    if (!resolvedBase) issues.push('report BASE_COMMIT does not resolve to a commit');
+    else if (!isAncestor(repoRoot, resolvedBase, headCommit)) issues.push('report BASE_COMMIT is not an ancestor of current HEAD');
+  }
+  const attempts = Number(fields.ATTEMPTS);
+  if (!/^[1-9]\d*$/.test(fields.ATTEMPTS || '') || attempts > budget || attempts > 2) issues.push(`ATTEMPTS must be 1..${Number.isFinite(budget) ? budget : 2}`);
+  if (!/^0$/.test(fields.EVIDENCE_EXIT_STATUS || '')) issues.push('EVIDENCE_EXIT_STATUS must be 0 for a passing report');
+  if (!/^[a-f0-9]{64}$/i.test(fields.EVIDENCE_SHA256 || '')) issues.push('EVIDENCE_SHA256 must be a 64-digit SHA-256');
+  if (fields.HASH !== 'N/A' && fields.HASH && fields.HASH.toLowerCase() !== String(fields.HEAD_COMMIT).toLowerCase()) issues.push('HASH must be N/A or match HEAD_COMMIT');
+
+  if (fields.EVIDENCE_FILE) {
+    const evidencePath = path.resolve(lanePath, fields.EVIDENCE_FILE);
+    const relative = path.relative(lanePath, evidencePath);
+    if (path.isAbsolute(fields.EVIDENCE_FILE) || relative === '..' || relative.startsWith(`..${path.sep}`)) {
+      issues.push('EVIDENCE_FILE must stay inside the lane directory');
+    } else if (hasSymlinkComponent(lanePath, relative)) {
+      issues.push('EVIDENCE_FILE cannot traverse a symlink');
+    } else {
+      const stat = lstatOrNull(evidencePath);
+      if (!stat || stat.isSymbolicLink() || !stat.isFile()) {
+        issues.push('EVIDENCE_FILE is missing or not a regular file');
+      } else if (/^[a-f0-9]{64}$/i.test(fields.EVIDENCE_SHA256 || '')) {
+        const digest = crypto.createHash('sha256').update(fs.readFileSync(evidencePath)).digest('hex');
+        if (digest !== fields.EVIDENCE_SHA256.toLowerCase()) issues.push('stale evidence: EVIDENCE_SHA256 does not match EVIDENCE_FILE');
+      }
+    }
+  }
+  if (!fields.EVIDENCE_COMMAND || !fields.EVIDENCE_COMMAND.trim()) issues.push('EVIDENCE_COMMAND must be nonempty');
+  if (['BLOCKED', 'NEEDS_CONTEXT', 'ACTIVE'].includes(fields.STATUS)) issues.push(`lane report status is incomplete: ${fields.STATUS}`);
+}
+
+function runVerify(args) {
+  printBanner();
+  const isGlobal = args.includes('--global') || args.includes('-g');
+  const baseDir = path.join(isGlobal ? HOME : CWD, '.taskard');
+  const lanesDir = path.join(baseDir, 'lanes');
+  let repoRoot;
+  let headCommit;
+  try {
+    repoRoot = gitOutput(CWD, ['rev-parse', '--show-toplevel']);
+    headCommit = gitOutput(repoRoot, ['rev-parse', 'HEAD']).toLowerCase();
+  } catch (_) {
+    console.error(`  ${C.rose}FAIL${C.reset} verify requires a Git working tree.`);
+    return false;
+  }
+  if (!assertDirectoryScope(baseDir)) {
+    console.log('  No Taskard workspace found to verify.');
+    return true;
+  }
+  assertDirectoryScope(lanesDir);
+  if (!lstatOrNull(lanesDir)) {
+    console.log('  No Taskard lanes found to verify.');
+    return true;
+  }
+
+  const lanes = [];
+  const scopeIssues = [];
+  for (const entry of fs.readdirSync(lanesDir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      scopeIssues.push(`${entry.name}: symlinked lane entry is not verified`);
+      continue;
+    }
+    if (!entry.isDirectory()) continue;
+    const lanePath = path.join(lanesDir, entry.name);
+    const issues = [];
+    const brief = readRegularFile(path.join(lanePath, 'brief.md'));
+    if (brief === null) {
+      lanes.push({ id: entry.name, path: lanePath, issues: ['brief.md is missing or is not a regular file'], blockedBy: [] });
+      continue;
+    }
+    const parsed = parseLaneBrief(brief, entry.name, repoRoot, issues);
+    if (parsed.baseCommit && !isAncestor(repoRoot, parsed.baseCommit, headCommit)) issues.push('brief BASE_COMMIT is not an ancestor of current HEAD');
+    if (parsed.sourceCommit && !isAncestor(repoRoot, parsed.sourceCommit, headCommit)) issues.push('brief SOURCE_COMMIT is not an ancestor of current HEAD');
+    validateLaneReport(lanePath, parsed.metadata, parsed.budget, headCommit, repoRoot, issues);
+    const state = parseLaneState(lanePath);
+    if (state.verdict === 'FAIL') issues.push('review verdict is FAIL');
+    else if (state.verdict === 'UNKNOWN') issues.push('review verdict is missing or invalid');
+    if (parsed.metadata.REQUIRES_REVIEW === 'YES' && !['PASS', 'PASS_WITH_NOTES'].includes(state.verdict)) issues.push('brief requires a passing review verdict');
+    if (parsed.metadata.REQUIRES_QA === 'YES') {
+      const qa = readRegularFile(path.join(lanePath, 'verification.md'));
+      const status = qa === null ? 'UNKNOWN' : exactField(qa, 'STATUS', ['VERIFIED', 'VERIFIED_WITH_GAPS', 'FAILED']);
+      if (status !== 'VERIFIED') issues.push(`brief requires QA STATUS: VERIFIED (found ${status})`);
+    }
+    lanes.push({ id: entry.name, path: lanePath, issues, blockedBy: parsed.blockedBy });
+  }
+
+  const laneIds = new Set(lanes.map((lane) => lane.id));
+  for (const lane of lanes) for (const dependency of lane.blockedBy) {
+    if (!laneIds.has(dependency)) lane.issues.push(`BLOCKED_BY references missing lane: ${dependency}`);
+  }
+  const graph = new Map(lanes.map((lane) => [lane.id, lane.blockedBy.filter((dependency) => laneIds.has(dependency))]));
+  const visiting = new Set();
+  const visited = new Set();
+  const cycleIds = new Set();
+  function visit(id, trail = []) {
+    if (visiting.has(id)) {
+      const start = trail.indexOf(id);
+      for (const cycleId of trail.slice(start < 0 ? 0 : start)) cycleIds.add(cycleId);
+      cycleIds.add(id);
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    for (const dependency of graph.get(id) || []) visit(dependency, [...trail, id]);
+    visiting.delete(id);
+    visited.add(id);
+  }
+  for (const lane of lanes) visit(lane.id);
+  for (const id of cycleIds) {
+    const lane = lanes.find((item) => item.id === id);
+    if (lane) lane.issues.push('BLOCKED_BY dependency cycle detected');
+  }
+
+  let failed = scopeIssues.length;
+  for (const lane of lanes) {
+    if (lane.issues.length) {
+      failed++;
+      for (const issue of lane.issues) console.error(`  ${C.rose}FAIL${C.reset} ${lane.id}: ${issue}`);
+    } else {
+      console.log(`  ${C.emerald}PASS${C.reset} ${lane.id}: metadata and evidence checks passed`);
+    }
+  }
+  for (const issue of scopeIssues) console.error(`  ${C.rose}FAIL${C.reset} ${issue}`);
+  console.log(`\n  ${lanes.length} lane(s) checked; ${failed} lane issue(s). Verify checks evidence metadata and does not authenticate that commands ran.`);
+  return failed === 0;
 }
 
 function runDoctor(args) {
@@ -1495,6 +1812,10 @@ async function main() {
   if (command === 'lanes' || command === 'lane' || command === 'ls' || command === 'list-lanes') {
     runLanes(args);
     process.exit(0);
+  }
+
+  if (command === 'verify') {
+    process.exit(runVerify(args) ? 0 : 1);
   }
 
   if (command === 'init' || command === 'install') {
