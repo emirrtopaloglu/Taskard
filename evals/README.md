@@ -43,7 +43,7 @@ The snippet shows field shape only; its placeholders and unfinished checks make 
 
 Each `checks` array must contain exactly the IDs listed for that scenario in [`scenarios.json`](scenarios.json). A passing or failing check must cite one or more evidence IDs. An unverified check has a short `reason`. `evidenceFiles` entries have the shape `{"id":"transcript","path":"evidence/transcript.txt","sha256":"<64 lowercase hex characters>"}`. Paths are relative to the directory containing the JSON artifact; absolute paths, `..`, symlinks, missing files, and hash mismatches are rejected.
 
-`durationMs`, token counts, cost, and manual interventions may be `null` when unavailable. Record only values captured from the run; the scorer does not infer or fill in missing numbers. Preserve the command and raw output in an evidence file referenced by a check.
+`durationMs` and `costUsd` accept finite non-negative numbers or `null`. `inputTokens`, `outputTokens`, and `manualInterventions` are non-negative safe-integer counters or `null` when unavailable. Record only values captured from the run; the scorer does not infer or fill in missing numbers. Preserve the command and raw output in an evidence file referenced by a check.
 
 ## Score Supplied Artifacts
 

@@ -64,6 +64,22 @@ try {
   assert.equal(scored.valid, true);
   assert.equal(scored.score, 1);
 
+  const metricCases = [
+    ['fractional input token count', { inputTokens: 0.5, outputTokens: 100, costUsd: 10, manualInterventions: 0 }],
+    ['fractional output token count', { inputTokens: 100, outputTokens: 0.5, costUsd: 10, manualInterventions: 0 }],
+    ['unsafe input token count', { inputTokens: Number.MAX_SAFE_INTEGER + 1, outputTokens: 100, costUsd: 10, manualInterventions: 0 }],
+    ['unsafe output token count', { inputTokens: 100, outputTokens: Number.MAX_SAFE_INTEGER + 1, costUsd: 10, manualInterventions: 0 }],
+    ['unsafe manual intervention count', { inputTokens: 100, outputTokens: 100, costUsd: 10, manualInterventions: Number.MAX_SAFE_INTEGER + 1 }],
+  ];
+  for (const [label, metrics] of metricCases) {
+    assert.equal(scoreRun(writeRun('taskard', 7, { metrics }).runPath).valid, false, label);
+  }
+  const nullCounters = writeRun('taskard', 8, {
+    durationMs: 0.5,
+    metrics: { inputTokens: null, outputTokens: null, costUsd: 0.25, manualInterventions: null },
+  });
+  assert.equal(scoreRun(nullCounters.runPath).valid, true);
+
   const failedCheck = writeRun('taskard', 2, {
     checks: scenario.criteria.map((criterion, index) => ({
       id: criterion.id,
@@ -130,7 +146,7 @@ try {
   assert.equal(duplicateSummary.invalidRuns.length, 2);
   assert.equal(duplicateSummary.groups[0].series.baseline.runs, 0);
   assert.equal(duplicateSummary.groups[0].comparisons.durationMs.reportable, false);
-  console.log('PASS: fixture self-check validates evidence, fixed rubric, and three-pair threshold');
+  console.log('PASS: fixture self-check validates rubric, metric counters, evidence, and comparisons');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

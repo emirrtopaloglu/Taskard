@@ -161,6 +161,8 @@ Hashes bind a report to the recorded file bytes, but cannot prove that a command
 
 No comparable live benchmark runs or raw historical artifacts are published. The evaluation suite defines fixed prompts and a standard-library scorer for supplied run artifacts; it does not start paid model runs. The scorer's self-check uses synthetic fixtures, not benchmark measurements. See [Evaluation Method](evals/README.md).
 
+Recorded `durationMs` and `costUsd` values must be finite and non-negative. Token counts and `manualInterventions` must be non-negative safe integers; unavailable values may be `null`.
+
 ## Contribute and Verify
 
 ```bash

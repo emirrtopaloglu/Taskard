@@ -161,6 +161,8 @@ Hash'ler raporu kaydedilmiş dosya baytlarına bağlar; komutun çalıştığın
 
 Karşılaştırılabilir canlı benchmark çalıştırmaları veya ham eski kayıtlar yayımlanmamıştır. Değerlendirme paketi sabit prompt'lar ve sağlanan run artifact'lerini inceleyen Node standart kütüphanesiyle yazılmış bir skorlayıcı içerir; ücretli model çalıştırmaz. Skorlayıcı self-check'i sentetik fixture kullanır, benchmark ölçümü değildir. [Evaluation Method](evals/README.md) sayfasına bakın.
 
+Kaydedilen `durationMs` ve `costUsd` değerleri sonlu ve negatif olmayan sayılar olmalıdır. Token sayıları ve `manualInterventions` negatif olmayan güvenli tam sayı olmalıdır; mevcut olmayan değerler `null` olabilir.
+
 ## Katkı ve Doğrulama
 
 ```bash

@@ -31,6 +31,10 @@ function isNonnegativeNumber(value) {
   return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
 }
 
+function isNonnegativeSafeInteger(value) {
+  return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0);
+}
+
 function validateEvidencePath(runDir, relativePath) {
   if (typeof relativePath !== 'string' || !relativePath || path.isAbsolute(relativePath) || /^[a-z]:[\\/]/i.test(relativePath)) {
     throw new Error(`evidence path must be relative: ${relativePath}`);
@@ -92,13 +96,13 @@ function validateRun(run, runDir) {
   if (!run.metrics || typeof run.metrics !== 'object' || Array.isArray(run.metrics)) {
     errors.push('metrics must be an object');
   } else {
-    for (const field of ['inputTokens', 'outputTokens', 'costUsd', 'manualInterventions']) {
-      if (!(field in run.metrics) || !isNonnegativeNumber(run.metrics[field])) {
-        errors.push(`metrics.${field} must be a non-negative number or null`);
+    for (const field of ['inputTokens', 'outputTokens', 'manualInterventions']) {
+      if (!(field in run.metrics) || !isNonnegativeSafeInteger(run.metrics[field])) {
+        errors.push(`metrics.${field} must be a non-negative safe integer or null`);
       }
     }
-    if (run.metrics.manualInterventions !== null && !Number.isInteger(run.metrics.manualInterventions)) {
-      errors.push('metrics.manualInterventions must be an integer or null');
+    if (!('costUsd' in run.metrics) || !isNonnegativeNumber(run.metrics.costUsd)) {
+      errors.push('metrics.costUsd must be a non-negative number or null');
     }
   }
 
