@@ -1,6 +1,6 @@
 # External Skill Dependencies
 
-Taskard **does not vendor** external skills into the repository. It references skills installed on your system. When upstream packages update, your system receives the latest improvements automatically with zero synchronization overhead. The installer resolves missing packages via `npx skills`.
+Taskard **does not vendor** external skills into the repository. It references skills installed on your system. Default installs leave optional upstream skills unchanged. An explicit global install can resolve the two workflow-entry skills (`using-superpowers` and `grilling`) through the external `npx skills` CLI.
 
 Upstream Sources: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills)
 
@@ -52,13 +52,16 @@ The following skills are referenced in **agent role contracts**. If installed, d
 
 ## Installation
 
-Automatic installation:
+Opt-in global installation:
 ```bash
-./install.sh   # installs missing packages via npx skills
+./install.sh --install-skills
+# or: npx taskard init --global --install-skills
 ```
+
+This option uses non-interactive global installs with a 30-second timeout per missing package. Taskard checks that each expected user skill directory appears. If resolution fails or the result cannot be verified, it reports the partial result and continues the core install. It makes no network request during a default install or a dry run. Project installs reject `--install-skills` because that option writes to user-level skill directories.
 
 Manual installation:
 ```bash
-npx skills add obra/superpowers --global
-npx skills add mattpocock/skills --global
+npx -y skills add obra/superpowers --skill using-superpowers -g -y
+npx -y skills add mattpocock/skills --skill grilling -g -y
 ```

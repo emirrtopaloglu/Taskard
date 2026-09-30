@@ -77,7 +77,7 @@ A/B Benchmark comparison on real-world full-stack development tasks (12-step fea
 
 ### Option 1: Zero-Dependency NPM (Recommended)
 
-Run directly inside any repository:
+Run from a project directory to install Taskard into that project only:
 
 ```bash
 npx taskard init
@@ -88,16 +88,20 @@ npx taskard init
 npx taskard init -i
 ```
 
-*For global installation across all harnesses:*
+*For a user-level installation:*
 ```bash
 npx taskard init --global
 ```
+
+Project installs do not write to your home directory. Global installs use user-level directories; existing regular harness files are preserved. `--force` replaces Taskard-managed links and profiles and restores the default config, while leaving regular harness-owned files intact.
 
 ### Option 2: Single-Line Shell Installer
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/emirrtopaloglu/Taskard/main/install.sh | bash
 ```
+
+The shell installer requires Node.js 18 or newer. It installs globally; use `--install-skills` to additionally resolve optional upstream skills, for example `./install.sh --install-skills` from a checkout, `npx taskard init --global --install-skills`, or `curl -fsSL https://raw.githubusercontent.com/emirrtopaloglu/Taskard/main/install.sh | bash -s -- --install-skills`. This opt-in uses non-interactive, bounded network requests. If an optional package cannot be resolved, Taskard reports the partial result while completing its core install. Default installs do not access the network for optional skills.
 
 ### Option 3: Clone & Install
 
@@ -112,7 +116,7 @@ cd Taskard
 ```bash
 taskard lanes             # List active, completed, and blocked taskard lanes (--global, --active, --completed)
 taskard clean             # Clean workspace lanes, diffs, and temp files (--dry-run, --yes, --completed)
-taskard doctor            # Diagnose harness bridges, skills symlinks & config health
+taskard doctor            # Check installed bridge/config files; unhealthy installs exit nonzero
 taskard config            # Inspect effective configuration and 7-role routing table
 taskard roles             # Display the 7-role tier roster matrix
 ```
@@ -213,7 +217,15 @@ run_integration_tests = false
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
+
+[harness_preferences.models.claude_code]
+# reviewer = "sonnet"       # Optional harness-specific alias override
+
+[harness_preferences.models.opencode]
+# reviewer = "provider/model"  # Optional; otherwise inherits the selected provider model
 ```
+
+OpenCode model overrides require a complete `provider/model` identifier. Claude Code can use the documented aliases (`sonnet`, `opus`, `haiku`). With no explicit harness-specific mapping, model selection stays with the harness or its selected provider. These are install-time profile preferences; they do not trigger automatic or paid harness fallback.
 
 **Precedence hierarchy:**
 `agents/*.md` (Defaults) < `~/.taskard/config.toml` (Global) < `.taskard/config.toml` (Project) < Session Prompts (Overrides all).

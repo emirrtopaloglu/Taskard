@@ -38,5 +38,14 @@ auto_verify_endpoints = false  # HTTP API response verification via curl
 # Fallback preference order when rate limits occur (optional):
 # implementer = ["claude", "codex", "opencode"]
 
+# Optional Claude Code role model aliases:
+[harness_preferences.models.claude_code]
+# reviewer = "sonnet"
+
+# Optional OpenCode role models must use provider/model; absent entries inherit
+# the model from OpenCode's selected provider.
+[harness_preferences.models.opencode]
+# reviewer = "provider/model"
+
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]

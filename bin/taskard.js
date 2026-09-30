@@ -14,7 +14,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { execSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 const crypto = require('node:crypto');
 
 const PKG_ROOT = path.resolve(__dirname, '..');
@@ -47,7 +47,7 @@ function printBanner() {
      ██║   ██║  ██║███████║██║  ██╗██║  ██║██║  ██║██████╔╝
      ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ` +
   `${C.reset}\n${C.cyan}${C.bold}     ◈ MULTI-HARNESS AGENT ORCHESTRATION CONVENTION ◈${C.reset}\n` +
-  `${C.gray}        Zero-Runtime · 3-Speed Gear · Aggressive Tiering${C.reset}\n`);
+  `${C.gray}        Zero-Runtime · 3-Speed Gear · Risk-First${C.reset}\n`);
 }
 
 function logStep(num, title, detail) {
@@ -70,7 +70,7 @@ function printHelp() {
   npx taskard init [options]     Initialize Taskard in current workspace or globally
   taskard lanes [options]        List active, completed, and blocked taskard lanes
   taskard clean [options]        Clean workspace lanes, diffs, and temporary files
-  taskard doctor                 Diagnose harness bridges, skills & configuration health
+  taskard doctor                 Check installed bridge and config files (not live agent behavior)
   taskard config                 Display effective configuration and role routing
   taskard roles                  Display the 7-role tier matrix
   taskard --version              Show installed Taskard version
@@ -78,9 +78,10 @@ function printHelp() {
 
 ${C.bold}INIT OPTIONS:${C.reset}
   -i, --interactive              Launch guided interactive setup wizard
-  -g, --global                   Initialize globally in ~/.taskard and ~/.claude
+  -g, --global                   Initialize globally in ~/.taskard and harness user directories
+  --install-skills               Resolve optional upstream skills (requires --global; network access)
   --dry-run                      Simulate installation without writing any files
-  -f, --force                    Force overwrite symlinks and configuration templates
+  -f, --force                    Replace Taskard links/profiles and default config files (regular user files are preserved)
 
 ${C.bold}LANES OPTIONS:${C.reset}
   -g, --global                   Inspect global ~/.taskard/lanes instead of workspace
@@ -105,149 +106,252 @@ ${C.bold}DOCUMENTATION & REPO:${C.reset}
 `);
 }
 
-function stripTomlComment(str) {
-  let inQuotes = false;
-  let quoteChar = '';
-  for (let i = 0; i < str.length; i++) {
-    const ch = str[i];
-    if ((ch === '"' || ch === "'") && (i === 0 || str[i - 1] !== '\\')) {
-      if (!inQuotes) {
-        inQuotes = true;
-        quoteChar = ch;
-      } else if (quoteChar === ch) {
-        inQuotes = false;
-      }
-    } else if (ch === '#' && !inQuotes) {
-      return str.slice(0, i).trim();
+const ROLE_NAMES = ['implementer', 'reviewer', 'planner', 'debugger', 'ui-developer', 'explorer', 'qa-tester'];
+const CONFIG_SECTIONS = new Set(['defaults', 'roles', 'qa', 'harness_preferences', 'risky_operations']);
+const HARNESS_NAMES = new Set(['claude-code', 'claude', 'opencode', 'codex', 'antigravity', 'cursor']);
+const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const OPTIONAL_SKILLS_TIMEOUT_MS = 30_000;
+
+function stripTomlComment(line) {
+  let quote = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quote === '"' && ch === '\\') {
+      i++;
+      continue;
+    }
+    if ((ch === '"' || ch === "'") && (!quote || quote === ch)) {
+      quote = quote ? '' : ch;
+    } else if (ch === '#' && !quote) {
+      return line.slice(0, i).trim();
     }
   }
-  return str.trim();
+  if (quote) throw new Error('unterminated string');
+  return line.trim();
+}
+
+function splitTomlArray(value) {
+  const parts = [];
+  let quote = '';
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (quote === '"' && ch === '\\') {
+      i++;
+      continue;
+    }
+    if ((ch === '"' || ch === "'") && (!quote || quote === ch)) {
+      quote = quote ? '' : ch;
+    } else if (ch === ',' && !quote) {
+      parts.push(value.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (quote) throw new Error('unterminated string in array');
+  const last = value.slice(start).trim();
+  if (last) parts.push(last);
+  else if (parts.length && value.trim().endsWith(',')) parts.pop();
+  return parts;
+}
+
+function parseTomlString(value) {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    const parsed = JSON.parse(value);
+    if (typeof parsed !== 'string') throw new Error('expected a string');
+    return parsed;
+  }
+  if (value.startsWith("'") && value.endsWith("'")) {
+    const inner = value.slice(1, -1);
+    if (inner.includes("'")) throw new Error('unsupported single-quoted string syntax');
+    return inner;
+  }
+  throw new Error('expected a quoted string');
+}
+
+function parseTomlValue(rawValue) {
+  const value = rawValue.trim();
+  if (!value) throw new Error('missing value');
+  if (value.startsWith('"') || value.startsWith("'")) return parseTomlString(value);
+  if (value.startsWith('[')) {
+    if (!value.endsWith(']')) throw new Error('unterminated array');
+    const inner = value.slice(1, -1).trim();
+    if (!inner) return [];
+    return splitTomlArray(inner).map(parseTomlString);
+  }
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^-?(?:0|[1-9]\d*)$/.test(value)) {
+    const number = Number(value);
+    if (!Number.isSafeInteger(number)) throw new Error('integer is outside the safe range');
+    return number;
+  }
+  throw new Error(`unsupported value '${value}'`);
 }
 
 function parseSimpleToml(content) {
   const result = {};
   let currentSection = result;
+  const explicitSections = new Set();
 
-  const lines = content.split(/\r?\n/);
-  for (let line of lines) {
-    line = line.trim();
-    if (!line || line.startsWith('#')) continue;
+  for (const [index, rawLine] of content.split(/\r?\n/).entries()) {
+    const line = stripTomlComment(rawLine).trim();
+    if (!line) continue;
 
-    const sectionMatch = line.match(/^\[([^\]]+)\]/);
+    const sectionMatch = line.match(/^\[([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*)\]$/);
     if (sectionMatch) {
-      const parts = sectionMatch[1].trim().split('.');
-      let curr = result;
-      for (const p of parts) {
-        curr[p] = curr[p] || {};
-        curr = curr[p];
+      const parts = sectionMatch[1].split('.');
+      if (parts.some((part) => DANGEROUS_KEYS.has(part))) throw new Error(`line ${index + 1}: unsafe table name`);
+      const sectionName = parts.join('.');
+      if (explicitSections.has(sectionName)) throw new Error(`line ${index + 1}: duplicate table [${sectionName}]`);
+      explicitSections.add(sectionName);
+
+      let current = result;
+      for (const part of parts) {
+        if (Object.prototype.hasOwnProperty.call(current, part) && (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part]))) {
+          throw new Error(`line ${index + 1}: '${part}' is already a value`);
+        }
+        current[part] ||= {};
+        current = current[part];
       }
-      currentSection = curr;
+      currentSection = current;
       continue;
     }
 
-    const eqIdx = line.indexOf('=');
-    if (eqIdx !== -1) {
-      const key = line.slice(0, eqIdx).trim();
-      let rawVal = stripTomlComment(line.slice(eqIdx + 1).trim());
-
-      let val = rawVal;
-      if (val.startsWith('"') && val.endsWith('"')) {
-        val = val.slice(1, -1);
-      } else if (val.startsWith("'") && val.endsWith("'")) {
-        val = val.slice(1, -1);
-      } else if (val === 'true') {
-        val = true;
-      } else if (val === 'false') {
-        val = false;
-      } else if (/^-?\d+(\.\d+)?$/.test(val) && val !== '') {
-        val = Number(val);
-      } else if (val.startsWith('[') && val.endsWith(']')) {
-        const inner = val.slice(1, -1).trim();
-        if (!inner) {
-          val = [];
-        } else {
-          const items = [];
-          let current = '';
-          let inQuotes = false;
-          let quoteChar = '';
-          for (let i = 0; i < inner.length; i++) {
-            const ch = inner[i];
-            if ((ch === '"' || ch === "'") && (i === 0 || inner[i - 1] !== '\\')) {
-              if (!inQuotes) {
-                inQuotes = true;
-                quoteChar = ch;
-              } else if (quoteChar === ch) {
-                inQuotes = false;
-              }
-              current += ch;
-            } else if (ch === ',' && !inQuotes) {
-              items.push(current.trim());
-              current = '';
-            } else {
-              current += ch;
-            }
-          }
-          if (current.trim()) items.push(current.trim());
-          val = items.map((s) => {
-            if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-              return s.slice(1, -1);
-            }
-            return s;
-          });
-        }
-      }
-      currentSection[key] = val;
+    const eqIndex = line.indexOf('=');
+    if (eqIndex < 1) throw new Error(`line ${index + 1}: expected a table or key = value`);
+    const key = line.slice(0, eqIndex).trim();
+    if (!/^[A-Za-z0-9_-]+$/.test(key) || DANGEROUS_KEYS.has(key)) throw new Error(`line ${index + 1}: invalid or unsafe key '${key}'`);
+    if (Object.prototype.hasOwnProperty.call(currentSection, key)) throw new Error(`line ${index + 1}: duplicate key '${key}'`);
+    try {
+      currentSection[key] = parseTomlValue(line.slice(eqIndex + 1));
+    } catch (error) {
+      throw new Error(`line ${index + 1}: ${error.message}`);
     }
   }
   return result;
 }
 
+function validateConfig(config, label = 'config.toml') {
+  const fail = (where, message) => { throw new Error(`${label}: ${where} ${message}`); };
+  const checkTable = (table, where, allowed) => {
+    if (!table || typeof table !== 'object' || Array.isArray(table)) fail(where, 'must be a table');
+    for (const key of Object.keys(table)) if (!allowed.has(key)) fail(`${where}.${key}`, 'is not a supported setting');
+  };
+  const checkString = (value, where) => {
+    if (typeof value !== 'string' || !value.trim()) fail(where, 'must be a non-empty string');
+  };
+  const checkStringArray = (value, where) => {
+    if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || !item.trim())) fail(where, 'must be an array of non-empty strings');
+  };
+
+  checkTable(config, 'config', CONFIG_SECTIONS);
+  if (config.defaults !== undefined) {
+    const defaults = config.defaults;
+    checkTable(defaults, '[defaults]', new Set(['permission_mode', 'default_mode', 'max_attempts', 'report_max_lines', 'budget_minutes']));
+    if (defaults.permission_mode !== undefined && !['bypassPermissions', 'default'].includes(defaults.permission_mode)) fail('[defaults].permission_mode', 'must be "bypassPermissions" or "default"');
+    if (defaults.default_mode !== undefined && !['fast', 'pro', 'max'].includes(defaults.default_mode)) fail('[defaults].default_mode', 'must be "fast", "pro", or "max"');
+    for (const [key, min, max] of [['max_attempts', 1, 2], ['report_max_lines', 1, 100], ['budget_minutes', 1, 1440]]) {
+      if (defaults[key] !== undefined && (!Number.isInteger(defaults[key]) || defaults[key] < min || defaults[key] > max)) fail(`[defaults].${key}`, `must be an integer from ${min} to ${max}`);
+    }
+  }
+  if (config.roles !== undefined) {
+    const roles = config.roles;
+    checkTable(roles, '[roles]', new Set([...ROLE_NAMES, 'reviewer_max', 'debugger_max', 'disabled']));
+    for (const [role, model] of Object.entries(roles)) {
+      if (role !== 'disabled') checkString(model, `[roles].${role}`);
+    }
+    if (roles.disabled !== undefined) {
+      checkStringArray(roles.disabled, '[roles].disabled');
+      for (const role of roles.disabled) if (!ROLE_NAMES.includes(role)) fail('[roles].disabled', `contains unknown role '${role}'`);
+    }
+  }
+  if (config.qa !== undefined) {
+    const qa = config.qa;
+    checkTable(qa, '[qa]', new Set(['enabled', 'headless_browser', 'run_integration_tests', 'auto_verify_endpoints']));
+    for (const [key, value] of Object.entries(qa)) if (typeof value !== 'boolean') fail(`[qa].${key}`, 'must be true or false');
+  }
+  if (config.harness_preferences !== undefined) {
+    const prefs = config.harness_preferences;
+    checkTable(prefs, '[harness_preferences]', new Set(['primary_harness', 'models', ...ROLE_NAMES]));
+    if (prefs.primary_harness !== undefined && !HARNESS_NAMES.has(prefs.primary_harness)) fail('[harness_preferences].primary_harness', 'must name a supported harness');
+    for (const role of ROLE_NAMES) {
+      if (prefs[role] !== undefined) {
+        checkStringArray(prefs[role], `[harness_preferences].${role}`);
+        if (prefs[role].some((harness) => !HARNESS_NAMES.has(harness))) fail(`[harness_preferences].${role}`, 'contains an unsupported harness');
+      }
+    }
+    if (prefs.models !== undefined) {
+      checkTable(prefs.models, '[harness_preferences].models', new Set(['claude_code', 'opencode']));
+      for (const [harness, modelTable] of Object.entries(prefs.models)) {
+        checkTable(modelTable, `[harness_preferences].models.${harness}`, new Set(ROLE_NAMES));
+        for (const [role, model] of Object.entries(modelTable)) {
+          checkString(model, `[harness_preferences].models.${harness}.${role}`);
+          if (harness === 'opencode' && !/^[^/\s]+\/[^/\s]+$/.test(model)) fail(`[harness_preferences].models.opencode.${role}`, 'must use provider/model format');
+        }
+      }
+    }
+  }
+  if (config.risky_operations !== undefined) {
+    const risky = config.risky_operations;
+    checkTable(risky, '[risky_operations]', new Set(['patterns']));
+    if (risky.patterns !== undefined) checkStringArray(risky.patterns, '[risky_operations].patterns');
+  }
+  return config;
+}
+
 function mergeConfigs(target, source) {
   for (const key of Object.keys(source)) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-      target[key] = target[key] || {};
-      mergeConfigs(target[key], source[key]);
+    const sourceValue = source[key];
+    if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+      if (!target[key]) target[key] = {};
+      mergeConfigs(target[key], sourceValue);
     } else {
-      target[key] = source[key];
+      target[key] = sourceValue;
     }
   }
   return target;
 }
 
-function loadEffectiveConfig() {
+function loadEffectiveConfig({ includeProject = true } = {}) {
   const tplPath = path.join(PKG_ROOT, 'templates', 'config.toml');
   const globalPath = path.join(HOME, '.taskard', 'config.toml');
   const projectPath = path.join(CWD, '.taskard', 'config.toml');
+  const read = (file, label) => validateConfig(parseSimpleToml(fs.readFileSync(file, 'utf8')), label);
+  const readOptional = (file, label) => {
+    const stat = lstatOrNull(file);
+    if (!stat) return null;
+    if (stat.isSymbolicLink()) {
+      let targetStat;
+      try {
+        targetStat = fs.statSync(file);
+      } catch (error) {
+        if (error.code === 'ENOENT') throw new Error(`${label}: broken symbolic link`);
+        throw new Error(`${label}: cannot follow symbolic link (${error.message})`);
+      }
+      if (!targetStat.isFile()) throw new Error(`${label}: symbolic link must point to a regular file`);
+    } else if (!stat.isFile()) {
+      throw new Error(`${label}: must be a regular file`);
+    }
+    return read(file, label);
+  };
 
-  let config = {};
-  if (fs.existsSync(tplPath)) {
-    try {
-      config = parseSimpleToml(fs.readFileSync(tplPath, 'utf8'));
-    } catch (_) {}
-  }
-
+  const config = read(tplPath, 'templates/config.toml');
   let source = 'templates/config.toml (Built-in Defaults)';
   let isProject = false;
   let isGlobal = false;
-
-  if (fs.existsSync(globalPath)) {
-    try {
-      const globalCfg = parseSimpleToml(fs.readFileSync(globalPath, 'utf8'));
-      mergeConfigs(config, globalCfg);
-      source = '~/.taskard/config.toml (Global)';
-      isGlobal = true;
-    } catch (_) {}
+  const globalConfig = readOptional(globalPath, '~/.taskard/config.toml');
+  if (globalConfig) {
+    mergeConfigs(config, globalConfig);
+    source = '~/.taskard/config.toml (Global)';
+    isGlobal = true;
   }
-
-  if (fs.existsSync(projectPath)) {
-    try {
-      const projectCfg = parseSimpleToml(fs.readFileSync(projectPath, 'utf8'));
-      mergeConfigs(config, projectCfg);
-      source = '.taskard/config.toml (Workspace)';
-      isProject = true;
-    } catch (_) {}
+  const projectConfig = includeProject ? readOptional(projectPath, '.taskard/config.toml') : null;
+  if (projectConfig) {
+    mergeConfigs(config, projectConfig);
+    source = '.taskard/config.toml (Workspace)';
+    isProject = true;
   }
-
+  validateConfig(config, 'effective config');
   return { config, source, isProject, isGlobal, globalPath, projectPath };
 }
 
@@ -267,247 +371,419 @@ function normalizeOpenCodeColor(color) {
   return 'primary';
 }
 
-function detectHarnesses() {
+function detectHarnessIds() {
+  const exists = (...parts) => fs.existsSync(path.join(...parts));
   const found = [];
-  if (fs.existsSync(path.join(HOME, '.claude'))) found.push('Claude Code (~/.claude)');
-  if (fs.existsSync(path.join(HOME, '.opencode')) || fs.existsSync(path.join(HOME, '.config', 'opencode'))) {
-    found.push('OpenCode');
-  }
-  if (fs.existsSync(path.join(HOME, '.agents')) || fs.existsSync(path.join(HOME, '.codex'))) {
-    found.push('Codex / OpenAgent');
-  }
-  if (fs.existsSync(path.join(HOME, '.gemini', 'antigravity-cli')) || fs.existsSync(path.join(HOME, '.gemini')) || fs.existsSync(path.join(HOME, '.antigravity'))) {
-    found.push('Antigravity');
-  }
-  if (fs.existsSync(path.join(CWD, '.cursor')) || fs.existsSync(path.join(CWD, '.cursorrules')) || fs.existsSync(path.join(HOME, '.cursor'))) {
-    found.push('Cursor');
-  }
-  if (found.length === 0) found.push('Standard Universal (Claude Code / OpenCode compatible)');
+  if (exists(HOME, '.claude') || exists(CWD, '.claude')) found.push('claude-code');
+  if ([HOME, CWD].some((base) => exists(base, '.opencode') || exists(base, '.config', 'opencode'))) found.push('opencode');
+  if (exists(HOME, '.agents') || exists(HOME, '.codex') || exists(CWD, '.agents')) found.push('codex');
+  if (exists(HOME, '.gemini') || exists(HOME, '.antigravity') || exists(CWD, '.gemini') || exists(CWD, '.antigravity')) found.push('antigravity');
+  if (exists(HOME, '.cursor') || exists(CWD, '.cursor') || exists(CWD, '.cursorrules')) found.push('cursor');
   return found;
 }
 
-function syncDirectiveBlock(targetFile, directiveSourcePath, dryRun) {
-  const MARK = '<!-- taskard:start -->';
-  const MARK_END = '<!-- taskard:end -->';
-  const sourceContent = fs.readFileSync(directiveSourcePath, 'utf8');
-
-  let existing = '';
-  if (fs.existsSync(targetFile)) {
-    existing = fs.readFileSync(targetFile, 'utf8');
-  }
-
-  const getHash = (text) => {
-    const match = text.match(/<!-- taskard:start -->([\s\S]*?)<!-- taskard:end -->/);
-    if (!match) return '';
-    return crypto.createHash('sha256').update(match[1].trim()).digest('hex');
+function detectHarnesses() {
+  const labels = {
+    'claude-code': 'Claude Code',
+    opencode: 'OpenCode',
+    codex: 'Codex / OpenAgent',
+    antigravity: 'Antigravity',
+    cursor: 'Cursor',
   };
+  return detectHarnessIds().map((id) => labels[id]);
+}
 
-  const wantHash = getHash(sourceContent);
-  const haveHash = getHash(existing);
-
-  if (wantHash && wantHash === haveHash) {
-    return false; // already up to date
+function lstatOrNull(target) {
+  try {
+    return fs.lstatSync(target);
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
   }
+}
 
-  if (dryRun) return true;
-
-  let newContent = existing;
-  if (existing.includes(MARK)) {
-    const before = existing.substring(0, existing.indexOf(MARK));
-    const afterIdx = existing.indexOf(MARK_END);
-    const after = afterIdx !== -1 ? existing.substring(afterIdx + MARK_END.length) : '';
-    newContent = (before.trimEnd() + '\n\n' + sourceContent.trim() + '\n\n' + after.trimStart()).trim() + '\n';
-  } else {
-    newContent = (existing.trim() + (existing.trim().length > 0 ? '\n\n' : '') + sourceContent.trim() + '\n');
+function ensureScopedDirectory(base, target, dryRun = false) {
+  const relative = path.relative(base, target);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`Refusing to write outside ${base}: ${target}`);
   }
+  const baseStat = lstatOrNull(base);
+  if (baseStat && (!baseStat.isDirectory() || baseStat.isSymbolicLink())) throw new Error(`Refusing to use non-directory scope root: ${base}`);
+  if (!baseStat && !dryRun) fs.mkdirSync(base, { recursive: true });
 
-  fs.mkdirSync(path.dirname(targetFile), { recursive: true });
-  fs.writeFileSync(targetFile, newContent, 'utf8');
+  let current = base;
+  for (const part of relative.split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    const stat = lstatOrNull(current);
+    if (stat) {
+      if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Refusing to use non-directory path: ${current}`);
+    } else if (!dryRun) {
+      fs.mkdirSync(current);
+    }
+  }
+}
+
+function atomicWriteFile(target, content, mode = 0o644) {
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${process.pid}.${crypto.randomUUID()}.tmp`);
+  let descriptor;
+  try {
+    descriptor = fs.openSync(temp, 'wx', mode);
+    fs.writeFileSync(descriptor, content, 'utf8');
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.renameSync(temp, target);
+  } catch (error) {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    try { fs.unlinkSync(temp); } catch (_) {}
+    throw error;
+  }
+}
+
+function writeManagedFile(target, content, { base, dryRun = false, force = false, replaceOnForce = false } = {}) {
+  if (Buffer.isBuffer(content)) content = content.toString('utf8');
+  ensureScopedDirectory(base, path.dirname(target), dryRun);
+  const stat = lstatOrNull(target);
+  if (stat && (stat.isSymbolicLink() || !stat.isFile())) throw new Error(`Refusing to replace user-owned path: ${target}`);
+  if (stat && fs.readFileSync(target, 'utf8') === content) return false;
+  if (stat && !(force && replaceOnForce)) throw new Error(`Refusing to overwrite existing file without --force: ${target}`);
+  if (!dryRun) atomicWriteFile(target, content, stat ? (stat.mode & 0o777) : 0o644);
   return true;
 }
 
-function copyDirRecursive(src, dest, dryRun) {
-  if (dryRun) return;
-  fs.mkdirSync(dest, { recursive: true });
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-  for (const entry of entries) {
+function ensureSymlink(target, source, { base, type, dryRun = false, force = false } = {}) {
+  ensureScopedDirectory(base, path.dirname(target), dryRun);
+  const stat = lstatOrNull(target);
+  if (stat) {
+    if (!stat.isSymbolicLink()) throw new Error(`Refusing to replace user-owned path: ${target}`);
+    try {
+      if (fs.realpathSync(target) === fs.realpathSync(source)) return false;
+    } catch (_) {}
+    if (!force) throw new Error(`Refusing to replace existing or broken symlink without --force: ${target}`);
+    if (!dryRun) fs.unlinkSync(target);
+  }
+  if (!dryRun) fs.symlinkSync(source, target, type);
+  return true;
+}
+
+function copyDirRecursive(src, dest, options) {
+  ensureScopedDirectory(options.base, dest, options.dryRun);
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath, dryRun);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
+    if (entry.isDirectory()) copyDirRecursive(srcPath, destPath, options);
+    else if (entry.isFile()) writeManagedFile(destPath, fs.readFileSync(srcPath), { ...options, replaceOnForce: true });
+    else throw new Error(`Unsupported source entry: ${srcPath}`);
+  }
+}
+
+function parseTaskardBlock(content, label) {
+  const start = '<!-- taskard:start -->';
+  const end = '<!-- taskard:end -->';
+  const starts = [...content.matchAll(/<!-- taskard:start -->/g)];
+  const ends = [...content.matchAll(/<!-- taskard:end -->/g)];
+  if (starts.length !== 1 || ends.length !== 1 || starts[0].index > ends[0].index) {
+    throw new Error(`${label}: expected exactly one paired Taskard start/end marker`);
+  }
+  const block = content.slice(starts[0].index, ends[0].index + end.length);
+  const versions = [...block.matchAll(/<!-- taskard:v(\d+) -->/g)];
+  if (versions.length !== 1) throw new Error(`${label}: expected exactly one versioned Taskard marker`);
+  return { block, version: versions[0][1], start: starts[0].index, end: ends[0].index + end.length };
+}
+
+function syncDirectiveBlock(targetFile, directiveSourcePath, { base, dryRun = false } = {}) {
+  const sourceContent = fs.readFileSync(directiveSourcePath, 'utf8');
+  const sourceBlock = parseTaskardBlock(sourceContent, directiveSourcePath).block;
+  ensureScopedDirectory(base, path.dirname(targetFile), dryRun);
+  const stat = lstatOrNull(targetFile);
+  if (stat && (stat.isSymbolicLink() || !stat.isFile())) throw new Error(`Refusing to modify user-owned path: ${targetFile}`);
+  const existing = stat ? fs.readFileSync(targetFile, 'utf8') : '';
+  let replacement;
+  if (!existing) replacement = `${sourceContent.trim()}\n`;
+  else {
+    let oldBlock;
+    try {
+      oldBlock = parseTaskardBlock(existing, targetFile);
+    } catch (error) {
+      if (existing.includes('<!-- taskard:start -->') || existing.includes('<!-- taskard:end -->')) throw error;
+      replacement = `${existing.replace(/\s*$/, '')}\n\n${sourceContent.trim()}\n`;
+    }
+    if (oldBlock) {
+      if (oldBlock.block === sourceBlock) return false;
+      replacement = `${existing.slice(0, oldBlock.start)}${sourceBlock}${existing.slice(oldBlock.end)}`;
     }
   }
+  if (!dryRun) {
+    atomicWriteFile(targetFile, replacement, stat ? (stat.mode & 0o777) : 0o644);
+  }
+  return true;
+}
+
+function readHarnessProfiles(file = path.join(PKG_ROOT, 'templates', 'harness-profiles.json')) {
+  const profileData = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (profileData.schemaVersion !== 1 || !profileData.harnesses || typeof profileData.harnesses !== 'object') {
+    throw new Error(`${file}: unsupported harness profile schema`);
+  }
+  return profileData.harnesses;
+}
+
+function getConfigPath(config, dottedPath) {
+  return dottedPath.split('.').reduce((value, key) => value && value[key], config);
+}
+
+function parseAgentFrontmatter(agentContent, label) {
+  const match = agentContent.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+  if (!match) throw new Error(`${label}: missing agent frontmatter`);
+  return { lines: match[1].split(/\r?\n/), body: agentContent.slice(match[0].length) };
+}
+
+function buildHarnessAgent(agentContent, role, harness, profiles, config, scope) {
+  const profile = profiles[harness];
+  if (!profile || !profile.installScope?.includes(scope)) return null;
+  const { lines, body } = parseAgentFrontmatter(agentContent, `${role}.md`);
+  const fields = [];
+  let skipField = false;
+  for (const line of lines) {
+    if (/^(model|color|mode|tools|permission):/.test(line)) {
+      skipField = true;
+      continue;
+    }
+    if (skipField && /^\s+/.test(line)) continue;
+    skipField = false;
+    fields.push(line);
+  }
+  const modelProfile = profile.models || {};
+  const configuredModel = modelProfile.configTable && getConfigPath(config, modelProfile.configTable);
+  const explicitModel = configuredModel && configuredModel[role];
+  let model;
+  if (explicitModel !== undefined) {
+    model = explicitModel;
+    if (harness === 'opencode' && !/^[^/\s]+\/[^/\s]+$/.test(model)) throw new Error(`[harness_preferences].models.opencode.${role} must use provider/model format`);
+  } else if (modelProfile.source !== 'selected-provider') {
+    const configuredRoleModel = (config.roles && config.roles[role]);
+    const sourceModel = lines.find((line) => line.startsWith('model:'))?.slice('model:'.length).trim().replace(/^['"]|['"]$/g, '');
+    const candidate = configuredRoleModel || sourceModel;
+    if (candidate) {
+      model = modelProfile.aliases?.[candidate] || (candidate.includes('/') ? candidate : undefined);
+      if (!model) throw new Error(`Unknown ${harness} model '${candidate}' for role '${role}'; use a documented alias or provider/model mapping`);
+    }
+  }
+
+  const extra = [];
+  const frontmatter = { ...profile.agentFrontmatter };
+  if (model !== undefined) extra.push(`model: ${model}`);
+  const originalColor = lines.find((line) => line.startsWith('color:'))?.slice('color:'.length).trim().replace(/^['"]|['"]$/g, '');
+  if (originalColor) extra.push(`color: ${harness === 'opencode' ? normalizeOpenCodeColor(originalColor) : originalColor}`);
+  for (const [field, value] of Object.entries(frontmatter)) extra.push(`${field}: ${value}`);
+  const readOnly = profile.readOnlyRoles?.includes(role) && profile.readOnly;
+  if (readOnly?.nativeField === 'tools' && Array.isArray(readOnly.allow)) {
+    extra.push(`${readOnly.nativeField}:`);
+    for (const tool of readOnly.allow) extra.push(`  - ${tool}`);
+  } else if (readOnly?.nativeField === 'permission' && readOnly.rules) {
+    extra.push(`${readOnly.nativeField}:`);
+    for (const [tool, action] of Object.entries(readOnly.rules)) extra.push(`  ${tool === '*' ? '"*"' : tool}: ${action}`);
+  }
+  return `---\n${[...fields, ...extra].join('\n')}\n---\n${body}`;
+}
+
+function setTomlSetting(content, section, key, value) {
+  const lines = content.split(/\r?\n/);
+  const header = `[${section}]`;
+  let start = lines.indexOf(header);
+  if (start === -1) {
+    if (lines[lines.length - 1] !== '') lines.push('');
+    lines.push(header, `${key} = ${JSON.stringify(value)}`);
+    return `${lines.join('\n').replace(/\n*$/, '\n')}`;
+  }
+  let end = lines.findIndex((line, index) => index > start && /^\s*\[/.test(line));
+  if (end === -1) end = lines.length;
+  const found = lines.findIndex((line, index) => index > start && index < end && line.match(/^\s*([A-Za-z0-9_-]+)\s*=/)?.[1] === key);
+  if (found !== -1) lines[found] = `${key} = ${JSON.stringify(value)}`;
+  else lines.splice(start + 1, 0, `${key} = ${JSON.stringify(value)}`);
+  return `${lines.join('\n').replace(/\n*$/, '\n')}`;
+}
+
+function applyCustomConfig(content, customConfig) {
+  if (customConfig.default_mode !== undefined) content = setTomlSetting(content, 'defaults', 'default_mode', customConfig.default_mode);
+  if (customConfig.permission_mode !== undefined) content = setTomlSetting(content, 'defaults', 'permission_mode', customConfig.permission_mode);
+  if (customConfig.primary_harness !== undefined) content = setTomlSetting(content, 'harness_preferences', 'primary_harness', customConfig.primary_harness);
+  return content;
+}
+
+function resolveOptionalSkills({ home, dryRun }) {
+  const skills = [
+    { repo: 'obra/superpowers', name: 'using-superpowers' },
+    { repo: 'mattpocock/skills', name: 'grilling' },
+  ];
+  const isInstalled = (name) => [
+    path.join(home, '.claude', 'skills', name),
+    path.join(home, '.agents', 'skills', name),
+  ].some((candidate) => fs.existsSync(candidate));
+  const missing = skills.filter(({ name }) => !isInstalled(name));
+  if (!missing.length) return { status: 'Optional upstream skills are already present', failures: [] };
+  if (dryRun) return { status: `Dry run: would resolve ${missing.length} optional upstream skill(s); no network request was made`, failures: [] };
+
+  const failures = [];
+  for (const skill of missing) {
+    const result = spawnSync('npx', [
+      '-y', 'skills', 'add', skill.repo,
+      '--skill', skill.name,
+      '-g', '-y',
+    ], {
+      cwd: home,
+      env: { ...process.env, HOME: home, CI: '1' },
+      stdio: 'ignore',
+      timeout: OPTIONAL_SKILLS_TIMEOUT_MS,
+    });
+    if (result.error || result.status !== 0) {
+      const detail = result.error?.code === 'ETIMEDOUT'
+        ? `timed out after ${OPTIONAL_SKILLS_TIMEOUT_MS}ms`
+        : result.error?.message || `exited with status ${result.status ?? 'unknown'}`;
+      failures.push(`${skill.repo}/${skill.name} ${detail}`);
+    } else if (!isInstalled(skill.name)) {
+      failures.push(`${skill.repo}/${skill.name} exited successfully but did not create an expected user skill directory`);
+    }
+  }
+  return {
+    status: failures.length
+      ? `Optional skill resolution failed: ${failures.join('; ')}`
+      : `Optional skills resolved: ${missing.map(({ name }) => name).join(', ')}`,
+    failures,
+  };
 }
 
 function runInit(args, customConfig = null) {
   const startTime = Date.now();
   const dryRun = args.includes('--dry-run');
   const isGlobal = args.includes('--global') || args.includes('-g');
+  const installSkills = args.includes('--install-skills');
+  const force = args.includes('--force') || args.includes('-f');
+  const scopeRoot = isGlobal ? HOME : CWD;
+  const installScope = isGlobal ? 'user' : 'project';
+
+  if (installSkills && !isGlobal) throw new Error('--install-skills requires --global because upstream skills are installed in user scope');
+  if (!isGlobal && CWD === HOME) throw new Error(`Refusing to initialize inside HOME without --global: ${HOME}`);
+  let config = loadEffectiveConfig({ includeProject: !isGlobal }).config;
+  const profiles = readHarnessProfiles();
+  if (force && !customConfig) config = validateConfig(parseSimpleToml(fs.readFileSync(path.join(PKG_ROOT, 'templates', 'config.toml'), 'utf8')), 'templates/config.toml');
+  if (customConfig) {
+    config.defaults ||= {};
+    config.harness_preferences ||= {};
+    if (customConfig.default_mode !== undefined) config.defaults.default_mode = customConfig.default_mode;
+    if (customConfig.permission_mode !== undefined) config.defaults.permission_mode = customConfig.permission_mode;
+    if (customConfig.primary_harness !== undefined) config.harness_preferences.primary_harness = customConfig.primary_harness;
+    validateConfig(config, 'interactive configuration');
+  }
 
   printBanner();
 
   // 1. Core directories
-  const taskardHome = path.join(HOME, '.taskard');
+  const taskardHome = path.join(scopeRoot, '.taskard');
   const skillsSrc = path.join(PKG_ROOT, 'skills');
   const agentsSrc = path.join(PKG_ROOT, 'agents');
   const templatesSrc = path.join(PKG_ROOT, 'templates');
-
-  if (!dryRun) {
-    fs.mkdirSync(taskardHome, { recursive: true });
-    copyDirRecursive(skillsSrc, path.join(taskardHome, 'skills'), dryRun);
-    const agentsDest = path.join(taskardHome, 'agents');
-    if (fs.existsSync(agentsDest)) {
-      fs.rmSync(agentsDest, { recursive: true, force: true });
-    }
-    copyDirRecursive(agentsSrc, agentsDest, dryRun);
-    copyDirRecursive(templatesSrc, path.join(taskardHome, 'templates'), dryRun);
-  }
-  logStep(1, 'Core Directories & Templates', `~/.taskard (skills, agents, templates ${dryRun ? 'verified' : 'synchronized'})`);
+  const copyOptions = { base: scopeRoot, dryRun, force };
+  ensureScopedDirectory(scopeRoot, taskardHome, dryRun);
+  copyDirRecursive(skillsSrc, path.join(taskardHome, 'skills'), copyOptions);
+  copyDirRecursive(agentsSrc, path.join(taskardHome, 'agents'), copyOptions);
+  copyDirRecursive(templatesSrc, path.join(taskardHome, 'templates'), copyOptions);
+  logStep(1, 'Core Directories & Templates', `${isGlobal ? '~/.taskard' : '.taskard'} (skills, agents, templates ${dryRun ? 'verified' : 'synchronized'})`);
 
   // 2. Harness Integration & Roles
-  const harnesses = detectHarnesses();
-  const claudeSkills = path.join(HOME, '.claude', 'skills');
-  const claudeAgents = path.join(HOME, '.claude', 'agents');
-  const agentsSkills = path.join(HOME, '.agents', 'skills');
+  const harnessIds = detectHarnessIds();
+  const harnessNames = { 'claude-code': 'Claude Code', opencode: 'OpenCode', codex: 'Codex', antigravity: 'Antigravity', cursor: 'Cursor' };
+  const targetSkill = path.join(taskardHome, 'skills', 'taskard');
+  const claudeSkills = path.join(scopeRoot, '.claude', 'skills');
+  const claudeAgents = path.join(scopeRoot, '.claude', 'agents');
+  const agentsSkills = path.join(scopeRoot, '.agents', 'skills');
+  const openCodeAgents = isGlobal
+    ? path.join(scopeRoot, '.config', 'opencode', 'agents')
+    : path.join(scopeRoot, '.opencode', 'agents');
+  const claudeProfiles = path.join(taskardHome, 'claude-agents');
+  const openCodeProfiles = path.join(taskardHome, 'opencode-agents');
+  const agentFiles = fs.readdirSync(agentsSrc).filter((file) => file.endsWith('.md')).sort();
 
-  if (!dryRun) {
-    fs.mkdirSync(claudeSkills, { recursive: true });
-    fs.mkdirSync(claudeAgents, { recursive: true });
-    fs.mkdirSync(agentsSkills, { recursive: true });
-
-    // Link skill
-    const targetSkill = path.join(taskardHome, 'skills', 'taskard');
-    try {
-      const sym1 = path.join(claudeSkills, 'taskard');
-      if (fs.existsSync(sym1) || fs.lstatSync(sym1).isSymbolicLink()) fs.unlinkSync(sym1);
-      fs.symlinkSync(targetSkill, sym1, 'dir');
-    } catch (_) {}
-
-    try {
-      const sym2 = path.join(agentsSkills, 'taskard');
-      if (fs.existsSync(sym2) || fs.lstatSync(sym2).isSymbolicLink()) fs.unlinkSync(sym2);
-      fs.symlinkSync(targetSkill, sym2, 'dir');
-    } catch (_) {}
-
-    // OpenCode directories
-    const openCodeDirs = [
-      path.join(HOME, '.config', 'opencode', 'agent'),
-      path.join(HOME, '.config', 'opencode', 'agents'),
-      path.join(HOME, '.opencode', 'agent'),
-      path.join(HOME, '.opencode', 'agents'),
-    ];
-    for (const d of openCodeDirs) {
-      fs.mkdirSync(d, { recursive: true });
-    }
-
-    // Link/Sync agents
-    const agentFiles = fs.readdirSync(agentsSrc).filter((f) => f.endsWith('.md'));
-    for (const f of agentFiles) {
-      const srcAgent = path.join(taskardHome, 'agents', f);
-      const agentName = f.replace('.md', '');
-
-      // Claude link
-      const claudeAgentLink = path.join(claudeAgents, f);
-      try {
-        if (fs.existsSync(claudeAgentLink) || fs.lstatSync(claudeAgentLink).isSymbolicLink()) {
-          fs.unlinkSync(claudeAgentLink);
-        }
-        fs.symlinkSync(srcAgent, claudeAgentLink, 'file');
-      } catch (_) {}
-
-      // OpenCode agent sync (color conversion)
-      const agentContent = fs.readFileSync(srcAgent, 'utf8');
-      const colorMatch = agentContent.match(/^color:\s*([^\r\n]+)/m);
-      const originalColor = colorMatch ? colorMatch[1].trim().replace(/['"]/g, '') : 'primary';
-      const ocColor = normalizeOpenCodeColor(originalColor);
-      const normalizedContent = agentContent.replace(/^color:\s*.*$/m, `color: ${ocColor}`);
-
-      for (const d of openCodeDirs) {
-        fs.writeFileSync(path.join(d, f), normalizedContent, 'utf8');
-      }
+  for (const skillLink of [path.join(claudeSkills, 'taskard'), path.join(agentsSkills, 'taskard')]) {
+    ensureSymlink(skillLink, targetSkill, { base: scopeRoot, type: 'dir', dryRun, force });
+  }
+  for (const file of agentFiles) {
+    const role = file.slice(0, -3);
+    const installedAgent = path.join(taskardHome, 'agents', file);
+    const source = fs.readFileSync(fs.existsSync(installedAgent) ? installedAgent : path.join(agentsSrc, file), 'utf8');
+    for (const [harness, profileRoot, targetRoot] of [
+      ['claude-code', claudeProfiles, claudeAgents],
+      ['opencode', openCodeProfiles, openCodeAgents],
+    ]) {
+      const rendered = buildHarnessAgent(source, role, harness, profiles, config, installScope);
+      if (rendered === null) continue;
+      const profileFile = path.join(profileRoot, file);
+      writeManagedFile(profileFile, rendered, { base: scopeRoot, dryRun, force, replaceOnForce: true });
+      ensureSymlink(path.join(targetRoot, file), profileFile, { base: scopeRoot, type: 'file', dryRun, force });
     }
   }
 
-  logStep(2, 'Harness Bridges & Role Roster', `${harnesses.join(', ')} (7 roles connected)`);
+  const supportLabels = Object.entries(profiles).map(([id, profile]) => {
+    const level = profile.support === 'tested' ? 'deterministic profile fixtures' : profile.support;
+    return `${harnessNames[id] || id}: ${level}`;
+  });
+  const detectedText = harnessIds.length ? `detected ${harnessIds.map((id) => harnessNames[id] || id).join(', ')}` : 'no harness detected';
+  logStep(2, 'Harness Profile Export', `${agentFiles.length} Taskard role files exported for ${installScope}; ${detectedText}; ${supportLabels.join('; ')}; live behavior not tested`);
 
   // 3. Configuration Setup
-  const globalConfigPath = path.join(taskardHome, 'config.toml');
+  const globalConfigPath = path.join(HOME, '.taskard', 'config.toml');
   const projectConfigPath = path.join(CWD, '.taskard', 'config.toml');
   const configTplPath = path.join(templatesSrc, 'config.toml');
-
-  let activeGear = 'Pro (Default)';
-  let activeSafety = '2-Strike Circuit Breaker · 3 Approval Gates';
-
-  if (!dryRun) {
-    let configContent = fs.readFileSync(configTplPath, 'utf8');
-    if (customConfig) {
-      if (customConfig.default_mode) {
-        configContent = configContent.replace(/^default_mode\s*=\s*"[^"]*"/m, `default_mode = "${customConfig.default_mode}"`);
-        activeGear = customConfig.default_mode.charAt(0).toUpperCase() + customConfig.default_mode.slice(1);
-      }
-      if (customConfig.permission_mode) {
-        configContent = configContent.replace(/^permission_mode\s*=\s*"[^"]*"/m, `permission_mode = "${customConfig.permission_mode}"`);
-        activeSafety = customConfig.permission_mode === 'bypassPermissions'
-          ? 'bypassPermissions (Autonomous)'
-          : 'Manual Confirmation Mode';
-      }
-      if (customConfig.primary_harness) {
-        if (configContent.includes('[harness_preferences]')) {
-          configContent = configContent.replace(/\[harness_preferences\]/, `[harness_preferences]\nprimary_harness = "${customConfig.primary_harness}"`);
-        }
-      }
-    }
-
-    if (!fs.existsSync(globalConfigPath) || (isGlobal && customConfig)) {
-      fs.writeFileSync(globalConfigPath, configContent, 'utf8');
-    }
-    if (!isGlobal && CWD !== HOME) {
-      fs.mkdirSync(path.join(CWD, '.taskard'), { recursive: true });
-      if (!fs.existsSync(projectConfigPath) || customConfig) {
-        fs.writeFileSync(projectConfigPath, configContent, 'utf8');
-      }
-    }
+  const configPath = isGlobal ? globalConfigPath : projectConfigPath;
+  const existingConfigStat = lstatOrNull(configPath);
+  if (existingConfigStat && (existingConfigStat.isSymbolicLink() || !existingConfigStat.isFile())) {
+    throw new Error(`Refusing to modify user-owned config path: ${configPath}`);
   }
-  logStep(3, 'Configuration Layer', isGlobal ? '~/.taskard/config.toml (Global Default)' : '.taskard/config.toml (Workspace & Global)');
+  let configContent;
+  if (customConfig) {
+    configContent = existingConfigStat
+      ? fs.readFileSync(configPath, 'utf8')
+      : (isGlobal ? fs.readFileSync(configTplPath, 'utf8') : '# Project overrides for ~/.taskard/config.toml.\n');
+    configContent = applyCustomConfig(configContent, customConfig);
+  } else if (existingConfigStat && !force) {
+    configContent = fs.readFileSync(configPath, 'utf8');
+  } else if (isGlobal || force) {
+    configContent = fs.readFileSync(configTplPath, 'utf8');
+  } else {
+    configContent = '# Project overrides for ~/.taskard/config.toml.\n';
+  }
+  validateConfig(parseSimpleToml(configContent), configPath);
+  writeManagedFile(configPath, configContent, {
+    base: scopeRoot,
+    dryRun,
+    force: force || Boolean(customConfig),
+    replaceOnForce: true,
+  });
 
-  // 4. External Skills Resolution
-  let externalStatus = 'Superpowers & Matt Pocock (active)';
-  try {
-    const hasSp = fs.existsSync(path.join(HOME, '.claude', 'skills', 'using-superpowers')) || fs.existsSync(path.join(HOME, '.agents', 'skills', 'using-superpowers'));
-    const hasGrill = fs.existsSync(path.join(HOME, '.claude', 'skills', 'grilling')) || fs.existsSync(path.join(HOME, '.agents', 'skills', 'grilling'));
-    if (!hasSp || !hasGrill) {
-      if (!dryRun) {
-        try {
-          execSync('npx -y skills add obra/superpowers --global >/dev/null 2>&1', { stdio: 'ignore' });
-          execSync('npx -y skills add mattpocock/skills --global >/dev/null 2>&1', { stdio: 'ignore' });
-          externalStatus = 'Resolved and connected via npx';
-        } catch (_) {
-          externalStatus = 'Optional external skills skipped';
-        }
-      }
-    }
-  } catch (_) {}
-  logStep(4, 'Discipline Standards', externalStatus);
+  const activeGearValue = config.defaults?.default_mode || 'pro';
+  const activeGear = activeGearValue === 'pro' ? 'Pro (Default)' : activeGearValue.charAt(0).toUpperCase() + activeGearValue.slice(1);
+  const activeSafety = config.defaults?.permission_mode === 'default'
+    ? 'default permission preference (harness-dependent)'
+    : 'bypassPermissions preference (harness-dependent)';
+  logStep(3, 'Configuration Layer', `${isGlobal ? '~/.taskard/config.toml (Global)' : '.taskard/config.toml (Project overrides)'}`);
+
+  // 4. Optional upstream skills are resolved only when explicitly requested.
+  const externalResolution = installSkills
+    ? resolveOptionalSkills({ home: HOME, dryRun })
+    : { status: 'Optional external skills unchanged; use --global --install-skills to resolve them', failures: [] };
+  if (externalResolution.failures.length) {
+    console.error(`Warning: core install will continue, but optional skill resolution failed: ${externalResolution.failures.join('; ')}`);
+  }
+  logStep(4, 'Optional External Skills', externalResolution.status);
 
   // 5. Directive Blocks Injection
   const directiveTpl = path.join(templatesSrc, 'directive-block.md');
-  const targets = isGlobal || CWD === HOME
-    ? [path.join(HOME, '.claude', 'CLAUDE.md'), path.join(HOME, '.claude', 'AGENTS.md')]
-    : [
-        path.join(HOME, '.claude', 'CLAUDE.md'),
-        path.join(HOME, '.claude', 'AGENTS.md'),
-        path.join(CWD, 'CLAUDE.md'),
-        path.join(CWD, 'AGENTS.md'),
-      ];
+  parseTaskardBlock(fs.readFileSync(directiveTpl, 'utf8'), directiveTpl);
+  const targets = isGlobal
+    ? [path.join(scopeRoot, '.claude', 'CLAUDE.md'), path.join(scopeRoot, '.claude', 'AGENTS.md')]
+    : [path.join(scopeRoot, 'CLAUDE.md'), path.join(scopeRoot, 'AGENTS.md')];
 
   let injectedCount = 0;
   for (const t of targets) {
-    if (fs.existsSync(t) || t.includes('.claude') || fs.existsSync(path.dirname(t))) {
-      syncDirectiveBlock(t, directiveTpl, dryRun);
-      injectedCount++;
-    }
+    if (syncDirectiveBlock(t, directiveTpl, { base: scopeRoot, dryRun })) injectedCount++;
   }
   logStep(5, 'Harness Directives', `Idempotent directive block synced across ${injectedCount} manifest files`);
 
@@ -518,8 +794,10 @@ function runInit(args, customConfig = null) {
   printRoleRoster();
 
   // Success Card
-  const headerText = `TASKARD READY · SYNCHRONIZATION COMPLETE (${durStr})`;
-  const headerVisLen = 44 + durStr.length;
+  const headerText = externalResolution.failures.length
+    ? `TASKARD CORE INSTALLED · OPTIONAL SKILLS FAILED (${durStr})`
+    : `TASKARD READY · SYNCHRONIZATION COMPLETE (${durStr})`;
+  const headerVisLen = headerText.length;
   let padLen = 69 - headerVisLen;
   if (padLen < 0) padLen = 0;
   const pad = ' '.repeat(padLen);
@@ -528,7 +806,7 @@ function runInit(args, customConfig = null) {
   console.log(`  ${C.emerald}│${C.reset}  ${C.bold}${C.emerald}✨${C.reset}  ${C.bold}${headerText}${C.reset}${pad}  ${C.emerald}│${C.reset}`);
   console.log(`  ${C.emerald}${C.bold}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
   console.log(`  ${C.emerald}│${C.reset}  ${C.gray}• Speed Gear   :${C.reset} ${C.cyan}${C.bold}${activeGear}${C.reset} ${C.dim}· Fast · Max${C.reset}`);
-  console.log(`  ${C.emerald}│${C.reset}  ${C.gray}• Safety       :${C.reset} ${C.amber}${C.bold}${activeSafety}${C.reset}`);
+  console.log(`  ${C.emerald}│${C.reset}  ${C.gray}• Permission Pref:${C.reset} ${C.amber}${C.bold}${activeSafety}${C.reset}`);
   console.log(`  ${C.emerald}│${C.reset}  ${C.gray}• Config File  :${C.reset} ${C.dark}${isGlobal ? '~/.taskard/config.toml' : '.taskard/config.toml'}${C.reset}`);
   console.log(`  ${C.emerald}│${C.reset}`);
   console.log(`  ${C.emerald}│${C.reset}  ${C.bold}🚀 Quick Start:${C.reset}`);
@@ -560,9 +838,9 @@ async function runInteractiveInit(args) {
 
   // 1. Speed Gear
   console.log(`  ${C.cyan}${C.bold}[1/3] Default Speed Gear:${C.reset}`);
-  console.log(`        ${C.bold}1)${C.reset} ${C.cyan}🚀 Pro${C.reset}     ${C.gray}(Default - 5-10m, point-to-range brief + review gate)${C.reset}`);
-  console.log(`        ${C.bold}2)${C.reset} ${C.amber}⚡ Fast${C.reset}    ${C.gray}(Fast - <2m, zero overhead, single fix)${C.reset}`);
-  console.log(`        ${C.bold}3)${C.reset} ${C.purple}🏛️ Max${C.reset}     ${C.gray}(Rigor - 15-30m, worktree DAG, QA & opus review)${C.reset}`);
+  console.log(`        ${C.bold}1)${C.reset} ${C.cyan}🚀 Pro${C.reset}     ${C.gray}(Default - bounded feature or fix; about 5-10m)${C.reset}`);
+  console.log(`        ${C.bold}2)${C.reset} ${C.amber}⚡ Fast${C.reset}    ${C.gray}(Low-risk, isolated change with a clear check; under a few minutes)${C.reset}`);
+  console.log(`        ${C.bold}3)${C.reset} ${C.purple}🏛️ Max${C.reset}     ${C.gray}(High-risk, cross-boundary or parallel work; about 15-30m)${C.reset}`);
   const gearAns = (await question(`        ${C.bold}Selection [1-3] (1): ${C.reset}`)).trim() || '1';
 
   let selectedGear = 'pro';
@@ -578,13 +856,13 @@ async function runInteractiveInit(args) {
   console.log(`        ${C.bold}5)${C.reset} Cursor         ${C.gray}(.cursorrules, AGENTS.md)${C.reset}`);
   const harnessAns = (await question(`        ${C.bold}Selection [1-5] (${defaultHarnessNum}): ${C.reset}`)).trim() || defaultHarnessNum;
 
-  const harnessMap = { '1': 'claude', '2': 'opencode', '3': 'codex', '4': 'antigravity', '5': 'cursor' };
-  const selectedHarness = harnessMap[harnessAns] || 'claude';
+  const harnessMap = { '1': 'claude-code', '2': 'opencode', '3': 'codex', '4': 'antigravity', '5': 'cursor' };
+  const selectedHarness = harnessMap[harnessAns] || 'claude-code';
 
-  // 3. Permission Level
-  console.log(`\n  ${C.cyan}${C.bold}[3/3] Security & Permission Level:${C.reset}`);
-  console.log(`        ${C.bold}1)${C.reset} ${C.emerald}⚡ bypassPermissions${C.reset} ${C.gray}(Autonomous tool execution with 3 approval gates - Recommended)${C.reset}`);
-  console.log(`        ${C.bold}2)${C.reset} ${C.amber}🛡️ default / manual${C.reset}   ${C.gray}(Prompt for every tool action, manual confirmation)${C.reset}`);
+  // 3. Harness permission preference
+  console.log(`\n  ${C.cyan}${C.bold}[3/3] Harness Permission Preference:${C.reset}`);
+  console.log(`        ${C.bold}1)${C.reset} ${C.emerald}⚡ bypassPermissions${C.reset} ${C.gray}(Preference only; follow this harness's controls)${C.reset}`);
+  console.log(`        ${C.bold}2)${C.reset} ${C.amber}🛡️ default${C.reset}            ${C.gray}(Use the harness's default permission behavior)${C.reset}`);
   const permAns = (await question(`        ${C.bold}Selection [1-2] (1): ${C.reset}`)).trim() || '1';
 
   const selectedPerm = (permAns === '2' || permAns.toLowerCase() === 'manual' || permAns.toLowerCase() === 'default')
@@ -985,168 +1263,131 @@ function runDoctor(args) {
   console.log(`  ${C.violet}${C.bold}╭─────────────────────────── TASKARD SYSTEM DOCTOR ───────────────────────────╮${C.reset}`);
   console.log(`  ${C.violet}│${C.reset}  ${C.bold}Diagnostic health inspection for multi-harness agent environment${C.reset}`);
   console.log(`  ${C.violet}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+  let passed = 0;
+  let failed = 0;
+  const report = (step, title, ok, detail) => {
+    console.log(`  ${C.cyan}${C.bold}[${step}/5]${C.reset} ${C.bold}${title}${C.reset}`);
+    console.log(`        ${ok ? `${C.emerald}✔` : `${C.rose}✖`}${C.reset} ${C.gray}${detail}${C.reset}`);
+    if (ok) passed++;
+    else failed++;
+  };
 
-  let totalChecks = 0;
-  let passedChecks = 0;
-  let warningChecks = 0;
-
-  // 1. Harness Detection
-  totalChecks++;
-  const harnesses = detectHarnesses();
-  const hasSpecificHarness = !harnesses.includes('Standard Universal (Claude Code / OpenCode compatible)');
-  console.log(`  ${C.cyan}${C.bold}[1/5]${C.reset} ${C.bold}Harness Detection${C.reset}`);
-  if (hasSpecificHarness) {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Detected: ${C.bold}${harnesses.join(', ')}${C.reset}`);
-  } else {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Universal compatibility mode active (${harnesses[0]})${C.reset}`);
+  let effective;
+  let configError = '';
+  try {
+    effective = loadEffectiveConfig();
+  } catch (error) {
+    configError = error.message;
   }
+  const config = effective?.config || {};
+  const detectedIds = detectHarnessIds();
+  const configuredHarness = config.harness_preferences?.primary_harness === 'claude'
+    ? 'claude-code'
+    : config.harness_preferences?.primary_harness;
+  const selectedHarness = configuredHarness || detectedIds[0] || '';
+  const displayNames = { 'claude-code': 'Claude Code', opencode: 'OpenCode', codex: 'Codex / OpenAgent', antigravity: 'Antigravity', cursor: 'Cursor' };
+  const installedRoots = [CWD, HOME].filter((root, index, all) => all.indexOf(root) === index)
+    .filter((root) => fs.existsSync(path.join(root, '.taskard', 'skills', 'taskard', 'SKILL.md')));
+  const scopeRoot = installedRoots[0] || CWD;
+  const installScope = scopeRoot === HOME ? 'user' : 'project';
+  let profiles = {};
+  let profileError = '';
+  try { profiles = readHarnessProfiles(); } catch (error) { profileError = error.message; }
+  const selectedProfile = profiles[selectedHarness];
+  const scopeSupported = Boolean(selectedProfile?.installScope?.includes(installScope));
 
-  // 2. Skills Symlink Health
-  totalChecks++;
-  const taskardHome = path.join(HOME, '.taskard');
-  const claudeSkillLink = path.join(HOME, '.claude', 'skills', 'taskard');
-  const agentsSkillLink = path.join(HOME, '.agents', 'skills', 'taskard');
-  const localSkillMd = path.join(PKG_ROOT, 'skills', 'taskard', 'SKILL.md');
-  const globalSkillMd = path.join(taskardHome, 'skills', 'taskard', 'SKILL.md');
+  report(1, 'Harness Detection', Boolean(selectedHarness && selectedProfile && scopeSupported), selectedHarness
+    ? `${profileError || `Selected ${displayNames[selectedHarness] || selectedHarness} (${installScope} install scope)`}${selectedProfile && !scopeSupported ? `; ${selectedHarness} does not support this scope` : ''}`
+    : 'No harness integration is installed; package source alone is uninstalled');
 
-  const claudeSkillExists = fs.existsSync(claudeSkillLink);
-  const agentsSkillExists = fs.existsSync(agentsSkillLink);
-  const skillMdExists = fs.existsSync(localSkillMd) || fs.existsSync(globalSkillMd);
-
-  console.log(`  ${C.cyan}${C.bold}[2/5]${C.reset} ${C.bold}Skills Symlink & Health${C.reset}`);
-  if (skillMdExists && (claudeSkillExists || agentsSkillExists || fs.existsSync(taskardHome))) {
-    passedChecks++;
-    const linksFound = [];
-    if (claudeSkillExists) linksFound.push('~/.claude/skills/taskard');
-    if (agentsSkillExists) linksFound.push('~/.agents/skills/taskard');
-    const linksDesc = linksFound.length > 0 ? linksFound.join(', ') : 'Package skill core';
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Skill symlinks verified: ${linksDesc} (SKILL.md readable)${C.reset}`);
-  } else if (skillMdExists) {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Package skill source verified (Run 'taskard init' to link harnesses)${C.reset}`);
-  } else {
-    warningChecks++;
-    console.log(`        ${C.rose}✖${C.reset} ${C.gray}Taskard skill not linked. Run 'npx taskard init'${C.reset}`);
+  let skillLink = '';
+  let roleDirectory = '';
+  let expectedRoleDirectory = '';
+  let directiveTargets = [];
+  if (selectedHarness === 'claude-code') {
+    skillLink = path.join(scopeRoot, '.claude', 'skills', 'taskard');
+    roleDirectory = path.join(scopeRoot, '.claude', 'agents');
+    expectedRoleDirectory = path.join(scopeRoot, '.taskard', 'claude-agents');
+  } else if (selectedHarness === 'opencode') {
+    skillLink = path.join(scopeRoot, '.agents', 'skills', 'taskard');
+    roleDirectory = installScope === 'user'
+      ? path.join(scopeRoot, '.config', 'opencode', 'agents')
+      : path.join(scopeRoot, '.opencode', 'agents');
+    expectedRoleDirectory = path.join(scopeRoot, '.taskard', 'opencode-agents');
+  } else if (selectedHarness) {
+    skillLink = path.join(scopeRoot, '.agents', 'skills', 'taskard');
   }
+  const expectedSkill = path.join(scopeRoot, '.taskard', 'skills', 'taskard');
+  let skillHealthy = false;
+  try {
+    const stat = lstatOrNull(skillLink);
+    skillHealthy = Boolean(stat?.isSymbolicLink() && fs.realpathSync(skillLink) === fs.realpathSync(expectedSkill)
+      && fs.existsSync(path.join(skillLink, 'SKILL.md')));
+  } catch (_) {}
+  report(2, 'Installed Skill Bridge', Boolean(selectedHarness && skillHealthy), skillHealthy
+    ? `Verified ${path.relative(scopeRoot, skillLink)}`
+    : selectedHarness ? `Required skill bridge is missing or broken: ${skillLink}` : 'Uninstalled; no required skill bridge can be checked');
 
-  // 3. 7 Agent Definitions Presence
-  totalChecks++;
-  const requiredRoles = ['implementer', 'reviewer', 'planner', 'debugger', 'ui-developer', 'explorer', 'qa-tester'];
-  const agentsSrcDir = path.join(PKG_ROOT, 'agents');
-  const globalAgentsDir = path.join(taskardHome, 'agents');
-  const claudeAgentsDir = path.join(HOME, '.claude', 'agents');
-
-  let validRolesCount = 0;
-  for (const role of requiredRoles) {
-    const candidatePaths = [
-      path.join(globalAgentsDir, `${role}.md`),
-      path.join(claudeAgentsDir, `${role}.md`),
-      path.join(agentsSrcDir, `${role}.md`),
-    ];
-    let foundRole = false;
-    for (const p of candidatePaths) {
-      if (fs.existsSync(p)) {
-        const content = fs.readFileSync(p, 'utf8');
-        if (content.includes('name:') && content.includes('model:') && content.includes('description:')) {
-          foundRole = true;
-          break;
+  let roleHealthy = Boolean(selectedProfile && selectedProfile.capabilities?.subagents !== 'native');
+  let validRoles = 0;
+  if (selectedHarness && selectedProfile?.capabilities?.subagents === 'native' && scopeSupported) {
+    for (const role of ROLE_NAMES) {
+      const target = path.join(roleDirectory, `${role}.md`);
+      const expected = path.join(expectedRoleDirectory, `${role}.md`);
+      try {
+        const stat = lstatOrNull(target);
+        if (!stat?.isSymbolicLink() || fs.realpathSync(target) !== fs.realpathSync(expected)) continue;
+        const content = fs.readFileSync(target, 'utf8');
+        const { lines } = parseAgentFrontmatter(content, target);
+        if (!lines.some((line) => line === `name: ${role}`)) continue;
+        if (selectedHarness === 'opencode' && !lines.includes('mode: subagent')) continue;
+        if (selectedProfile.readOnlyRoles?.includes(role)) {
+          const readOnly = selectedProfile.readOnly;
+          if (readOnly.nativeField === 'tools' && !readOnly.allow.every((tool) => content.includes(`  - ${tool}`))) continue;
+          if (readOnly.nativeField === 'permission' && !Object.entries(readOnly.rules).every(([tool, action]) => content.includes(`  ${tool === '*' ? '"*"' : tool}: ${action}`))) continue;
         }
-      }
+        validRoles++;
+      } catch (_) {}
     }
-    if (foundRole) validRolesCount++;
+    roleHealthy = validRoles === ROLE_NAMES.length;
   }
+  report(3, 'Installed Role Bridge', roleHealthy, roleHealthy
+    ? selectedProfile?.capabilities?.subagents === 'native'
+      ? `Verified all ${ROLE_NAMES.length} ${displayNames[selectedHarness] || selectedHarness} role links and native restrictions`
+      : `${displayNames[selectedHarness] || selectedHarness} uses ${selectedProfile?.capabilities?.subagents || 'declared'} role instructions`
+    : selectedHarness ? `${validRoles}/${ROLE_NAMES.length} required role definitions are valid under ${roleDirectory}` : 'Uninstalled; package roles are not an installed bridge');
 
-  console.log(`  ${C.cyan}${C.bold}[3/5]${C.reset} ${C.bold}Agent Role Definitions (7 Roles)${C.reset}`);
-  if (validRolesCount === requiredRoles.length) {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}All 7 role contracts validated (${requiredRoles.join(', ')})${C.reset}`);
-  } else {
-    warningChecks++;
-    console.log(`        ${C.amber}▲${C.reset} ${C.gray}${validRolesCount}/7 roles verified. Run 'taskard init' to sync missing roles.${C.reset}`);
+  const configHealthy = !configError && Boolean(effective);
+  report(4, 'Effective Configuration', configHealthy, configHealthy
+    ? `${effective.source}; speed=${config.defaults?.default_mode || 'pro'}, permission=${config.defaults?.permission_mode || 'bypassPermissions'}`
+    : `Invalid effective configuration: ${configError || 'no valid configuration source'}`);
+
+  if (selectedHarness === 'claude-code' || selectedHarness === 'opencode' || selectedHarness === 'codex' || selectedHarness === 'antigravity' || selectedHarness === 'cursor') {
+    directiveTargets = installScope === 'user'
+      ? [path.join(scopeRoot, '.claude', 'CLAUDE.md'), path.join(scopeRoot, '.claude', 'AGENTS.md')]
+      : [path.join(scopeRoot, 'CLAUDE.md'), path.join(scopeRoot, 'AGENTS.md')];
   }
-
-  // 4. Configuration Health
-  totalChecks++;
-  const globalConfigPath = path.join(taskardHome, 'config.toml');
-  const projectConfigPath = path.join(CWD, '.taskard', 'config.toml');
-  const templateConfigPath = path.join(PKG_ROOT, 'templates', 'config.toml');
-
-  let configHealthy = false;
-  const configLocations = [];
-
-  if (fs.existsSync(projectConfigPath)) {
+  let directiveHealthy = Boolean(directiveTargets.length);
+  const templateBlock = parseTaskardBlock(fs.readFileSync(path.join(PKG_ROOT, 'templates', 'directive-block.md'), 'utf8'), 'directive template');
+  for (const target of directiveTargets) {
     try {
-      parseSimpleToml(fs.readFileSync(projectConfigPath, 'utf8'));
-      configLocations.push('.taskard/config.toml (Workspace)');
-      configHealthy = true;
-    } catch (_) {}
+      const installedBlock = parseTaskardBlock(fs.readFileSync(target, 'utf8'), target);
+      if (installedBlock.version !== templateBlock.version || installedBlock.block !== templateBlock.block) directiveHealthy = false;
+    } catch (_) { directiveHealthy = false; }
   }
-  if (fs.existsSync(globalConfigPath)) {
-    try {
-      parseSimpleToml(fs.readFileSync(globalConfigPath, 'utf8'));
-      configLocations.push('~/.taskard/config.toml (Global)');
-      configHealthy = true;
-    } catch (_) {}
-  }
-  if (!configHealthy && fs.existsSync(templateConfigPath)) {
-    try {
-      parseSimpleToml(fs.readFileSync(templateConfigPath, 'utf8'));
-      configLocations.push('templates/config.toml (Built-in)');
-      configHealthy = true;
-    } catch (_) {}
-  }
+  report(5, 'Versioned Directive Blocks', directiveHealthy, directiveHealthy
+    ? `Verified paired taskard:v${templateBlock.version} blocks in ${directiveTargets.map((target) => path.relative(scopeRoot, target)).join(', ')}`
+    : selectedHarness ? `Required paired/versioned directive block is missing or stale: ${directiveTargets.join(', ')}` : 'Uninstalled; no harness directives are active');
 
-  console.log(`  ${C.cyan}${C.bold}[4/5]${C.reset} ${C.bold}Configuration Layer${C.reset}`);
-  if (configHealthy) {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Valid configuration source: ${configLocations.join(', ')}${C.reset}`);
-  } else {
-    warningChecks++;
-    console.log(`        ${C.amber}▲${C.reset} ${C.gray}No valid config.toml found. Run 'taskard init'${C.reset}`);
-  }
-
-  // 5. Directive Block Markers
-  totalChecks++;
-  const directiveTargets = [
-    path.join(CWD, 'CLAUDE.md'),
-    path.join(CWD, 'AGENTS.md'),
-    path.join(HOME, '.claude', 'CLAUDE.md'),
-    path.join(HOME, '.claude', 'AGENTS.md'),
-  ];
-  let markersFound = 0;
-  const syncedFiles = [];
-  for (const t of directiveTargets) {
-    if (fs.existsSync(t)) {
-      const content = fs.readFileSync(t, 'utf8');
-      if (content.includes('<!-- taskard:start -->') && content.includes('<!-- taskard:end -->')) {
-        markersFound++;
-        syncedFiles.push(path.basename(t));
-      }
-    }
-  }
-
-  console.log(`  ${C.cyan}${C.bold}[5/5]${C.reset} ${C.bold}Directive Block Markers${C.reset}`);
-  if (markersFound > 0) {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}<!-- taskard:start --> markers verified in ${markersFound} file(s) [${[...new Set(syncedFiles)].join(', ')}]${C.reset}`);
-  } else {
-    passedChecks++;
-    console.log(`        ${C.emerald}✔${C.reset} ${C.gray}Directive block ready for synchronization across CLAUDE.md / AGENTS.md${C.reset}`);
-  }
-
-  // Diagnostics Summary Card
-  const allGreen = warningChecks === 0;
-  const statusLabel = allGreen ? 'Healthy · All systems operational' : 'Warnings detected · Run taskard init';
-  const statusColor = allGreen ? C.emerald : C.amber;
-
+  const healthy = failed === 0;
+  const statusLabel = healthy ? 'Healthy · installed bridge verified' : selectedHarness ? 'Unhealthy · required integration is missing or invalid' : 'Uninstalled · run taskard init to create a harness bridge';
+  const statusColor = healthy ? C.emerald : C.rose;
   console.log(`\n  ${statusColor}${C.bold}╭───────────────────────────── DIAGNOSTICS SUMMARY ────────────────────────────╮${C.reset}`);
   console.log(`  ${statusColor}│${C.reset}  ${C.bold}Status        :${C.reset} ${statusColor}${C.bold}${statusLabel}${C.reset}`);
-  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Checks passed :${C.reset} ${C.bold}${passedChecks} / ${totalChecks}${C.reset} ${warningChecks > 0 ? `${C.amber}(${warningChecks} warnings)${C.reset}` : ''}`);
-  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Harnesses     :${C.reset} ${harnesses.join(', ')}`);
-  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Role Roster   :${C.reset} 7 roles active (implementer, reviewer, planner, debugger...)`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Checks passed :${C.reset} ${C.bold}${passed} / 5${C.reset} ${failed ? `${C.rose}(${failed} failed)${C.reset}` : ''}`);
+  console.log(`  ${statusColor}│${C.reset}  ${C.bold}Harness       :${C.reset} ${displayNames[selectedHarness] || 'none detected'}`);
   console.log(`  ${statusColor}${C.bold}╰─────────────────────────────────────────────────────────────────────────╯${C.reset}\n`);
+  return healthy;
 }
 
 function runConfig() {
@@ -1160,9 +1401,9 @@ function runConfig() {
   console.log(`  ${C.cyan}${C.bold}╭─────────────────────────── TASKARD CONFIGURATION ───────────────────────────╮${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.bold}Effective Source:${C.reset} ${C.emerald}${source}${C.reset}`);
   console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.violet}[DEFAULTS & GOVERNANCE]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.violet}[DEFAULTS & AGENT-READ PREFERENCES]${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Speed Gear         :${C.reset} ${C.bold}${C.cyan}${defaults.default_mode || 'pro'}${C.reset} ${C.dim}[fast | pro | max]${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Permission Mode    :${C.reset} ${C.bold}${defaults.permission_mode || 'bypassPermissions'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Permission Pref    :${C.reset} ${C.bold}${defaults.permission_mode || 'bypassPermissions'}${C.reset} ${C.dim}(harness-dependent)${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Circuit Breaker    :${C.reset} ${C.amber}${C.bold}2-Strike${C.reset} ${C.gray}(max_attempts = ${defaults.max_attempts ?? 2})${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Report Max Lines   :${C.reset} ${defaults.report_max_lines ?? 15} lines ${C.dim}(strict contract)${C.reset}`);
   if (defaults.budget_minutes) {
@@ -1182,12 +1423,12 @@ function runConfig() {
   const disabledStr = Array.isArray(roles.disabled) && roles.disabled.length > 0 ? roles.disabled.join(', ') : 'None';
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Disabled Roles     :${C.reset} ${disabledStr}`);
   console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.rose}[RISKY OPERATIONS (APPROVAL GATED)]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.rose}[RISKY OPERATION PATTERNS (AGENT-READ)]${C.reset}`);
   const patternsList = Array.isArray(risky.patterns) ? risky.patterns.join(', ') : 'migration, deploy, rm -rf, drop table, git push --force';
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Patterns           :${C.reset} ${C.rose}${patternsList}${C.reset}`);
   console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.emerald}[QA SYSTEM VERIFICATION]${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• QA Gate Enabled    :${C.reset} ${qa.enabled ? `${C.emerald}true${C.reset}` : `${C.dim}false (default OFF)${C.reset}`}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.bold}${C.emerald}[QA PREFERENCES (AGENT-READ)]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• QA Preference      :${C.reset} ${qa.enabled ? `${C.emerald}true${C.reset}` : `${C.dim}false (default OFF)${C.reset}`}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Headless Browser   :${C.reset} ${qa.headless_browser ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(agent-browser / playwright-cli)${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Integration Tests  :${C.reset} ${qa.run_integration_tests ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(npm test, pytest)${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Auto Endpoints     :${C.reset} ${qa.auto_verify_endpoints ? `${C.emerald}true${C.reset}` : `${C.dim}false${C.reset}`} ${C.dim}(HTTP curl verification)${C.reset}`);
@@ -1211,8 +1452,8 @@ async function main() {
   }
 
   if (command === 'doctor' || command === 'check' || command === 'status' || command === 'diag') {
-    runDoctor(args);
-    process.exit(0);
+    process.exitCode = runDoctor(args) ? 0 : 1;
+    return;
   }
 
   if (command === 'config' || command === 'cfg') {
@@ -1256,4 +1497,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

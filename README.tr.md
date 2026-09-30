@@ -77,7 +77,7 @@ Gerçek dünya senaryolarında 12 adımlı uçtan uca özellik geliştirme ve te
 
 ### Seçenek 1: Sıfır Bağımlılıklı NPM (Önerilen)
 
-Herhangi bir proje dizininde doğrudan çalıştırın:
+Taskard'ı yalnızca o projeye kurmak için proje dizininde çalıştırın:
 
 ```bash
 npx taskard init
@@ -88,16 +88,20 @@ npx taskard init
 npx taskard init -i
 ```
 
-*Tüm harness'lar için global kurulum:*
+*Kullanıcı düzeyinde global kurulum:*
 ```bash
 npx taskard init --global
 ```
+
+Proje kurulumu home dizinine yazmaz. Global kurulum kullanıcı dizinlerini kullanır; mevcut normal harness dosyalarını korur. `--force`, Taskard'ın yönettiği link ve profilleri yeniler ve varsayılan konfigürasyonu geri yükler; normal harness dosyalarını değiştirmez.
 
 ### Seçenek 2: Tek Satırlık Shell Kurulumu
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/emirrtopaloglu/Taskard/main/install.sh | bash
 ```
+
+Shell kurucusu Node.js 18 veya üzerini gerektirir ve global kurulum yapar. İsteğe bağlı upstream skill'leri çözmek için `--install-skills` kullanın; örneğin checkout içinden `./install.sh --install-skills`, `npx taskard init --global --install-skills` veya `curl -fsSL https://raw.githubusercontent.com/emirrtopaloglu/Taskard/main/install.sh | bash -s -- --install-skills`. Bu açık seçenek sınırlı süreli ve etkileşimsiz ağ istekleri yapar. İsteğe bağlı paket çözülemezse Taskard kısmi sonucu açıkça bildirir ve temel kurulumu tamamlar. Varsayılan kurulum isteğe bağlı skill'ler için ağa bağlanmaz.
 
 ### Seçenek 3: Klonla & Kur
 
@@ -112,7 +116,7 @@ cd Taskard
 ```bash
 taskard lanes             # Aktif, tamamlanan ve bloklanan lane'leri listele (--global, --active, --completed)
 taskard clean             # Çalışma alanındaki lane'leri, diff'leri ve geçici dosyaları temizle (--dry-run, --yes, --completed)
-taskard doctor            # Harness köprülerini, skill symlink'lerini ve yapılandırma sağlığını denetle
+taskard doctor            # Kurulu bridge/konfigürasyonu denetle; sağlıksız kurulum sıfır dışı çıkar
 taskard config            # Etkin yapılandırmayı ve 7 rolün model yönlendirme tablosunu incele
 taskard roles             # 7 rollü kademe matrisini göster
 ```
@@ -211,7 +215,15 @@ run_integration_tests = false
 
 [risky_operations]
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
+
+[harness_preferences.models.claude_code]
+# reviewer = "sonnet"       # İsteğe bağlı harness modeli takma adı
+
+[harness_preferences.models.opencode]
+# reviewer = "provider/model"  # İsteğe bağlı; belirtilmezse seçili provider modelini kullanır
 ```
+
+OpenCode model geçersiz kılmaları tam `provider/model` kimliği kullanmalıdır. Claude Code belgelenen takma adları (`sonnet`, `opus`, `haiku`) kullanabilir. Harness'a özel eşleme yoksa model seçimini harness veya seçili provider yapar. Bu değerler kurulum profili tercihidir; otomatik veya ücretli harness yedeklemesi başlatmaz.
 
 **Öncelik sırası:**
 `agents/*.md` < `~/.taskard/config.toml` (Global) < `.taskard/config.toml` (Proje) < Oturum Sözü (Hepsini ezer).

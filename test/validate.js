@@ -8,7 +8,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { execSync } = require('node:child_process');
+const { execFileSync, execSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 let failures = 0;
@@ -63,38 +63,55 @@ try {
     fail(`CLI roles command did not produce expected output`);
   }
 
-  // CLI Doctor Command Test
-  const doctorOut = execSync('node bin/taskard.js doctor', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (doctorOut.includes('TASKARD SYSTEM DOCTOR') && doctorOut.includes('Harness Detection') && doctorOut.includes('Checks passed')) {
-    pass('CLI doctor command executed successfully with health diagnosis');
+  // CLI Doctor Command Test: source-only is not an installed bridge.
+  const doctorRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'taskard-doctor-smoke-'));
+  const doctorHome = path.join(doctorRoot, 'home');
+  const doctorCwd = path.join(doctorRoot, 'project');
+  fs.mkdirSync(doctorHome, { recursive: true });
+  fs.mkdirSync(doctorCwd, { recursive: true });
+  const runDoctor = (args) => {
+    try {
+      const stdout = execFileSync(process.execPath, [path.join(ROOT, 'bin', 'taskard.js'), ...args], {
+        cwd: doctorCwd,
+        env: { ...process.env, HOME: doctorHome },
+        stdio: 'pipe',
+      }).toString();
+      return { status: 0, stdout, stderr: '' };
+    } catch (error) {
+      return { status: error.status, stdout: String(error.stdout || ''), stderr: String(error.stderr || '') };
+    }
+  };
+  const doctorResult = runDoctor(['doctor']);
+  if (doctorResult.status === 1 && doctorResult.stdout.includes('TASKARD SYSTEM DOCTOR') && doctorResult.stdout.includes('Uninstalled')) {
+    pass('CLI doctor reports isolated source-only setup as uninstalled and exits nonzero');
   } else {
-    fail(`CLI doctor command unexpected output: ${doctorOut}`);
+    fail(`CLI doctor source-only result was unexpected (status ${doctorResult.status}): ${doctorResult.stdout}${doctorResult.stderr}`);
   }
 
-  // CLI Doctor aliases (check, status, diag)
-  const checkOut = execSync('node bin/taskard.js check', { cwd: ROOT, stdio: 'pipe' }).toString();
-  const statusOut = execSync('node bin/taskard.js status', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (checkOut.includes('TASKARD SYSTEM DOCTOR') && statusOut.includes('TASKARD SYSTEM DOCTOR')) {
-    pass('CLI doctor aliases (check, status) executed successfully');
+  const checkResult = runDoctor(['check']);
+  const statusResult = runDoctor(['status']);
+  if (checkResult.status === 1 && statusResult.status === 1 && checkResult.stdout.includes('TASKARD SYSTEM DOCTOR') && statusResult.stdout.includes('TASKARD SYSTEM DOCTOR')) {
+    pass('CLI doctor aliases (check, status) preserve unhealthy exit status');
   } else {
-    fail('CLI doctor aliases did not produce expected output');
+    fail('CLI doctor aliases did not preserve the uninstalled result');
   }
 
-  // CLI Config Command Test
-  const configOut = execSync('node bin/taskard.js config', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (configOut.includes('TASKARD CONFIGURATION') && configOut.includes('Speed Gear') && configOut.includes('implementer') && configOut.includes('Effective Source')) {
-    pass('CLI config command executed successfully with effective config inspection');
+  const configResult = runDoctor(['config']);
+  if (configResult.status === 0 && configResult.stdout.includes('TASKARD CONFIGURATION') && configResult.stdout.includes('Speed Gear') && configResult.stdout.includes('implementer') && configResult.stdout.includes('Effective Source')) {
+    pass('CLI config command displays isolated effective defaults');
   } else {
-    fail(`CLI config command unexpected output: ${configOut}`);
+    fail(`CLI config command unexpected output (status ${configResult.status}): ${configResult.stdout}${configResult.stderr}`);
   }
 
-  // CLI Config alias (cfg)
-  const cfgOut = execSync('node bin/taskard.js cfg', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (cfgOut.includes('TASKARD CONFIGURATION') && cfgOut.includes('Speed Gear')) {
+  // CLI Config alias (cfg); use the isolated environment above so the test does not read user config.
+  const cfgResult = runDoctor(['cfg']);
+  const cfgOut = cfgResult.stdout;
+  if (cfgResult.status === 0 && cfgOut.includes('TASKARD CONFIGURATION') && cfgOut.includes('Speed Gear')) {
     pass('CLI config alias (cfg) executed successfully');
   } else {
     fail('CLI config alias did not produce expected output');
   }
+  fs.rmSync(doctorRoot, { recursive: true, force: true });
 
   // CLI Lanes Command Test
   const lanesOut = execSync('node bin/taskard.js lanes', { cwd: ROOT, stdio: 'pipe' }).toString();
