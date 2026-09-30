@@ -223,6 +223,18 @@ try {
   assert.match(fs.readFileSync(forceGlobalConfig, 'utf8'), /default_mode = "pro"/);
   assert.doesNotMatch(fs.readFileSync(forceGlobalConfig, 'utf8'), /not-a-bool/);
 
+  const forceProjectGlobalModel = fixture('force-project-global-model');
+  fs.mkdirSync(path.join(forceProjectGlobalModel.home, '.taskard'), { recursive: true });
+  fs.mkdirSync(path.join(forceProjectGlobalModel.cwd, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(forceProjectGlobalModel.home, '.taskard', 'config.toml'), '[roles]\nreviewer = "opus"\n');
+  fs.writeFileSync(path.join(forceProjectGlobalModel.cwd, '.taskard', 'config.toml'), '[defaults]\ndefault_mode = "not-a-mode"\n');
+  mustSucceed(cli(['init', '--force'], forceProjectGlobalModel), 'project force aligns exported role with reset config');
+  const forcedProjectConfig = fs.readFileSync(path.join(forceProjectGlobalModel.cwd, '.taskard', 'config.toml'), 'utf8');
+  const forcedClaudeReviewer = fs.readFileSync(path.join(forceProjectGlobalModel.cwd, '.claude', 'agents', 'reviewer.md'), 'utf8');
+  assert.match(forcedProjectConfig, /^reviewer = "sonnet"/m);
+  assert.match(forcedClaudeReviewer, /^model: sonnet$/m);
+  assert.doesNotMatch(forcedClaudeReviewer, /^model: opus$/m);
+
   const invalidOtherScope = fixture('force-invalid-other-scope');
   fs.mkdirSync(path.join(invalidOtherScope.home, '.taskard'), { recursive: true });
   fs.mkdirSync(path.join(invalidOtherScope.cwd, '.taskard'), { recursive: true });
@@ -244,6 +256,23 @@ try {
   const orphanDoctor = cli(['doctor'], orphanVersion);
   mustFail(orphanDoctor, 'doctor rejects orphan Taskard version marker');
   assert.match(orphanDoctor.stdout, /directive|version|unhealthy/i);
+
+  for (const [name, marker] of [
+    ['unclosed-version-marker', '<!-- taskard:v2'],
+    ['unclosed-start-marker', '<!-- taskard:start'],
+    ['unclosed-end-marker', '<!-- taskard:end'],
+  ]) {
+    const unclosedMarker = fixture(name);
+    mustSucceed(cli(['init'], unclosedMarker), `${name} healthy fixture install`);
+    const manifest = path.join(unclosedMarker.cwd, 'CLAUDE.md');
+    const manifestBytes = `User instructions\n\n${marker}\n\nKeep this file intact.\n`;
+    fs.writeFileSync(manifest, manifestBytes);
+    mustFail(cli(['init'], unclosedMarker), `init rejects ${name}`);
+    assert.equal(fs.readFileSync(manifest, 'utf8'), manifestBytes, `${name} manifest bytes must remain unchanged`);
+    const doctor = cli(['doctor'], unclosedMarker);
+    mustFail(doctor, `doctor rejects ${name}`);
+    assert.match(doctor.stdout, /directive|version|unhealthy/i);
+  }
 
   const precedence = fixture('precedence');
   fs.mkdirSync(path.join(precedence.home, '.taskard'), { recursive: true });

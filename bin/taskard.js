@@ -478,10 +478,12 @@ function copyDirRecursive(src, dest, options) {
 function parseTaskardBlock(content, label) {
   const start = '<!-- taskard:start -->';
   const end = '<!-- taskard:end -->';
+  const prefixes = [...content.matchAll(/<!--\s*taskard:/g)];
   const markers = [...content.matchAll(/<!--\s*taskard:[^>]*-->/g)];
   const starts = [...content.matchAll(/<!-- taskard:start -->/g)];
   const ends = [...content.matchAll(/<!-- taskard:end -->/g)];
   const allVersions = [...content.matchAll(/<!-- taskard:v(\d+) -->/g)];
+  if (prefixes.length !== markers.length) throw new Error(`${label}: contains a malformed or unclosed Taskard marker`);
   if (markers.length !== starts.length + ends.length + allVersions.length) {
     throw new Error(`${label}: contains an unsupported Taskard marker`);
   }
@@ -510,7 +512,7 @@ function syncDirectiveBlock(targetFile, directiveSourcePath, { base, dryRun = fa
     try {
       oldBlock = parseTaskardBlock(existing, targetFile);
     } catch (error) {
-      if (/<!--\s*taskard:[^>]*-->/.test(existing)) throw error;
+      if (/<!--\s*taskard:/.test(existing)) throw error;
       replacement = `${existing.replace(/\s*$/, '')}\n\n${sourceContent.trim()}\n`;
     }
     if (oldBlock) {
@@ -671,10 +673,15 @@ function runInit(args, customConfig = null) {
   const defaultConfigPath = path.join(PKG_ROOT, 'templates', 'config.toml');
   let config;
   if (force) {
-    // Local force replaces the project layer but still honors valid global defaults.
-    config = isGlobal
-      ? validateConfig(parseSimpleToml(fs.readFileSync(defaultConfigPath, 'utf8')), 'templates/config.toml')
-      : loadEffectiveConfig({ includeProject: false }).config;
+    // Build profile settings from the effective config after the selected layer resets.
+    const resetConfig = validateConfig(parseSimpleToml(fs.readFileSync(defaultConfigPath, 'utf8')), 'templates/config.toml');
+    if (isGlobal) {
+      config = resetConfig;
+    } else {
+      config = loadEffectiveConfig({ includeProject: false }).config;
+      mergeConfigs(config, resetConfig);
+      validateConfig(config, 'effective config after project reset');
+    }
   } else {
     config = loadEffectiveConfig({ includeProject: !isGlobal }).config;
   }

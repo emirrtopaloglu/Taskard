@@ -93,7 +93,7 @@ npx taskard init -i
 npx taskard init --global
 ```
 
-Proje kurulumu home dizinine yazmaz. Global kurulum kullanıcı dizinlerini kullanır; mevcut normal harness dosyalarını korur. `--force`, Taskard'ın yönettiği link ve profilleri yeniler ve yalnızca seçili kapsamın konfigürasyonunu sıfırlar. Proje kapsamındaki force, global konfigürasyonu da doğrular ve ona dokunmaz. Kurucu, manifesti değiştirmeden önce sahipsiz veya bozuk Taskard direktif işaretlerini reddeder.
+Proje kurulumu home dizinine yazmaz. Global kurulum kullanıcı dizinlerini kullanır; mevcut normal harness dosyalarını korur. `--force`, Taskard'ın yönettiği link ve profilleri yeniler ve yalnızca seçili kapsamın konfigürasyonunu sıfırlar. Üretilen rol profilleri bu sıfırlama sonrasındaki etkin konfigürasyonu kullanır. Proje kapsamındaki force, global konfigürasyonu da doğrular ve ona dokunmaz. Kurucu, manifesti değiştirmeden önce sahipsiz, bozuk veya tamamlanmamış Taskard direktif işaretlerini reddeder.
 
 ### Seçenek 2: Tek Satırlık Shell Kurulumu
 

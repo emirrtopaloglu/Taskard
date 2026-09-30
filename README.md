@@ -93,7 +93,7 @@ npx taskard init -i
 npx taskard init --global
 ```
 
-Project installs do not write to your home directory. Global installs use user-level directories; existing regular harness files are preserved. `--force` replaces Taskard-managed links and profiles and resets the selected scope's config. A project force still validates the global config and leaves it untouched. The installer rejects orphan or malformed Taskard directive markers before changing a manifest.
+Project installs do not write to your home directory. Global installs use user-level directories; existing regular harness files are preserved. `--force` replaces Taskard-managed links and profiles and resets the selected scope's config. Exported role profiles reflect the effective config after that reset. A project force still validates the global config and leaves it untouched. The installer rejects orphan, malformed, or unfinished Taskard directive markers before changing a manifest.
 
 ### Option 2: Single-Line Shell Installer
 
