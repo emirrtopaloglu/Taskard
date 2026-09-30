@@ -33,10 +33,19 @@ function workspace(fn) {
 }
 
 function runCli(cwd, home, ...args) {
+  const isolatedEnv = { ...process.env };
+  for (const key of ['CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME']) delete isolatedEnv[key];
   return spawnSync(process.execPath, [CLI, ...args], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, HOME: home },
+    env: {
+      ...isolatedEnv,
+      HOME: home,
+      CODEX_HOME: path.join(home, '.codex'),
+      XDG_CONFIG_HOME: path.join(home, '.config'),
+      XDG_CACHE_HOME: path.join(home, '.cache'),
+      XDG_DATA_HOME: path.join(home, '.local', 'share'),
+    },
   });
 }
 
@@ -139,6 +148,42 @@ test('review-only FAIL remains protected', () => workspace((dir, home) => {
   const clean = runCli(dir, home, 'clean', '--yes');
   assert.equal(clean.status, 0, clean.stderr);
   assert.ok(fs.existsSync(laneDir(dir, 'review-only')));
+}));
+
+test('conflicting active reviews stay unknown and survive cleanup and purge', () => workspace((dir, home) => {
+  const commit = initRepo(dir);
+  const lane = makeVerifiedLane(dir, 'ambiguous-review', commit, { review: 'VERDICT: PASS\n' });
+  fs.writeFileSync(path.join(lane, 'review-round2.md'), 'VERDICT: FAIL\n');
+  const archivedLane = path.join(dir, '.taskard', 'archive', 'lanes', 'ambiguous-review');
+  fs.mkdirSync(archivedLane, { recursive: true });
+  fs.writeFileSync(path.join(archivedLane, 'report.md'), 'STATUS: DONE\n');
+  fs.writeFileSync(path.join(archivedLane, 'review.md'), 'VERDICT: PASS\n');
+  fs.writeFileSync(path.join(archivedLane, 'review-round2.md'), 'VERDICT: FAIL\n');
+
+  const lanes = runCli(dir, home, 'lanes');
+  assert.match(lanes.stdout, /ambiguous-review.*\[UNKNOWN\]/s);
+  const verify = runCli(dir, home, 'verify');
+  assert.notEqual(verify.status, 0, verify.stdout + verify.stderr);
+  assert.match(verify.stdout + verify.stderr, /review verdict is missing or invalid/i);
+
+  const dryRun = runCli(dir, home, 'clean', '--dry-run');
+  assert.equal(dryRun.status, 0, dryRun.stderr);
+  assert.match(dryRun.stdout, /0 items/);
+  assert.ok(fs.existsSync(lane), 'dry-run must leave the ambiguous lane in place');
+
+  const archive = runCli(dir, home, 'clean', '--yes');
+  assert.equal(archive.status, 0, archive.stderr);
+  assert.ok(fs.existsSync(lane), 'completed cleanup must preserve ambiguous review state');
+  assert.ok(fs.existsSync(archivedLane), 'completed cleanup must preserve ambiguous archived evidence');
+
+  const purgeDryRun = runCli(dir, home, 'clean', '--purge', '--dry-run');
+  assert.equal(purgeDryRun.status, 0, purgeDryRun.stderr);
+  assert.match(purgeDryRun.stdout, /0 items/);
+
+  const purge = runCli(dir, home, 'clean', '--purge', '--yes');
+  assert.equal(purge.status, 0, purge.stderr);
+  assert.ok(fs.existsSync(lane), 'explicit archive purge must not remove an ambiguous live lane');
+  assert.ok(fs.existsSync(archivedLane), 'explicit archive purge must preserve ambiguous archived evidence');
 }));
 
 test('completed cleanup preserves unrelated tmp and diffs while archiving the lane', () => workspace((dir, home) => {

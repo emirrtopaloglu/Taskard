@@ -11,6 +11,7 @@
       },
       "readOnlyRoles": ["reviewer", "explorer"],
       "models": {
+        "configTable": "harness_preferences.models.claude_code",
         "source": "role-config-or-provider-default",
         "aliases": {
           "sonnet": "sonnet",

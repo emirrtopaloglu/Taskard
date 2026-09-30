@@ -41,7 +41,7 @@ Expected TDD **Red** is recorded as the pre-fix baseline and does not consume an
 ## Role Output Limits
 
 - Implementer, debugger, and UI-developer reports: at most 15 lines and the exact report fields above.
-- Reviewer `review.md`: at most 15 lines; include `BASE_COMMIT`, `HEAD_COMMIT`, cited findings, and `VERDICT: PASS|PASS_WITH_NOTES|FAIL|UNVERIFIED`.
+- Reviewer `review.md`: the single active review record for a lane, at most 15 lines; include `BASE_COMMIT`, `HEAD_COMMIT`, cited findings, and `VERDICT: PASS|PASS_WITH_NOTES|FAIL|UNVERIFIED`. Keep review history outside the lane's active `review*.md` namespace; multiple active review files make the verdict unknown and keep the lane out of completed cleanup and archive purge.
 - QA `verification.md`: at most 15 lines; include `STATUS`, commit references, verified criteria and actual commands, evidence reference/hash, and gaps.
 - Planner briefs and explorer maps: at most 15 lines for a summary unless the user asked for the full planning artifact.
 

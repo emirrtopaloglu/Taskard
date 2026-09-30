@@ -78,9 +78,11 @@ taskard clean --all            # remove all live lanes, tmp files, and diffs aft
 taskard clean --purge          # permanently remove eligible completed archives after confirmation
 ```
 
-`taskard clean` archives eligible completed lanes by default and leaves temporary files and diffs alone. `--all` and `--purge` require an interactive confirmation or `--yes`; `--all --purge` also removes archived lanes. Cleanup refuses symlinked scopes and reports removal failures with a nonzero exit.
+`taskard clean` archives eligible completed lanes by default and leaves temporary files and diffs alone. `--all` and `--purge` require an interactive confirmation or `--yes`; `--all --purge` also removes archived lanes. Cleanup refuses symlinked scopes and reports removal failures with a nonzero exit. Each lane has at most one active review record, named `review.md`; multiple active review records make its verdict unknown and keep it out of completed cleanup and archive purge.
 
 `taskard doctor` checks the selected harness's required skill bridge, native role exports when applicable, effective configuration, and versioned directive blocks. A missing or invalid required integration makes it exit nonzero; package source without an installed harness bridge is reported as uninstalled.
+
+Choose the global target with `primary_harness` in `~/.taskard/config.toml`; init otherwise uses the detected harness and defaults to Claude Code when none is detected. Global directives follow that selection: Claude Code uses `~/.claude/CLAUDE.md` and `~/.claude/AGENTS.md`, Codex uses `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), and OpenCode uses `AGENTS.md` in `$OPENCODE_CONFIG_DIR` (default `${XDG_CONFIG_HOME:-~/.config}/opencode`). OpenCode role exports use the same config directory. Taskard honors these native roots when they resolve inside `HOME`; an outside root is rejected before installation and doctor reports it as unsupported. Antigravity and Cursor are project-only recipe profiles and receive no global native-health claim.
 
 `taskard verify` is read-only. It checks lane contracts, Git freshness, evidence hashes, and referenced source ranges; pointers that traverse symlinks in the recorded source commit or working tree are rejected. It does not execute `EVIDENCE_COMMAND` or authenticate agent claims. An empty lane directory is a successful empty check, not proof that a task or test ran. See [Role, Brief, and Evidence Contracts](skills/taskard/references/roles-and-evidence.md) for its boundaries.
 
@@ -125,15 +127,18 @@ These are aliases and defaults, not fixed provider model IDs or availability gua
 
 Configuration in `~/.taskard/config.toml` and `.taskard/config.toml` is agent-read data. Project values may override global defaults; session instructions take precedence. Taskard does not mutate config files at runtime.
 
-`templates/harness-profiles.json` records each harness's install scope, support level, model inheritance, and native permission fields. OpenCode may use explicit role models:
+`templates/harness-profiles.json` records each harness's install scope, support level, model inheritance, and native permission fields. Harness-specific role overrides take precedence over `[roles]` for exported native profiles. Claude Code accepts model aliases, while OpenCode requires provider/model IDs:
 
 ```toml
+[harness_preferences.models.claude_code]
+reviewer = "haiku"
+
 [harness_preferences.models.opencode]
 reviewer = "provider/model"
 debugger = "provider/model"
 ```
 
-When no OpenCode role override is set, the selected provider's model is used. Taskard does not perform automatic or paid harness fallback. `permission_mode` and `risky_operations` are preferences for agents and supported harness settings; they are not a cross-harness runtime safety system.
+When no OpenCode role override is set, the selected provider's model is used. Session instructions take precedence over all configured defaults. Taskard does not perform automatic or paid harness fallback. `permission_mode` and `risky_operations` are preferences for agents and supported harness settings; they are not a cross-harness runtime safety system.
 
 The CLI supports its documented TOML subset: single-line tables and assignments with strings, integers, booleans, and single-line string arrays (including valid trailing commas), plus comments. It rejects malformed or unsafe keys, unsupported settings, wrong types, and out-of-range numbers.
 

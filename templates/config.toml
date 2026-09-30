@@ -32,6 +32,7 @@ auto_verify_endpoints = false
 
 [harness_preferences]
 # Manual preferences only; Taskard performs no automatic or paid harness fallback.
+# primary_harness = "claude-code" # optional: "claude-code" | "opencode" | "codex"
 
 # Optional Claude Code role model aliases:
 [harness_preferences.models.claude_code]

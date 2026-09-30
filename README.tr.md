@@ -78,9 +78,11 @@ taskard clean --all            # onay sonrası tüm etkin lane, tmp ve diff dosy
 taskard clean --purge          # onay sonrası uygun tamamlanmış arşivleri kalıcı sil
 ```
 
-`taskard clean` varsayılan olarak uygun tamamlanmış lane'leri arşivler; geçici dosyalara ve diff'lere dokunmaz. `--all` ve `--purge` etkileşimli onay veya `--yes` gerektirir; `--all --purge` arşivlenmiş lane'leri de siler. Temizlik symlink kapsamlarını reddeder ve silme hatalarında sıfır dışı çıkar.
+`taskard clean` varsayılan olarak uygun tamamlanmış lane'leri arşivler; geçici dosyalara ve diff'lere dokunmaz. `--all` ve `--purge` etkileşimli onay veya `--yes` gerektirir; `--all --purge` arşivlenmiş lane'leri de siler. Temizlik symlink kapsamlarını reddeder ve silme hatalarında sıfır dışı çıkar. Her lane'de en fazla bir etkin review kaydı bulunur ve dosyanın adı `review.md` olur; birden fazla etkin review kaydı verdict'ü belirsiz yapar, bu yüzden normal tamamlanmış lane temizliği ve arşiv purge işlemi lane'i korur.
 
 `taskard doctor`, seçili harness'ın gerekli skill köprüsünü, varsa yerel rol dışa aktarımlarını, etkin konfigürasyonu ve sürümlü direktif bloklarını denetler. Gerekli bir entegrasyon eksik veya geçersizse sıfır dışı çıkar; kurulu harness köprüsü olmayan paket kaynak dizinini kurulu değil olarak bildirir.
+
+Global hedefi `~/.taskard/config.toml` içindeki `primary_harness` ile seçin; init bu değer yoksa algıladığı harness'ı kullanır ve hiçbir harness algılanmazsa Claude Code'u seçer. Global direktifler bu seçimi izler: Claude Code `~/.claude/CLAUDE.md` ve `~/.claude/AGENTS.md` kullanır; Codex `$CODEX_HOME/AGENTS.md` yolunu (varsayılan `~/.codex/AGENTS.md`), OpenCode ise `$OPENCODE_CONFIG_DIR` içindeki `AGENTS.md` dosyasını (varsayılan `${XDG_CONFIG_HOME:-~/.config}/opencode`) kullanır. OpenCode rol dışa aktarımları da aynı konfigürasyon dizinine yazılır. Taskard bu yerel kökleri yalnızca `HOME` içinde kaldıklarında kullanır; dışarıdaki bir kök kurulumdan önce reddedilir ve doctor tarafından desteklenmiyor olarak bildirilir. Antigravity ve Cursor yalnızca proje kapsamındaki recipe profilleridir; global kapsamda yerel sağlık iddiası oluşturulmaz.
 
 `taskard verify` salt-okunurdur. Lane sözleşmelerini, Git güncelliğini, kanıt hash'lerini ve kaynak satır aralıklarını denetler; kaydedilen kaynak commit'inde veya çalışma ağacında symlink üzerinden ilerleyen pointer'ları reddeder. `EVIDENCE_COMMAND` komutunu çalıştırmaz ve ajan iddialarını doğrulamaz. Boş bir lane dizini başarılı boş kontroldür; görevin veya testin çalıştığı anlamına gelmez. Sınırlar için [Rol, Brief ve Kanıt Sözleşmeleri](skills/taskard/references/roles-and-evidence.md) sayfasına bakın.
 
@@ -125,15 +127,18 @@ Bu değerler takma ad ve varsayılandır; sabit model kimlikleri veya kullanıla
 
 `~/.taskard/config.toml` ve `.taskard/config.toml` içindeki konfigürasyon ajanların okuduğu veridir. Proje değerleri global varsayılanların üzerine yazabilir; oturum talimatları en önceliklidir. Taskard çalışma anında konfigürasyonu değiştirmez.
 
-`templates/harness-profiles.json` her harness için kurulum kapsamını, destek düzeyini, model devralımını ve yerel izin alanlarını kaydeder. OpenCode için rol modeli açıkça ayarlanabilir:
+`templates/harness-profiles.json` her harness için kurulum kapsamını, destek düzeyini, model devralımını ve yerel izin alanlarını kaydeder. Harness'e özel rol ayarları, dışa aktarılan yerel profillerde `[roles]` değerlerinden önceliklidir. Claude Code model takma adlarını, OpenCode ise `provider/model` kimliklerini kabul eder:
 
 ```toml
+[harness_preferences.models.claude_code]
+reviewer = "haiku"
+
 [harness_preferences.models.opencode]
 reviewer = "provider/model"
 debugger = "provider/model"
 ```
 
-OpenCode rol modeli belirtilmezse seçili provider'ın modeli kullanılır. Taskard otomatik veya ücretli harness yedeğine geçmez. `permission_mode` ve `risky_operations` ajan tercihidir ve desteklenen harness ayarlarıdır; harness'lar arasında çalışan bir güvenlik sistemi değildir.
+OpenCode rol modeli belirtilmezse seçili provider'ın modeli kullanılır. Oturum talimatları tüm konfigürasyon varsayılanlarından önceliklidir. Taskard otomatik veya ücretli harness yedeğine geçmez. `permission_mode` ve `risky_operations` ajan tercihidir ve desteklenen harness ayarlarıdır; harness'lar arasında çalışan bir güvenlik sistemi değildir.
 
 CLI'ın belgelenmiş TOML alt kümesi tek satırlı tabloları ve atamaları; string, integer, boolean ve tek satırlı string dizilerini (geçerli sondaki virgül dahil) ve yorumları destekler. Bozuk veya güvensiz anahtarları, desteklenmeyen ayarları, yanlış türleri ve aralık dışı sayıları reddeder.
 

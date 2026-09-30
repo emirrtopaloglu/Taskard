@@ -22,6 +22,19 @@ function fail(msg) {
   failures++;
 }
 
+function isolatedNativeEnv(home) {
+  const env = { ...process.env };
+  for (const key of ['CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME']) delete env[key];
+  return {
+    ...env,
+    HOME: home,
+    CODEX_HOME: path.join(home, '.codex'),
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+    XDG_CACHE_HOME: path.join(home, '.cache'),
+    XDG_DATA_HOME: path.join(home, '.local', 'share'),
+  };
+}
+
 console.log('\n--- 🧪 Taskard Validation Suite ---\n');
 
 // 1. Shell Syntax Check
@@ -49,11 +62,24 @@ try {
     fail(`CLI version command unexpected output: ${versionOut}`);
   }
 
-  const dryRunOut = execSync('node bin/taskard.js init --dry-run', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (dryRunOut.includes('TASKARD READY')) {
-    pass('CLI init --dry-run executed successfully');
-  } else {
-    fail(`CLI init --dry-run did not produce expected output`);
+  const dryRunRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'taskard-dry-run-smoke-'));
+  const dryRunHome = path.join(dryRunRoot, 'home');
+  const dryRunCwd = path.join(dryRunRoot, 'project');
+  fs.mkdirSync(dryRunHome, { recursive: true });
+  fs.mkdirSync(dryRunCwd, { recursive: true });
+  try {
+    const dryRunOut = execFileSync(process.execPath, [path.join(ROOT, 'bin', 'taskard.js'), 'init', '--dry-run'], {
+      cwd: dryRunCwd,
+      env: isolatedNativeEnv(dryRunHome),
+      stdio: 'pipe',
+    }).toString();
+    if (dryRunOut.includes('TASKARD READY')) {
+      pass('CLI init --dry-run executed successfully');
+    } else {
+      fail('CLI init --dry-run did not produce expected output');
+    }
+  } finally {
+    fs.rmSync(dryRunRoot, { recursive: true, force: true });
   }
 
   const rolesOut = execSync('node bin/taskard.js roles', { cwd: ROOT, stdio: 'pipe' }).toString();
@@ -69,11 +95,12 @@ try {
   const doctorCwd = path.join(doctorRoot, 'project');
   fs.mkdirSync(doctorHome, { recursive: true });
   fs.mkdirSync(doctorCwd, { recursive: true });
+  const doctorEnv = isolatedNativeEnv(doctorHome);
   const runDoctor = (args) => {
     try {
       const stdout = execFileSync(process.execPath, [path.join(ROOT, 'bin', 'taskard.js'), ...args], {
         cwd: doctorCwd,
-        env: { ...process.env, HOME: doctorHome },
+        env: doctorEnv,
         stdio: 'pipe',
       }).toString();
       return { status: 0, stdout, stderr: '' };

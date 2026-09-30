@@ -33,12 +33,18 @@ function fixture(name) {
 }
 
 function run(command, args, { home, cwd, env = {} }) {
+  const isolatedEnv = { ...process.env };
+  for (const key of ['CODEX_HOME', 'OPENCODE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME']) delete isolatedEnv[key];
   return spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
     env: {
-      ...process.env,
+      ...isolatedEnv,
       HOME: home,
+      CODEX_HOME: path.join(home, '.codex'),
+      XDG_CONFIG_HOME: path.join(home, '.config'),
+      XDG_CACHE_HOME: path.join(home, '.cache'),
+      XDG_DATA_HOME: path.join(home, '.local', 'share'),
       PATH: `${tmpBin}${path.delimiter}${process.env.PATH || ''}`,
       TASKARD_NPX_LOG: npxLog,
       ...env,
@@ -108,6 +114,111 @@ try {
   fs.writeFileSync(path.join(mapped.home, '.taskard', 'config.toml'), '[harness_preferences.models.opencode]\nreviewer = "anthropic/claude-sonnet-4-6"\n');
   mustSucceed(cli(['init', '--global'], mapped), 'install explicit OpenCode model mapping');
   assert.match(fs.readFileSync(path.join(mapped.home, '.config', 'opencode', 'agents', 'reviewer.md'), 'utf8'), /^model: anthropic\/claude-sonnet-4-6$/m);
+
+  const codexNative = fixture('global-codex-directive');
+  const codexRoot = path.join(codexNative.home, 'codex-config');
+  fs.mkdirSync(path.join(codexNative.home, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(codexNative.home, '.taskard', 'config.toml'), '[harness_preferences]\nprimary_harness = "codex"\n');
+  const codexEnv = { CODEX_HOME: codexRoot };
+  mustSucceed(cli(['init', '--global'], { ...codexNative, env: codexEnv }), 'Codex global directive install');
+  const codexDirective = path.join(codexRoot, 'AGENTS.md');
+  assert.ok(fs.existsSync(codexDirective), 'Codex global instructions must be installed under CODEX_HOME');
+  assert.match(fs.readFileSync(codexDirective, 'utf8'), /<!-- taskard:start -->/);
+  mustSucceed(cli(['doctor'], { ...codexNative, env: codexEnv }), 'Codex doctor checks native instructions');
+  fs.unlinkSync(codexDirective);
+  mustFail(cli(['doctor'], { ...codexNative, env: codexEnv }), 'Codex doctor rejects missing native instructions');
+  mustSucceed(cli(['init', '--global'], { ...codexNative, env: codexEnv }), 'restore Codex global directive');
+  fs.writeFileSync(codexDirective, 'User instructions\n<!-- taskard:start -->\n');
+  mustFail(cli(['doctor'], { ...codexNative, env: codexEnv }), 'Codex doctor rejects malformed native instructions');
+
+  const unsupportedGlobal = fixture('unsupported-global-harness');
+  fs.mkdirSync(path.join(unsupportedGlobal.home, '.taskard'), { recursive: true });
+  const unsupportedConfig = path.join(unsupportedGlobal.home, '.taskard', 'config.toml');
+  fs.writeFileSync(unsupportedConfig, '[harness_preferences]\nprimary_harness = "claude-code"\n');
+  mustSucceed(cli(['init', '--global'], unsupportedGlobal), 'global install before unsupported scope check');
+  fs.writeFileSync(unsupportedConfig, '[harness_preferences]\nprimary_harness = "antigravity"\n');
+  const unsupportedDoctor = cli(['doctor'], unsupportedGlobal);
+  mustFail(unsupportedDoctor, 'doctor rejects native health claim for recipe-only user scope');
+  assert.match(unsupportedDoctor.stdout, /does not support this scope|unsupported for antigravity in user scope/i);
+  assert.doesNotMatch(unsupportedDoctor.stdout, /Healthy · installed bridge verified/);
+
+  const openCodeDefault = fixture('global-opencode-directive');
+  fs.mkdirSync(path.join(openCodeDefault.home, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(openCodeDefault.home, '.taskard', 'config.toml'), '[harness_preferences]\nprimary_harness = "opencode"\n');
+  mustSucceed(cli(['init', '--global'], openCodeDefault), 'OpenCode global directive install');
+  const defaultOpenCodeRoot = path.join(openCodeDefault.home, '.config', 'opencode');
+  const defaultOpenCodeDirective = path.join(defaultOpenCodeRoot, 'AGENTS.md');
+  assert.ok(fs.existsSync(defaultOpenCodeDirective), 'OpenCode global instructions must be installed under its default config directory');
+  assert.ok(fs.lstatSync(path.join(defaultOpenCodeRoot, 'agents', 'reviewer.md')).isSymbolicLink(), 'OpenCode roles and instructions must share the same config directory');
+  assert.match(fs.readFileSync(defaultOpenCodeDirective, 'utf8'), /<!-- taskard:start -->/);
+  mustSucceed(cli(['doctor'], openCodeDefault), 'OpenCode doctor checks native instructions');
+  fs.unlinkSync(defaultOpenCodeDirective);
+  mustFail(cli(['doctor'], openCodeDefault), 'OpenCode doctor rejects missing native instructions');
+  mustSucceed(cli(['init', '--global'], openCodeDefault), 'restore OpenCode global directive');
+  fs.writeFileSync(defaultOpenCodeDirective, 'User instructions\n<!-- taskard:start -->\n');
+  mustFail(cli(['doctor'], openCodeDefault), 'OpenCode doctor rejects malformed native instructions');
+
+  const openCodeXdg = fixture('global-opencode-xdg-config');
+  const xdgConfigHome = path.join(openCodeXdg.home, 'xdg-config');
+  fs.mkdirSync(path.join(openCodeXdg.home, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(openCodeXdg.home, '.taskard', 'config.toml'), '[harness_preferences]\nprimary_harness = "opencode"\n');
+  const xdgEnv = { XDG_CONFIG_HOME: xdgConfigHome };
+  mustSucceed(cli(['init', '--global'], { ...openCodeXdg, env: xdgEnv }), 'OpenCode XDG config directory install');
+  const xdgOpenCodeRoot = path.join(xdgConfigHome, 'opencode');
+  assert.ok(fs.existsSync(path.join(xdgOpenCodeRoot, 'AGENTS.md')));
+  assert.ok(fs.lstatSync(path.join(xdgOpenCodeRoot, 'agents', 'reviewer.md')).isSymbolicLink());
+  mustSucceed(cli(['doctor'], { ...openCodeXdg, env: xdgEnv }), 'OpenCode doctor follows XDG config directory');
+
+  const openCodeOverride = fixture('global-opencode-config-override');
+  const openCodeConfig = path.join(openCodeOverride.home, 'custom-opencode');
+  fs.mkdirSync(path.join(openCodeOverride.home, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(openCodeOverride.home, '.taskard', 'config.toml'), '[harness_preferences]\nprimary_harness = "opencode"\n');
+  const openCodeEnv = { OPENCODE_CONFIG_DIR: openCodeConfig };
+  mustSucceed(cli(['init', '--global'], { ...openCodeOverride, env: openCodeEnv }), 'OpenCode custom config directory install');
+  assert.ok(fs.existsSync(path.join(openCodeConfig, 'AGENTS.md')));
+  assert.ok(fs.lstatSync(path.join(openCodeConfig, 'agents', 'reviewer.md')).isSymbolicLink());
+  mustSucceed(cli(['doctor'], { ...openCodeOverride, env: openCodeEnv }), 'OpenCode doctor follows custom config directory');
+  const outsideOpenCode = path.join(openCodeOverride.root, 'outside-opencode');
+  const outsideDoctor = cli(['doctor'], { ...openCodeOverride, env: { OPENCODE_CONFIG_DIR: outsideOpenCode } });
+  mustFail(outsideDoctor, 'OpenCode doctor rejects config directory outside HOME');
+  assert.match(outsideDoctor.stdout + outsideDoctor.stderr, /outside HOME|unsupported/i);
+  const outsideInstall = fixture('global-opencode-outside-root');
+  fs.mkdirSync(path.join(outsideInstall.home, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(outsideInstall.home, '.taskard', 'config.toml'), '[harness_preferences]\nprimary_harness = "opencode"\n');
+  const outsideRoot = path.join(outsideInstall.root, 'outside-opencode');
+  const outsideResult = cli(['init', '--global'], { ...outsideInstall, env: { OPENCODE_CONFIG_DIR: outsideRoot } });
+  mustFail(outsideResult, 'OpenCode init rejects config directory outside HOME');
+  assert.match(outsideResult.stderr, /outside HOME|unsupported/i);
+  assert.equal(fs.existsSync(path.join(outsideInstall.home, '.taskard', 'skills')), false, 'unsupported roots must fail before global writes');
+
+  const globalClaudeModel = fixture('global-claude-model-override');
+  fs.mkdirSync(path.join(globalClaudeModel.home, '.taskard'), { recursive: true });
+  const globalClaudeConfig = '[roles]\nreviewer = "sonnet"\n\n[harness_preferences.models.claude_code]\nreviewer = "haiku"\n';
+  fs.writeFileSync(path.join(globalClaudeModel.home, '.taskard', 'config.toml'), globalClaudeConfig);
+  mustSucceed(cli(['init', '--global'], globalClaudeModel), 'global Claude model override');
+  const globalClaudeOverride = fs.readFileSync(path.join(globalClaudeModel.home, '.claude', 'agents', 'reviewer.md'), 'utf8');
+  assert.match(globalClaudeOverride, /^model: haiku$/m);
+  assert.match(fs.readFileSync(path.join(globalClaudeModel.home, '.taskard', 'config.toml'), 'utf8'), /reviewer = "haiku"/);
+  const globalClaudeEffective = cli(['config'], globalClaudeModel);
+  mustSucceed(globalClaudeEffective, 'global Claude model effective config');
+  assert.match(globalClaudeEffective.stdout, /reviewer default -> sonnet/);
+  assert.match(globalClaudeEffective.stdout, /Claude Code reviewer override -> haiku/);
+
+  const projectClaudeModel = fixture('project-claude-model-override');
+  fs.mkdirSync(path.join(projectClaudeModel.home, '.taskard'), { recursive: true });
+  fs.mkdirSync(path.join(projectClaudeModel.cwd, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(projectClaudeModel.home, '.taskard', 'config.toml'), '[roles]\nreviewer = "haiku"\n');
+  const projectClaudeConfig = '[roles]\nreviewer = "sonnet"\n\n[harness_preferences.models.claude_code]\nreviewer = "opus"\n';
+  fs.writeFileSync(path.join(projectClaudeModel.cwd, '.taskard', 'config.toml'), projectClaudeConfig);
+  mustSucceed(cli(['init'], projectClaudeModel), 'project Claude model override');
+  const projectClaudeReviewer = fs.readFileSync(path.join(projectClaudeModel.cwd, '.claude', 'agents', 'reviewer.md'), 'utf8');
+  assert.match(projectClaudeReviewer, /^model: opus$/m);
+  assert.match(fs.readFileSync(path.join(projectClaudeModel.cwd, '.taskard', 'config.toml'), 'utf8'), /reviewer = "opus"/);
+  const projectClaudeEffective = cli(['config'], projectClaudeModel);
+  mustSucceed(projectClaudeEffective, 'project Claude model effective config');
+  assert.match(projectClaudeEffective.stdout, /reviewer default -> sonnet/);
+  assert.match(projectClaudeEffective.stdout, /Claude Code reviewer override -> opus/);
+
   assert.equal(fs.existsSync(npxLog), false, 'installer must not invoke optional skill resolution non-interactively');
 
   const drySkills = fixture('dry-skills');

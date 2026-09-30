@@ -378,13 +378,62 @@ function normalizeOpenCodeColor(color) {
 
 function detectHarnessIds() {
   const exists = (...parts) => fs.existsSync(path.join(...parts));
+  const nativeRoots = resolveGlobalNativeRoots(HOME);
   const found = [];
   if (exists(HOME, '.claude') || exists(CWD, '.claude')) found.push('claude-code');
-  if ([HOME, CWD].some((base) => exists(base, '.opencode') || exists(base, '.config', 'opencode'))) found.push('opencode');
-  if (exists(HOME, '.agents') || exists(HOME, '.codex') || exists(CWD, '.agents')) found.push('codex');
+  if (fs.existsSync(nativeRoots.openCodeConfigDir) || exists(CWD, '.opencode') || exists(CWD, '.config', 'opencode')) found.push('opencode');
+  if (exists(HOME, '.agents') || fs.existsSync(nativeRoots.codexHome) || exists(CWD, '.agents')) found.push('codex');
   if (exists(HOME, '.gemini') || exists(HOME, '.antigravity') || exists(CWD, '.gemini') || exists(CWD, '.antigravity')) found.push('antigravity');
   if (exists(HOME, '.cursor') || exists(CWD, '.cursor') || exists(CWD, '.cursorrules')) found.push('cursor');
   return found;
+}
+
+function selectHarness(config, detected = detectHarnessIds(), fallback = '') {
+  const configured = config.harness_preferences?.primary_harness;
+  return configured === 'claude' ? 'claude-code' : configured || detected[0] || fallback;
+}
+
+function isPathWithin(root, target) {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+function resolveGlobalNativeRoots(home = HOME, env = process.env) {
+  const codexHome = path.resolve(env.CODEX_HOME || path.join(home, '.codex'));
+  const openCodeConfigDir = path.resolve(env.OPENCODE_CONFIG_DIR || path.join(env.XDG_CONFIG_HOME || path.join(home, '.config'), 'opencode'));
+  const scopedIssue = (label, target) => {
+    if (!isPathWithin(home, target)) return `${label} resolves outside HOME and is unsupported by scoped global installation: ${target}`;
+    if (hasSymlinkComponent(home, path.relative(home, target))) return `${label} contains a symlinked path and is unsupported by scoped global installation: ${target}`;
+    return '';
+  };
+  return {
+    codexHome,
+    openCodeConfigDir,
+    codexIssue: scopedIssue('CODEX_HOME', codexHome),
+    openCodeIssue: scopedIssue('OpenCode config directory', openCodeConfigDir),
+  };
+}
+
+function resolveHarnessPaths(harness, scopeRoot, installScope, nativeRoots) {
+  if (installScope === 'project') {
+    return {
+      directiveTargets: harness ? [path.join(scopeRoot, 'CLAUDE.md'), path.join(scopeRoot, 'AGENTS.md')] : [],
+      roleDirectory: harness === 'claude-code' ? path.join(scopeRoot, '.claude', 'agents')
+        : harness === 'opencode' ? path.join(scopeRoot, '.opencode', 'agents') : '',
+      issue: '',
+    };
+  }
+  nativeRoots ||= resolveGlobalNativeRoots(scopeRoot);
+  if (harness === 'claude-code') {
+    return { directiveTargets: [path.join(scopeRoot, '.claude', 'CLAUDE.md'), path.join(scopeRoot, '.claude', 'AGENTS.md')], roleDirectory: path.join(scopeRoot, '.claude', 'agents'), issue: '' };
+  }
+  if (harness === 'codex') {
+    return { directiveTargets: [path.join(nativeRoots.codexHome, 'AGENTS.md')], roleDirectory: '', issue: nativeRoots.codexIssue };
+  }
+  if (harness === 'opencode') {
+    return { directiveTargets: [path.join(nativeRoots.openCodeConfigDir, 'AGENTS.md')], roleDirectory: path.join(nativeRoots.openCodeConfigDir, 'agents'), issue: nativeRoots.openCodeIssue };
+  }
+  return { directiveTargets: [], roleDirectory: '', issue: harness ? `Global native instructions are unsupported for ${harness} in user scope` : '' };
 }
 
 function detectHarnesses() {
@@ -701,6 +750,13 @@ function runInit(args, customConfig = null) {
     validateConfig(config, 'interactive configuration');
   }
 
+  const selectedHarness = selectHarness(config, detectHarnessIds(), 'claude-code');
+  const nativeRoots = isGlobal ? resolveGlobalNativeRoots(scopeRoot) : null;
+  const selectedNativePaths = resolveHarnessPaths(selectedHarness, scopeRoot, installScope, nativeRoots);
+  const openCodeNativePaths = resolveHarnessPaths('opencode', scopeRoot, installScope, nativeRoots);
+  if (isGlobal && openCodeNativePaths.issue) throw new Error(openCodeNativePaths.issue);
+  if (isGlobal && selectedNativePaths.issue) throw new Error(selectedNativePaths.issue);
+
   printBanner();
 
   // 1. Core directories
@@ -722,9 +778,7 @@ function runInit(args, customConfig = null) {
   const claudeSkills = path.join(scopeRoot, '.claude', 'skills');
   const claudeAgents = path.join(scopeRoot, '.claude', 'agents');
   const agentsSkills = path.join(scopeRoot, '.agents', 'skills');
-  const openCodeAgents = isGlobal
-    ? path.join(scopeRoot, '.config', 'opencode', 'agents')
-    : path.join(scopeRoot, '.opencode', 'agents');
+  const openCodeAgents = openCodeNativePaths.roleDirectory;
   const claudeProfiles = path.join(taskardHome, 'claude-agents');
   const openCodeProfiles = path.join(taskardHome, 'opencode-agents');
   const agentFiles = fs.readdirSync(agentsSrc).filter((file) => file.endsWith('.md')).sort();
@@ -804,9 +858,7 @@ function runInit(args, customConfig = null) {
   // 5. Directive Blocks Injection
   const directiveTpl = path.join(templatesSrc, 'directive-block.md');
   parseTaskardBlock(fs.readFileSync(directiveTpl, 'utf8'), directiveTpl);
-  const targets = isGlobal
-    ? [path.join(scopeRoot, '.claude', 'CLAUDE.md'), path.join(scopeRoot, '.claude', 'AGENTS.md')]
-    : [path.join(scopeRoot, 'CLAUDE.md'), path.join(scopeRoot, 'AGENTS.md')];
+  const targets = selectedNativePaths.directiveTargets;
 
   let injectedCount = 0;
   for (const t of targets) {
@@ -983,9 +1035,11 @@ function parseLaneState(lanePath) {
 
   let verdict = 'Pending';
   try {
-    const reviews = fs.readdirSync(lanePath).filter((name) => name.startsWith('review') && name.endsWith('.md')).sort();
-    if (reviews.length) {
-      const review = readRegularFile(path.join(lanePath, reviews[reviews.length - 1]));
+    const reviews = fs.readdirSync(lanePath).filter((name) => name.startsWith('review') && name.endsWith('.md'));
+    if (reviews.length > 1 || (reviews.length === 1 && reviews[0] !== 'review.md')) {
+      verdict = 'UNKNOWN';
+    } else if (reviews.length === 1) {
+      const review = readRegularFile(path.join(lanePath, 'review.md'));
       verdict = review === null ? 'UNKNOWN' : fieldAtPosition(review, 'VERDICT', REVIEW_VERDICTS, 'last');
     }
   } catch (_) {
@@ -1639,10 +1693,7 @@ function runDoctor(args) {
   }
   const config = effective?.config || {};
   const detectedIds = detectHarnessIds();
-  const configuredHarness = config.harness_preferences?.primary_harness === 'claude'
-    ? 'claude-code'
-    : config.harness_preferences?.primary_harness;
-  const selectedHarness = configuredHarness || detectedIds[0] || '';
+  const selectedHarness = selectHarness(config, detectedIds);
   const displayNames = { 'claude-code': 'Claude Code', opencode: 'OpenCode', codex: 'Codex / OpenAgent', antigravity: 'Antigravity', cursor: 'Cursor' };
   const installedRoots = [CWD, HOME].filter((root, index, all) => all.indexOf(root) === index)
     .filter((root) => fs.existsSync(path.join(root, '.taskard', 'skills', 'taskard', 'SKILL.md')));
@@ -1653,6 +1704,7 @@ function runDoctor(args) {
   try { profiles = readHarnessProfiles(); } catch (error) { profileError = error.message; }
   const selectedProfile = profiles[selectedHarness];
   const scopeSupported = Boolean(selectedProfile?.installScope?.includes(installScope));
+  const nativePaths = resolveHarnessPaths(selectedHarness, scopeRoot, installScope);
 
   report(1, 'Harness Detection', Boolean(selectedHarness && selectedProfile && scopeSupported), selectedHarness
     ? `${profileError || `Selected ${displayNames[selectedHarness] || selectedHarness} (${installScope} install scope)`}${selectedProfile && !scopeSupported ? `; ${selectedHarness} does not support this scope` : ''}`
@@ -1661,16 +1713,13 @@ function runDoctor(args) {
   let skillLink = '';
   let roleDirectory = '';
   let expectedRoleDirectory = '';
-  let directiveTargets = [];
   if (selectedHarness === 'claude-code') {
     skillLink = path.join(scopeRoot, '.claude', 'skills', 'taskard');
-    roleDirectory = path.join(scopeRoot, '.claude', 'agents');
+    roleDirectory = nativePaths.roleDirectory;
     expectedRoleDirectory = path.join(scopeRoot, '.taskard', 'claude-agents');
   } else if (selectedHarness === 'opencode') {
     skillLink = path.join(scopeRoot, '.agents', 'skills', 'taskard');
-    roleDirectory = installScope === 'user'
-      ? path.join(scopeRoot, '.config', 'opencode', 'agents')
-      : path.join(scopeRoot, '.opencode', 'agents');
+    roleDirectory = nativePaths.roleDirectory;
     expectedRoleDirectory = path.join(scopeRoot, '.taskard', 'opencode-agents');
   } else if (selectedHarness) {
     skillLink = path.join(scopeRoot, '.agents', 'skills', 'taskard');
@@ -1686,9 +1735,9 @@ function runDoctor(args) {
     ? `Verified ${path.relative(scopeRoot, skillLink)}`
     : selectedHarness ? `Required skill bridge is missing or broken: ${skillLink}` : 'Uninstalled; no required skill bridge can be checked');
 
-  let roleHealthy = Boolean(selectedProfile && selectedProfile.capabilities?.subagents !== 'native');
+  let roleHealthy = Boolean(selectedProfile && selectedProfile.capabilities?.subagents !== 'native') && !nativePaths.issue;
   let validRoles = 0;
-  if (selectedHarness && selectedProfile?.capabilities?.subagents === 'native' && scopeSupported) {
+  if (selectedHarness && selectedProfile?.capabilities?.subagents === 'native' && scopeSupported && !nativePaths.issue) {
     for (const role of ROLE_NAMES) {
       const target = path.join(roleDirectory, `${role}.md`);
       const expected = path.join(expectedRoleDirectory, `${role}.md`);
@@ -1713,29 +1762,25 @@ function runDoctor(args) {
     ? selectedProfile?.capabilities?.subagents === 'native'
       ? `Verified all ${ROLE_NAMES.length} ${displayNames[selectedHarness] || selectedHarness} role links and native restrictions`
       : `${displayNames[selectedHarness] || selectedHarness} uses ${selectedProfile?.capabilities?.subagents || 'declared'} role instructions`
-    : selectedHarness ? `${validRoles}/${ROLE_NAMES.length} required role definitions are valid under ${roleDirectory}` : 'Uninstalled; package roles are not an installed bridge');
+    : nativePaths.issue || (selectedHarness ? `${validRoles}/${ROLE_NAMES.length} required role definitions are valid under ${roleDirectory}` : 'Uninstalled; package roles are not an installed bridge'));
 
   const configHealthy = !configError && Boolean(effective);
   report(4, 'Effective Configuration', configHealthy, configHealthy
     ? `${effective.source}; speed=${config.defaults?.default_mode || 'pro'}, permission=${config.defaults?.permission_mode || 'bypassPermissions'}`
     : `Invalid effective configuration: ${configError || 'no valid configuration source'}`);
 
-  if (selectedHarness === 'claude-code' || selectedHarness === 'opencode' || selectedHarness === 'codex' || selectedHarness === 'antigravity' || selectedHarness === 'cursor') {
-    directiveTargets = installScope === 'user'
-      ? [path.join(scopeRoot, '.claude', 'CLAUDE.md'), path.join(scopeRoot, '.claude', 'AGENTS.md')]
-      : [path.join(scopeRoot, 'CLAUDE.md'), path.join(scopeRoot, 'AGENTS.md')];
-  }
-  let directiveHealthy = Boolean(directiveTargets.length);
+  const directiveTargets = nativePaths.directiveTargets;
+  let directiveHealthy = Boolean(directiveTargets.length) && !nativePaths.issue;
   const templateBlock = parseTaskardBlock(fs.readFileSync(path.join(PKG_ROOT, 'templates', 'directive-block.md'), 'utf8'), 'directive template');
-  for (const target of directiveTargets) {
+  for (const target of nativePaths.issue ? [] : directiveTargets) {
     try {
       const installedBlock = parseTaskardBlock(fs.readFileSync(target, 'utf8'), target);
       if (installedBlock.version !== templateBlock.version || installedBlock.block !== templateBlock.block) directiveHealthy = false;
     } catch (_) { directiveHealthy = false; }
   }
   report(5, 'Versioned Directive Blocks', directiveHealthy, directiveHealthy
-    ? `Verified paired taskard:v${templateBlock.version} blocks in ${directiveTargets.map((target) => path.relative(scopeRoot, target)).join(', ')}`
-    : selectedHarness ? `Required paired/versioned directive block is missing or stale: ${directiveTargets.join(', ')}` : 'Uninstalled; no harness directives are active');
+    ? `Verified taskard:v${templateBlock.version} block${directiveTargets.length === 1 ? '' : 's'} in ${directiveTargets.map((target) => path.relative(scopeRoot, target)).join(', ')}`
+    : nativePaths.issue || (selectedHarness ? `Required versioned directive block is missing or stale: ${directiveTargets.join(', ')}` : 'Uninstalled; no harness directives are active'));
 
   const healthy = failed === 0;
   const statusLabel = healthy ? 'Healthy · installed bridge verified' : selectedHarness ? 'Unhealthy · required integration is missing or invalid' : 'Uninstalled · run taskard init to create a harness bridge';
@@ -1768,16 +1813,21 @@ function runConfig() {
     console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Budget Ceiling     :${C.reset} ${defaults.budget_minutes} minutes`);
   }
   console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}[ROLE ROUTING & MODEL TIERS]${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}Strategy (Tier 1)${C.reset}   : planner -> ${C.bold}${roles.planner || 'opus'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         reviewer_max -> ${C.bold}${roles.reviewer_max || roles.reviewer_full || 'opus'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         debugger_max -> ${C.bold}${roles.debugger_max || roles.debugger_full || 'opus'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.blue}${C.bold}Execution (Tier 2)${C.reset}  : implementer -> ${C.bold}${roles.implementer || 'sonnet'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         ui-developer -> ${C.bold}${roles['ui-developer'] || 'sonnet'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         reviewer -> ${C.bold}${roles.reviewer || 'sonnet'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         debugger -> ${C.bold}${roles.debugger || 'sonnet'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}  ${C.emerald}${C.bold}Assist (Tier 3)${C.reset}     : explorer -> ${C.bold}${roles.explorer || 'haiku'}${C.reset}`);
-  console.log(`  ${C.cyan}│${C.reset}                         qa-tester -> ${C.bold}${roles['qa-tester'] || 'haiku'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}[ROLE DEFAULTS & MODEL TIERS]${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.purple}${C.bold}Strategy (Tier 1)${C.reset}   : planner default -> ${C.bold}${roles.planner || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         reviewer_max default -> ${C.bold}${roles.reviewer_max || roles.reviewer_full || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         debugger_max default -> ${C.bold}${roles.debugger_max || roles.debugger_full || 'opus'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.blue}${C.bold}Execution (Tier 2)${C.reset}  : implementer default -> ${C.bold}${roles.implementer || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         ui-developer default -> ${C.bold}${roles['ui-developer'] || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         reviewer default -> ${C.bold}${roles.reviewer || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         debugger default -> ${C.bold}${roles.debugger || 'sonnet'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}  ${C.emerald}${C.bold}Assist (Tier 3)${C.reset}     : explorer default -> ${C.bold}${roles.explorer || 'haiku'}${C.reset}`);
+  console.log(`  ${C.cyan}│${C.reset}                         qa-tester default -> ${C.bold}${roles['qa-tester'] || 'haiku'}${C.reset}`);
+  for (const [harness, label] of [['claude_code', 'Claude Code'], ['opencode', 'OpenCode']]) {
+    for (const [role, model] of Object.entries(config.harness_preferences?.models?.[harness] || {})) {
+      console.log(`  ${C.cyan}│${C.reset}                         ${label} ${role} override -> ${C.bold}${model}${C.reset}`);
+    }
+  }
   const disabledStr = Array.isArray(roles.disabled) && roles.disabled.length > 0 ? roles.disabled.join(', ') : 'None';
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Disabled Roles     :${C.reset} ${disabledStr}`);
   console.log(`  ${C.cyan}├─────────────────────────────────────────────────────────────────────────┤${C.reset}`);
