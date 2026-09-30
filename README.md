@@ -168,9 +168,11 @@ Recorded `durationMs` and `costUsd` values must be finite and non-negative. Toke
 ```bash
 npm test
 bash -n install.sh
+node --check bin/taskard.js
 node bin/taskard.js init --dry-run
-node evals/test-score.js
 ```
+
+`npm test` runs structural validation, installer regressions, cleanup/verification safety checks, and scorer fixture checks.
 
 Use an isolated home and project directory for installer tests. Do not install optional external skills or write to the current user's global config as part of the test run.
 

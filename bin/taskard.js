@@ -937,15 +937,6 @@ function formatBytes(bytes) {
 const LANE_STATUSES = ['ACTIVE', 'BLOCKED', 'DONE', 'DONE_WITH_CONCERNS', 'NEEDS_CONTEXT'];
 const REVIEW_VERDICTS = ['FAIL', 'PASS', 'PASS_WITH_NOTES'];
 
-function lstatOrNull(targetPath) {
-  try {
-    return fs.lstatSync(targetPath);
-  } catch (err) {
-    if (err.code === 'ENOENT') return null;
-    throw err;
-  }
-}
-
 function assertDirectoryScope(targetPath) {
   const stat = lstatOrNull(targetPath);
   if (!stat) return false;

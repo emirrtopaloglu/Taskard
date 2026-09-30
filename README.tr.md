@@ -168,9 +168,11 @@ Kaydedilen `durationMs` ve `costUsd` değerleri sonlu ve negatif olmayan sayıla
 ```bash
 npm test
 bash -n install.sh
+node --check bin/taskard.js
 node bin/taskard.js init --dry-run
-node evals/test-score.js
 ```
+
+`npm test` yapısal doğrulamayı, kurucu regresyonlarını, temizlik/doğrulama güvenlik kontrollerini ve skorlayıcı fixture kontrollerini çalıştırır.
 
 Kurulum testlerinde yalıtılmış bir home ve proje dizini kullanın. Test sırasında isteğe bağlı harici skill'leri kurmayın veya mevcut kullanıcının global konfigürasyonuna yazmayın.
 

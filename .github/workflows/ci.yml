@@ -27,8 +27,8 @@ jobs:
       - name: Shell Syntax Check
         run: bash -n install.sh
 
-      - name: Run Taskard Validation Suite
-        run: node test/validate.js
+      - name: Run Taskard Test Suite
+        run: npm test
 
       - name: Test CLI Dry Run
         run: node bin/taskard.js init --dry-run
