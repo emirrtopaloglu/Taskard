@@ -6,6 +6,7 @@ permission_mode = "bypassPermissions" # Harness-specific preference; not a cross
 default_mode = "pro"                  # "fast" | "pro" | "max"
 report_max_lines = 15
 max_attempts = 2                       # Total fix attempts: first attempt plus at most one retry.
+max_parallel = 3                       # Concurrent writer lanes per wave; reviewer, explorer, and QA do not count.
 # budget_minutes = 30                  # Optional estimate ceiling for a lane.
 
 [roles]

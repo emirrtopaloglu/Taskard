@@ -420,6 +420,79 @@ test('verify refuses a symlinked .taskard root', () => workspace((dir, home) => 
   assert.match(result.stdout + result.stderr, /symlinked/i);
 }));
 
+function orchestratedBrief(id, commit, lines) {
+  return validBrief(id, commit).replace('REQUIRES_QA: NO\n', `REQUIRES_QA: NO\n${lines}\n`);
+}
+
+test('verify rejects a missing declared worktree once a report exists', () => workspace((dir, home) => {
+  const commit = initRepo(dir);
+  const lane = writeLane(dir, 'missing-worktree', {
+    brief: orchestratedBrief('missing-worktree', commit, [
+      `WORKTREE: ${path.join(dir, 'worktrees', 'gone')}`,
+      'BRANCH: lane/missing-worktree',
+      'SCOPE: src/**',
+      'WAVE: 1',
+      'REVIEWER_MODEL: ANY',
+    ].join('\n')),
+  });
+  fs.writeFileSync(path.join(lane, 'report.md'), validReport(lane, commit));
+  const result = runCli(dir, home, 'verify');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /WORKTREE does not exist/i);
+}));
+
+test('verify rejects a worktree shared by two live lanes', () => workspace((dir, home) => {
+  const commit = initRepo(dir);
+  const shared = path.join(dir, 'worktrees', 'shared');
+  fs.mkdirSync(shared, { recursive: true });
+  for (const id of ['share-one', 'share-two']) {
+    const lane = writeLane(dir, id, {
+      brief: orchestratedBrief(id, commit, [
+        `WORKTREE: ${shared}`,
+        `BRANCH: lane/${id}`,
+        'SCOPE: NONE',
+        'WAVE: 0',
+        'REVIEWER_MODEL: ANY',
+      ].join('\n')),
+    });
+    fs.writeFileSync(path.join(lane, 'report.md'), validReport(lane, commit));
+  }
+  const result = runCli(dir, home, 'verify');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /WORKTREE is shared/i);
+}));
+
+test('verify rejects overlapping explicit scopes inside one wave', () => workspace((dir, home) => {
+  const commit = initRepo(dir);
+  const specs = [
+    ['scope-a', ['SCOPE: apps/api/**', 'WAVE: 1']],
+    ['scope-b', ['SCOPE: apps/api/src/routes.ts', 'WAVE: 1']],
+  ];
+  for (const [id, extra] of specs) {
+    const lane = writeLane(dir, id, {
+      brief: orchestratedBrief(id, commit, ['WORKTREE: NONE', `BRANCH: lane/${id}`, ...extra, 'REVIEWER_MODEL: ANY'].join('\n')),
+    });
+    fs.writeFileSync(path.join(lane, 'report.md'), validReport(lane, commit));
+  }
+  const result = runCli(dir, home, 'verify');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /SCOPE overlaps/i);
+}));
+
+test('verify accepts disjoint orchestration metadata', () => workspace((dir, home) => {
+  const commit = initRepo(dir);
+  const specs = [
+    ['wave-a', ['WORKTREE: NONE', 'BRANCH: lane/wave-a', 'SCOPE: packages/core/**', 'WAVE: 1', 'REVIEWER_MODEL: ANY']],
+    ['wave-b', ['WORKTREE: NONE', 'BRANCH: lane/wave-b', 'SCOPE: packages/ui/**', 'WAVE: 1', 'REVIEWER_MODEL: ANY']],
+  ];
+  for (const [id, lines] of specs) {
+    const lane = writeLane(dir, id, { brief: orchestratedBrief(id, commit, lines.join('\n')) });
+    fs.writeFileSync(path.join(lane, 'report.md'), validReport(lane, commit));
+  }
+  const result = runCli(dir, home, 'verify');
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+}));
+
 if (failures) {
   console.error(`${failures} hardening regression(s) failed`);
   process.exitCode = 1;

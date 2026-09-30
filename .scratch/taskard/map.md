@@ -17,3 +17,13 @@ Status: authorized for implementation by the user after critical review.
 12. Native global directives follow the selected harness through one shared resolver: Claude uses its existing paired files, Codex uses `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), and OpenCode uses `AGENTS.md` in its resolved config directory, shared with the OpenCode role export root. Global native roots must remain inside `HOME` to preserve scoped filesystem safety; unsupported roots fail before writes and doctor reports them unhealthy.
 13. Claude's `harness_preferences.models.claude_code` is the explicit native export override and takes precedence over `[roles]` for the same role; session instructions remain the top-level override.
 14. A live lane has at most one active review record, canonically named `review.md`. Multiple active review records make the verdict `UNKNOWN`, keeping the lane out of completed cleanup and archive purge; historical reviews belong outside the active lane review namespace. Cleanup never infers chronology from filenames or mtimes.
+
+## 2026-09-30 — Orchestration layer for parallel lanes
+
+Status: shipped as agent-read conventions plus incremental verify coverage; enforcement grows only where deterministic checks exist.
+
+15. Max writing lanes gain optional orchestration metadata after the base brief fields: `WORKTREE`, `BRANCH`, `SCOPE`, `WAVE`, `REVIEWER_MODEL`. Base fields and ordering are unchanged so existing briefs keep verifying.
+16. One writing lane never shares its worktree, branch, or explicit scope with another live lane. Same-wave explicit scopes must be disjoint; `DERIVED` scopes are not cross-checked and the docs say so.
+17. The concurrent writer ceiling defaults to 3 and lives in agent-read config (`[defaults].max_parallel`, validated integer 1–8). It is a convention for agents and reviewers, not a runtime limiter.
+18. Merges are serial and user-owned; lanes never write the main branch. Merge records, dependency rebases, and conflict handling are documented conventions until tooling verifies them.
+19. `verify` coverage remains incremental and labelled: it now checks optional field formats and ordering, missing declared worktrees once a report exists, shared worktrees/branches, and same-wave scope overlap. Diff containment, branch ancestry, merge records, and reviewer-model separation are explicitly "not yet checked" in orchestration.md; no document may imply enforcement that does not exist.

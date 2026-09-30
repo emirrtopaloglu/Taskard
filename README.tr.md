@@ -162,6 +162,12 @@ Uygulama raporları on sıralı alan kullanır: durum, diff özeti, base/head co
 
 Hash'ler raporu kaydedilmiş dosya baytlarına bağlar; komutun çalıştığını veya ajan iddiasının doğru olduğunu kanıtlamaz. Eksik veya eski metadata doğrulamanın başarısız olmasına yol açar; çalışma doğrulanmış kabul edilemez. Alanların tamamı için [Rol, Brief ve Kanıt Sözleşmeleri](skills/taskard/references/roles-and-evidence.md) sayfasına bakın.
 
+## Orkestrasyon Katmanı
+
+Paralel Max lane'leri tek bir worktree, kapsam ve dalga sözleşmesine uyar: yazma yapan lane brief'inde `WORKTREE`, `BRANCH` ve `SCOPE` alanlarını bildirir, aynı dalgadaki lane'lerin açık kapsamları kesişemez ve varsayılan eşzamanlı yazar tavanı üçtür (`[defaults].max_parallel`). Merge işlemleri seridir — aynı anda tek yazar — ve yalnızca kapıları geçen lane'lerden yapılır; ana dala lane'ler doğrudan yazmaz.
+
+`taskard verify`, bugün deterministik olarak kontrol edebildiklerini denetler: alan biçimleri ve sıralaması, canlı lane'ler arasında paylaşılan worktree veya branch, aynı dalgadaki açık kapsam kesişimi ve lane bir rapora sahip olduğunda eksik bildirilmiş worktree. Henüz var olmayan kapsam açıkça listelenir ve reviewer konvansiyonu olarak kalır. Ayrıntılar: [Orchestration Layer](skills/taskard/references/orchestration.md).
+
 ## Benchmark Durumu
 
 Karşılaştırılabilir canlı benchmark çalıştırmaları veya ham eski kayıtlar yayımlanmamıştır. Değerlendirme paketi sabit prompt'lar ve sağlanan run artifact'lerini inceleyen Node standart kütüphanesiyle yazılmış bir skorlayıcı içerir; ücretli model çalıştırmaz. Skorlayıcı self-check'i sentetik fixture kullanır, benchmark ölçümü değildir. [Evaluation Method](evals/README.md) sayfasına bakın.

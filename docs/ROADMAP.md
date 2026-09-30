@@ -11,6 +11,7 @@ No reproducible raw benchmark runs are published. Earlier savings figures have b
 The following changes are being prepared for a later release; they are not part of the published v0.1.3 package until released:
 
 - Risk-first gear selection, source-aware briefs, bounded fix attempts, and consistent report metadata.
+- An orchestration layer for parallel Max lanes: optional worktree/branch/scope/wave/reviewer metadata on briefs, a serial user-owned merge order, and incremental `verify` coverage for shared worktrees, same-wave scope overlaps, and missing declared worktrees.
 - Capability-based harness profile data and tested/partial/recipe support labels. “Tested” means local installer/profile checks, not live agent behavior.
 - A standard-library artifact scorer for fixed scenarios. It validates supplied run metadata and evidence hashes, scores recorded checks, and reports paired metrics only after at least three repeats. It does not start paid harness runs.
 - Current benchmark status: no fresh live runs or comparable historical artifacts have been supplied.

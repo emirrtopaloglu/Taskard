@@ -13,7 +13,14 @@ SOURCE_COMMIT: <40-character source snapshot SHA>
 BLOCKED_BY: NONE|<comma-separated lane IDs>
 REQUIRES_REVIEW: YES|NO
 REQUIRES_QA: YES|NO
+WORKTREE: <absolute worktree path>|NONE
+BRANCH: <branch name>|NONE
+SCOPE: <comma-separated repository-relative path prefixes>|DERIVED|NONE
+WAVE: <non-negative integer; 0 for serial work>
+REVIEWER_MODEL: <model alias>|ANY
 ```
+
+The first eight fields are required. The orchestration fields are optional; when present they must follow the base fields in the order above. Worktree, scope, wave, and merge rules live in [Orchestration Layer](orchestration.md).
 
 Context entries use `path#Lstart-Lend` and may include a symbol anchor, such as `src/auth.ts#L10-L32 :: validateSession`. The brief contains pointers rather than copied code. Delegates start from those ranges, then inspect relevant callers, imports, tests, and dependencies. Before implementation, check pointer context at `SOURCE_COMMIT` and detect relevant changes from `SOURCE_COMMIT` to `BASE_COMMIT`. Reread changed context or refresh the brief. Changes from `BASE_COMMIT` to `HEAD_COMMIT` are intentional lane work.
 
@@ -51,4 +58,4 @@ Native permissions can restrict reviewer and explorer in Claude Code and OpenCod
 
 `taskard verify [--global|-g]` is a read-only check of every live lane in the selected `.taskard/lanes` directory. A missing lane directory succeeds as an empty check; a non-Git working directory fails. It reports nonzero for malformed or missing briefs/reports, invalid role/gear/budget, escaped or out-of-bounds source pointers, relevant source-context changes or dirty pointed files, stale report commits, unsuccessful or missing evidence commands, evidence hash mismatches, attempts over budget, incomplete lanes, failed/unknown review verdicts, unmet declared review/QA gates, missing/cyclic dependencies, or symlinked lane scope.
 
-Zero means no checked violation was found; it does not mean any lane or test ran. Verify checks report structure, Git/log references, evidence file presence and digest, and declared gate results. It does not execute the supplied `EVIDENCE_COMMAND`, authenticate who ran a command, prove output came from it, or establish live behavior. Old report formats remain visible in lane listings, but missing required metadata fails verification rather than being treated as success.
+Zero means no checked violation was found; it does not mean any lane or test ran. Verify checks report structure, Git/log references, evidence file presence and digest, and declared gate results. It does not execute the supplied `EVIDENCE_COMMAND`, authenticate who ran a command, prove output came from it, or establish live behavior. Old report formats remain visible in lane listings, but missing required metadata fails verification rather than being treated as success. Orchestration coverage is incremental and listed in [Orchestration Layer](orchestration.md): today it covers optional field formats and ordering, missing declared worktrees once a report exists, worktrees or branches shared across live lanes, and overlapping explicit scopes within one wave.

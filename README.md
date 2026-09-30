@@ -162,6 +162,12 @@ Implementation reports use ten ordered fields: status, diff summary, base/head c
 
 Hashes bind a report to the recorded file bytes, but cannot prove that a command ran or that an agent claim is true. Missing or stale metadata fails verification and cannot be treated as verified work. Full field definitions are in [Role, Brief, and Evidence Contracts](skills/taskard/references/roles-and-evidence.md).
 
+## Orchestration Layer
+
+Parallel Max lanes follow one worktree, scope, and wave contract: a writing lane declares `WORKTREE`, `BRANCH`, and `SCOPE` in its brief, same-wave lanes keep disjoint explicit scopes, and the default ceiling is three concurrent writers (`[defaults].max_parallel`). Merges stay serial — one writer at a time — and only from lanes whose gates passed; the main branch is never written directly by a lane.
+
+`taskard verify` checks what it can check deterministically today: optional field formats and ordering, worktrees or branches shared across live lanes, overlapping explicit scopes within one wave, and missing declared worktrees once a lane has a report. Coverage that does not exist yet is listed explicitly and remains a reviewer convention. See [Orchestration Layer](skills/taskard/references/orchestration.md).
+
 ## Benchmark Status
 
 No comparable live benchmark runs or raw historical artifacts are published. The evaluation suite defines fixed prompts and a standard-library scorer for supplied run artifacts; it does not start paid model runs. The scorer's self-check uses synthetic fixtures, not benchmark measurements. See [Evaluation Method](evals/README.md).

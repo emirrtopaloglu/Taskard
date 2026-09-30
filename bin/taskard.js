@@ -252,10 +252,10 @@ function validateConfig(config, label = 'config.toml') {
   checkTable(config, 'config', CONFIG_SECTIONS);
   if (config.defaults !== undefined) {
     const defaults = config.defaults;
-    checkTable(defaults, '[defaults]', new Set(['permission_mode', 'default_mode', 'max_attempts', 'report_max_lines', 'budget_minutes']));
+    checkTable(defaults, '[defaults]', new Set(['permission_mode', 'default_mode', 'max_attempts', 'report_max_lines', 'budget_minutes', 'max_parallel']));
     if (defaults.permission_mode !== undefined && !['bypassPermissions', 'default'].includes(defaults.permission_mode)) fail('[defaults].permission_mode', 'must be "bypassPermissions" or "default"');
     if (defaults.default_mode !== undefined && !['fast', 'pro', 'max'].includes(defaults.default_mode)) fail('[defaults].default_mode', 'must be "fast", "pro", or "max"');
-    for (const [key, min, max] of [['max_attempts', 1, 2], ['report_max_lines', 1, 100], ['budget_minutes', 1, 1440]]) {
+    for (const [key, min, max] of [['max_attempts', 1, 2], ['report_max_lines', 1, 100], ['budget_minutes', 1, 1440], ['max_parallel', 1, 8]]) {
       if (defaults[key] !== undefined && (!Number.isInteger(defaults[key]) || defaults[key] < min || defaults[key] > max)) fail(`[defaults].${key}`, `must be an integer from ${min} to ${max}`);
     }
   }
@@ -1445,6 +1445,54 @@ function parseLaneBrief(brief, laneId, repoRoot, issues) {
   if (!['YES', 'NO'].includes(metadata.REQUIRES_REVIEW)) issues.push('REQUIRES_REVIEW must be YES or NO');
   if (!['YES', 'NO'].includes(metadata.REQUIRES_QA)) issues.push('REQUIRES_QA must be YES or NO');
 
+  const orchestrationKeys = ['WORKTREE', 'BRANCH', 'SCOPE', 'WAVE', 'REVIEWER_MODEL'];
+  const lastBaseIndex = Math.max(...indexes);
+  const orchestrationValues = {};
+  let lastOrchestrationIndex = -1;
+  let orchestrationOrderValid = true;
+  for (const key of orchestrationKeys) {
+    const positions = metadataLines.map((line, index) => (line.startsWith(`${key}:`) ? index : -1)).filter((index) => index >= 0);
+    if (positions.length > 1) issues.push(`brief metadata ${key} must not be repeated`);
+    orchestrationValues[key] = oneMetadataValue(metadataLines, key);
+    if (positions.length === 1) {
+      if (positions[0] <= lastBaseIndex || positions[0] <= lastOrchestrationIndex) orchestrationOrderValid = false;
+      lastOrchestrationIndex = positions[0];
+    }
+  }
+  if (!orchestrationOrderValid) issues.push(`orchestration metadata must follow the base fields in order: ${orchestrationKeys.join(', ')}`);
+
+  if (orchestrationValues.WORKTREE && orchestrationValues.WORKTREE !== 'NONE' && !path.isAbsolute(orchestrationValues.WORKTREE)) {
+    issues.push('WORKTREE must be an absolute path or NONE');
+  }
+  if (orchestrationValues.BRANCH && orchestrationValues.BRANCH !== 'NONE'
+    && (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(orchestrationValues.BRANCH) || orchestrationValues.BRANCH.includes('..'))) {
+    issues.push('BRANCH must be a safe branch name or NONE');
+  }
+  let scopePrefixes = null;
+  if (orchestrationValues.SCOPE) {
+    if (['DERIVED', 'NONE'].includes(orchestrationValues.SCOPE)) {
+      scopePrefixes = orchestrationValues.SCOPE;
+    } else {
+      scopePrefixes = orchestrationValues.SCOPE.split(',').map((value) => value.trim()).filter(Boolean);
+      if (!scopePrefixes.length) issues.push('SCOPE must be DERIVED, NONE, or comma-separated path prefixes');
+      const invalid = scopePrefixes.find((value) => path.isAbsolute(value) || value.split('/').includes('..') || !/^[A-Za-z0-9._*/-]+$/.test(value));
+      if (scopePrefixes.length && invalid) issues.push(`invalid SCOPE prefix: ${invalid}`);
+    }
+  }
+  if (orchestrationValues.WAVE !== null && !/^\d+$/.test(orchestrationValues.WAVE)) {
+    issues.push('WAVE must be a non-negative integer');
+  }
+  if (orchestrationValues.REVIEWER_MODEL && orchestrationValues.REVIEWER_MODEL !== 'ANY'
+    && !/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(orchestrationValues.REVIEWER_MODEL)) {
+    issues.push('REVIEWER_MODEL must be a model alias or ANY');
+  }
+  const orchestration = {
+    worktree: orchestrationValues.WORKTREE && orchestrationValues.WORKTREE !== 'NONE' ? orchestrationValues.WORKTREE : null,
+    branch: orchestrationValues.BRANCH && orchestrationValues.BRANCH !== 'NONE' ? orchestrationValues.BRANCH : null,
+    scope: Array.isArray(scopePrefixes) ? scopePrefixes : null,
+    wave: /^\d+$/.test(orchestrationValues.WAVE || '') ? Number(orchestrationValues.WAVE) : null,
+  };
+
   const baseCommit = resolveCommit(repoRoot, metadata.BASE_COMMIT);
   const sourceCommit = resolveCommit(repoRoot, metadata.SOURCE_COMMIT);
   if (!baseCommit) issues.push('BASE_COMMIT is missing or does not resolve to a commit');
@@ -1518,7 +1566,7 @@ function parseLaneBrief(brief, laneId, repoRoot, issues) {
     if (working.status === 1) issues.push(`stale evidence: pointed file has uncommitted changes: ${pointer.fileName}`);
     else if (working.status !== 0) issues.push(`could not compare pointed file with HEAD: ${pointer.fileName}`);
   }
-  return { metadata, budget, baseCommit, sourceCommit, blockedBy };
+  return { metadata, budget, baseCommit, sourceCommit, blockedBy, orchestration };
 }
 
 function validateLaneReport(lanePath, metadata, budget, headCommit, repoRoot, issues) {
@@ -1610,10 +1658,15 @@ function runVerify(args) {
     const issues = [];
     const brief = readRegularFile(path.join(lanePath, 'brief.md'));
     if (brief === null) {
-      lanes.push({ id: entry.name, path: lanePath, issues: ['brief.md is missing or is not a regular file'], blockedBy: [] });
+      lanes.push({ id: entry.name, path: lanePath, issues: ['brief.md is missing or is not a regular file'], blockedBy: [], orchestration: null });
       continue;
     }
     const parsed = parseLaneBrief(brief, entry.name, repoRoot, issues);
+    const laneOrchestration = parsed.orchestration;
+    if (laneOrchestration.worktree && readRegularFile(path.join(lanePath, 'report.md')) !== null) {
+      const worktreeStat = lstatOrNull(laneOrchestration.worktree);
+      if (!worktreeStat || !worktreeStat.isDirectory()) issues.push(`declared WORKTREE does not exist: ${laneOrchestration.worktree}`);
+    }
     if (parsed.baseCommit && !isAncestor(repoRoot, parsed.baseCommit, headCommit)) issues.push('brief BASE_COMMIT is not an ancestor of current HEAD');
     if (parsed.sourceCommit && !isAncestor(repoRoot, parsed.sourceCommit, headCommit)) issues.push('brief SOURCE_COMMIT is not an ancestor of current HEAD');
     validateLaneReport(lanePath, parsed.metadata, parsed.budget, headCommit, repoRoot, issues);
@@ -1626,7 +1679,7 @@ function runVerify(args) {
       const status = qa === null ? 'UNKNOWN' : exactField(qa, 'STATUS', ['VERIFIED', 'VERIFIED_WITH_GAPS', 'FAILED']);
       if (status !== 'VERIFIED') issues.push(`brief requires QA STATUS: VERIFIED (found ${status})`);
     }
-    lanes.push({ id: entry.name, path: lanePath, issues, blockedBy: parsed.blockedBy });
+    lanes.push({ id: entry.name, path: lanePath, issues, blockedBy: parsed.blockedBy, orchestration: laneOrchestration });
   }
 
   const laneIds = new Set(lanes.map((lane) => lane.id));
@@ -1654,6 +1707,39 @@ function runVerify(args) {
   for (const id of cycleIds) {
     const lane = lanes.find((item) => item.id === id);
     if (lane) lane.issues.push('BLOCKED_BY dependency cycle detected');
+  }
+
+  const worktreeGroups = new Map();
+  const branchGroups = new Map();
+  const waveGroups = new Map();
+  for (const lane of lanes) {
+    const orchestration = lane.orchestration;
+    if (!orchestration) continue;
+    if (orchestration.worktree) worktreeGroups.set(orchestration.worktree, [...(worktreeGroups.get(orchestration.worktree) || []), lane]);
+    if (orchestration.branch) branchGroups.set(orchestration.branch, [...(branchGroups.get(orchestration.branch) || []), lane]);
+    if (orchestration.wave !== null && orchestration.wave > 0 && orchestration.scope && orchestration.scope.length) {
+      waveGroups.set(orchestration.wave, [...(waveGroups.get(orchestration.wave) || []), lane]);
+    }
+  }
+  for (const [worktree, group] of worktreeGroups) {
+    if (group.length > 1) for (const lane of group) lane.issues.push(`WORKTREE is shared by live lanes: ${worktree}`);
+  }
+  for (const [branch, group] of branchGroups) {
+    if (group.length > 1) for (const lane of group) lane.issues.push(`BRANCH is shared by live lanes: ${branch}`);
+  }
+  const normalizeScopePrefix = (value) => value.replace(/\*+$/, '').replace(/\/+$/, '');
+  const scopesOverlap = (left, right) => left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+  for (const [wave, group] of waveGroups) {
+    for (let i = 0; i < group.length; i += 1) {
+      for (let j = i + 1; j < group.length; j += 1) {
+        const left = group[i].orchestration.scope.map(normalizeScopePrefix).filter(Boolean);
+        const right = group[j].orchestration.scope.map(normalizeScopePrefix).filter(Boolean);
+        if (left.some((a) => right.some((b) => scopesOverlap(a, b)))) {
+          group[i].issues.push(`SCOPE overlaps ${group[j].id} in wave ${wave}`);
+          group[j].issues.push(`SCOPE overlaps ${group[i].id} in wave ${wave}`);
+        }
+      }
+    }
   }
 
   let failed = scopeIssues.length;
@@ -1809,6 +1895,9 @@ function runConfig() {
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Permission Pref    :${C.reset} ${C.bold}${defaults.permission_mode || 'bypassPermissions'}${C.reset} ${C.dim}(harness-dependent)${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Circuit Breaker    :${C.reset} ${C.amber}${C.bold}2-Strike${C.reset} ${C.gray}(max_attempts = ${defaults.max_attempts ?? 2})${C.reset}`);
   console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Report Max Lines   :${C.reset} ${defaults.report_max_lines ?? 15} lines ${C.dim}(strict contract)${C.reset}`);
+  if (defaults.max_parallel) {
+    console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Parallel Writers   :${C.reset} ${defaults.max_parallel} ${C.dim}(max concurrent writing lanes per wave)${C.reset}`);
+  }
   if (defaults.budget_minutes) {
     console.log(`  ${C.cyan}│${C.reset}  ${C.gray}• Budget Ceiling     :${C.reset} ${defaults.budget_minutes} minutes`);
   }

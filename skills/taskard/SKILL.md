@@ -39,7 +39,7 @@ Profiles describe model inheritance and native permissions without pinning provi
 
 For Pro and Max, write a brief with the required metadata and acceptance criteria. A Context Files entry uses `path#Lstart-Lend` and may add a symbol anchor, for example `src/auth.ts#L10-L32 :: validateSession`. Pointers are starting context, not a ban on reading callers, imports, tests, or dependencies. Expand the scope when needed and record why.
 
-Each brief records:
+Each brief records the base fields:
 
 ```text
 ROLE: <planner|implementer|reviewer|debugger|ui-developer|explorer|qa-tester>
@@ -51,6 +51,18 @@ BLOCKED_BY: NONE|<comma-separated lane IDs>
 REQUIRES_REVIEW: YES|NO
 REQUIRES_QA: YES|NO
 ```
+
+Max briefs add the orchestration fields after the base fields:
+
+```text
+WORKTREE: <absolute worktree path>|NONE
+BRANCH: <branch name>|NONE
+SCOPE: <comma-separated path prefixes>|DERIVED|NONE
+WAVE: <integer; 0 for serial work>
+REVIEWER_MODEL: <model alias>|ANY
+```
+
+Writing lanes run in their own worktree and branch; same-wave lanes keep disjoint scopes; concurrent writers stay at or under `[defaults].max_parallel` (default 3). Merges stay serial and user-owned. See [Orchestration Layer](references/orchestration.md) for the full contract and current verify coverage.
 
 Before using pointers, check them at `SOURCE_COMMIT`. If relevant context changed from `SOURCE_COMMIT` to `BASE_COMMIT`, reread current callers and dependencies and refresh the brief or report it as stale. Changes from `BASE_COMMIT` to `HEAD_COMMIT` are the lane's intentional work.
 
@@ -97,3 +109,4 @@ The implementer role contains the minimum TDD and evidence rules; no external te
 - [Memory & Handoff Format](references/memory-and-handoff.md)
 - [Cross-Harness Support](references/cross-harness.md)
 - [Role and Evidence Contracts](references/roles-and-evidence.md)
+- [Orchestration Layer](references/orchestration.md)
