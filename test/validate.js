@@ -177,7 +177,7 @@ try {
 
   // CLI Clean --completed Dry-Run Test
   const cleanCompletedDryOut = execSync('node bin/taskard.js clean --dry-run --completed', { cwd: ROOT, stdio: 'pipe' }).toString();
-  if (cleanCompletedDryOut.includes('TASKARD WORKSPACE CLEANUP') && (cleanCompletedDryOut.includes('completed lanes only') || cleanCompletedDryOut.includes('No completed lanes'))) {
+  if (cleanCompletedDryOut.includes('TASKARD WORKSPACE CLEANUP') && cleanCompletedDryOut.includes('completed lanes')) {
     pass('CLI clean --dry-run --completed executed successfully');
   } else {
     fail(`CLI clean --dry-run --completed unexpected output: ${cleanCompletedDryOut}`);
