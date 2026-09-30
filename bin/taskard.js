@@ -1326,6 +1326,22 @@ function gitOutput(cwd, args) {
   return result.stdout.trim();
 }
 
+function gitSymlinkComponent(cwd, revision, relativePath) {
+  let current = '';
+  for (const component of relativePath.split('/').filter(Boolean)) {
+    current = current ? `${current}/${component}` : component;
+    const result = gitResult(cwd, ['--literal-pathspecs', 'ls-tree', '-z', revision, '--', current]);
+    if (result.status !== 0) return { error: true };
+    for (const entry of result.stdout.split('\0').filter(Boolean)) {
+      const tab = entry.indexOf('\t');
+      if (tab < 0 || entry.slice(tab + 1) !== current) continue;
+      const mode = entry.slice(0, tab).split(' ')[0];
+      if (mode === '120000') return { symlinkPath: current };
+    }
+  }
+  return { symlinkPath: null };
+}
+
 function sectionBody(content, title) {
   const lines = content.split(/\r?\n/);
   const start = lines.findIndex((line) => new RegExp(`^##\\s+${title}\\s*$`, 'i').test(line));
@@ -1429,6 +1445,19 @@ function parseLaneBrief(brief, laneId, repoRoot, issues) {
   if (!pointers.length) issues.push('brief needs at least one scoped Context Files pointer');
   for (const pointer of pointers) {
     if (!pointer.sourceCommit || !pointer.baseCommit) continue;
+    const symlink = gitSymlinkComponent(repoRoot, pointer.sourceCommit, pointer.fileName);
+    if (symlink.error) {
+      issues.push(`could not inspect SOURCE_COMMIT pointer path: ${pointer.fileName}`);
+      continue;
+    }
+    if (symlink.symlinkPath) {
+      issues.push(`pointer traverses a Git symlink at SOURCE_COMMIT: ${symlink.symlinkPath}`);
+      continue;
+    }
+    if (hasSymlinkComponent(repoRoot, pointer.fileName)) {
+      issues.push(`pointer traverses a symlink path component in the working tree: ${pointer.fileName}`);
+      continue;
+    }
     const blob = gitResult(repoRoot, ['show', `${pointer.sourceCommit}:${pointer.fileName}`]);
     if (blob.status !== 0) {
       issues.push(`pointer missing at SOURCE_COMMIT: ${pointer.fileName}`);

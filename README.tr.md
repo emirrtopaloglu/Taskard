@@ -125,6 +125,7 @@ taskard roles             # 7 rollü kademe matrisini göster
 ```
 
 Hedefleri önizlemek için `taskard clean --dry-run` kullanın. `--all` etkileşimli onay veya `--yes` ister; `--purge`, `.taskard/archive/lanes/` içindeki uygun lane'leri kalıcı olarak siler.
+`taskard verify`, `SOURCE_COMMIT` veya çalışma ağacında sembolik bağlantıdan geçen Context Files işaretçilerini reddeder.
 
 ---
 

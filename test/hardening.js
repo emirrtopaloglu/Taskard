@@ -281,6 +281,53 @@ test('verify rejects pointer context changed between SOURCE_COMMIT and BASE_COMM
   assert.match(result.stdout + result.stderr, /stale context/i);
 }));
 
+test('verify rejects tracked symlink pointers that escape the repository', () => workspace((dir, home) => {
+  initRepo(dir);
+  const outside = path.join(dir, 'outside.js');
+  fs.writeFileSync(outside, 'module.exports = "outside";\n');
+  fs.symlinkSync(outside, path.join(dir, 'src', 'link.js'));
+  git(dir, 'add', 'src/link.js');
+  git(dir, 'commit', '--quiet', '-m', 'add external symlink');
+  const commit = git(dir, 'rev-parse', 'HEAD');
+  const lane = makeVerifiedLane(dir, 'symlink-pointer', commit);
+  const briefPath = path.join(lane, 'brief.md');
+  fs.writeFileSync(briefPath, fs.readFileSync(briefPath, 'utf8').replace('src/sample.js#L1-L1', 'src/link.js#L1-L1'));
+  const result = runCli(dir, home, 'verify');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout + result.stderr, /symlink/i);
+}));
+
+test('verify rejects pointers beneath tracked symlink path components', () => workspace((dir, home) => {
+  initRepo(dir);
+  const outside = path.join(dir, 'outside');
+  fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, 'nested.js'), 'module.exports = "outside";\n');
+  fs.symlinkSync(outside, path.join(dir, 'src', 'bridge'));
+  git(dir, 'add', 'src/bridge');
+  git(dir, 'commit', '--quiet', '-m', 'add external directory symlink');
+  const commit = git(dir, 'rev-parse', 'HEAD');
+  const lane = makeVerifiedLane(dir, 'symlink-component', commit);
+  const briefPath = path.join(lane, 'brief.md');
+  fs.writeFileSync(briefPath, fs.readFileSync(briefPath, 'utf8').replace('src/sample.js#L1-L1', 'src/bridge/nested.js#L1-L1'));
+  const result = runCli(dir, home, 'verify');
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout + result.stderr, /Git symlink at SOURCE_COMMIT/i);
+}));
+
+test('verify permits pointed-file edits committed after BASE_COMMIT', () => workspace((dir, home) => {
+  const base = initRepo(dir);
+  const lane = makeVerifiedLane(dir, 'base-to-head-edit', base);
+  fs.writeFileSync(path.join(dir, 'src', 'sample.js'), 'module.exports = 5;\n');
+  git(dir, 'add', 'src/sample.js');
+  git(dir, 'commit', '--quiet', '-m', 'edit after lane base');
+  const head = git(dir, 'rev-parse', 'HEAD');
+  fs.writeFileSync(path.join(lane, 'report.md'), validReport(lane, base, {
+    overrides: { HEAD_COMMIT: head, HASH: head },
+  }));
+  const result = runCli(dir, home, 'verify');
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+}));
+
 test('verify rejects dependency cycles', () => workspace((dir, home) => {
   const commit = initRepo(dir);
   makeVerifiedLane(dir, 'alpha', commit, { blockedBy: 'beta' });

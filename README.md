@@ -125,6 +125,7 @@ taskard roles             # Display the 7-role tier roster matrix
 ```
 
 Use `taskard clean --dry-run` to preview targets. `--all` requires an interactive confirmation or `--yes`; `--purge` removes eligible lanes already in `.taskard/archive/lanes/`.
+`taskard verify` rejects Context Files pointers that traverse a symlink in `SOURCE_COMMIT` or the working tree.
 
 ---
 
