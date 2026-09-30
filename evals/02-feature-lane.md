@@ -1,6 +1,6 @@
-# Scenario 02 — Feature Lane (Pro Mode Evaluation)
+# Scenario 02 — Bounded Feature Lane
 
-## Prompt (Use Verbatim)
+## Fixed Prompt
 
 ```text
 Task: Add a "Language" toggle option (EN/TR) to the user settings screen.
@@ -8,18 +8,16 @@ Context: settings/ module exists; no heavy i18n infrastructure present; minimal 
 Acceptance: Selection persists in local storage/config; UI displays selected language toggle; typecheck and linter pass cleanly.
 ```
 
-## Expected Behavior
+This is a bounded feature suitable for Pro when no additional security or data-loss risk is discovered. File count is only one input to classification.
 
-1. **Pro Mode Execution:** Creates a point-to-range `brief.md` + `implementer` + scoped `reviewer` gate.
-2. **Review Gate Enforcement:** Reviewer evaluates the diff against standards and returns a structured verdict (`PASS` / `FAIL`).
-3. **Targeted Fix Loop:** If review finds issues, fixes are performed via targeted delegate execution rather than inline main-loop coding.
-4. **Evidence-Backed Report:** Report contains raw linter and typecheck command output proof.
+## Acceptance Checks
 
-## Evaluation Criteria
+- `risk-first-gear` — Choose the gear by risk first; record that time ranges are estimates.
+- `pointer-starting-context` — Brief ranges include `SOURCE_COMMIT` and optional symbol anchors. Inspect callers or dependencies as needed and detect relevant changes through `BASE_COMMIT`.
+- `tdd-red-green` — Record an expected TDD Red as the baseline; count only unsuccessful fix attempts against the 1–2 total attempt budget.
+- `named-review-gate` — A named reviewer records cited findings and a definitive verdict within 15 lines.
+- `report-contract` — The implementation report includes the exact commit, attempts, command, exit status, evidence path/hash, and status fields.
 
-- [ ] Pro mode correctly identified (point-to-range `brief.md` created with `## Context Files` line pointers).
-- [ ] Subagents spawned with explicit named roles (`implementer`, `reviewer`).
-- [ ] Implementer applies native TDD and provides command evidence in `report.md`.
-- [ ] Reviewer provides `file:line` cited findings with a definitive verdict in `review.md`.
-- [ ] Fix cycle does not violate the 2-Strike Circuit Breaker.
-- [ ] Merge and live acceptance decision is left to the human.
+## Run Artifact
+
+Record the harness/model/version, repository revision, repeated-run index, criterion results, and evidence hashes using [`evals/README.md`](README.md). Do not treat a saved report as proof that its command ran.

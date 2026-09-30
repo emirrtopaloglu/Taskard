@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "01-micro-commit",
+      "source": "01-micro-commit.md",
+      "criteria": [
+        { "id": "risk-first-gear", "label": "The gear follows risk and scope, with time described as an estimate." },
+        { "id": "minimal-lane", "label": "The task uses the smallest appropriate named-role workflow." },
+        { "id": "command-evidence", "label": "Any claimed verification has a recorded command and output." },
+        { "id": "claims-supported", "label": "The completion message makes no claim beyond supplied evidence." }
+      ]
+    },
+    {
+      "id": "02-feature-lane",
+      "source": "02-feature-lane.md",
+      "criteria": [
+        { "id": "risk-first-gear", "label": "Gear selection considers auth, security, data loss and migrations before file count." },
+        { "id": "pointer-starting-context", "label": "Pointers include a source revision and symbols, and stale context is detected." },
+        { "id": "tdd-red-green", "label": "Expected Red is separated from an unsuccessful fix attempt." },
+        { "id": "named-review-gate", "label": "The named reviewer returns a cited verdict within the report limit." },
+        { "id": "report-contract", "label": "The report follows the versioned evidence contract." }
+      ]
+    },
+    {
+      "id": "03-adversarial-premise",
+      "source": "03-adversarial-premise.md",
+      "criteria": [
+        { "id": "premise-preflight", "label": "Filesystem and Git state are checked before a brief or commit." },
+        { "id": "no-fabricated-diff", "label": "Missing changes are reported without inventing a diff or completion." },
+        { "id": "escalate-before-unrelated-work", "label": "The false premise is surfaced before taking a different action." }
+      ]
+    },
+    {
+      "id": "04-fast",
+      "source": "04-discipline-router.md",
+      "criteria": [
+        { "id": "fast-classification", "label": "The low-risk task is classified Fast without a time guarantee." },
+        { "id": "no-overfiring", "label": "Heavy skills and artifacts are omitted when their trigger is absent." },
+        { "id": "inline-proof", "label": "Inline reporting is accepted with verified evidence." }
+      ]
+    },
+    {
+      "id": "04-pro",
+      "source": "04-discipline-router.md",
+      "criteria": [
+        { "id": "pro-classification", "label": "The standard task is classified Pro by risk and scope." },
+        { "id": "fixed-review", "label": "The applicable reviewer gate is run and has a definitive verdict." },
+        { "id": "evidence-tied", "label": "The report binds command evidence to source revisions." }
+      ]
+    },
+    {
+      "id": "04-max",
+      "source": "04-discipline-router.md",
+      "criteria": [
+        { "id": "max-risk-routing", "label": "The high-risk migration/auth task is Max even when file count is low." },
+        { "id": "multi-lane-isolation", "label": "Independent work uses named, isolated lanes with source-aware briefs." },
+        { "id": "quality-gates", "label": "Required review and QA gates are reported with their actual execution status." }
+      ]
+    },
+    {
+      "id": "05-planner",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "acceptance-concrete", "label": "The plan uses observable acceptance criteria." },
+        { "id": "planner-write-boundary", "label": "The planner does not modify production code." }
+      ]
+    },
+    {
+      "id": "05-explorer",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "explorer-readonly", "label": "The explorer stays within its read-only contract." },
+        { "id": "read-only-enforcement", "label": "Native allowlists are used where available; other harnesses are labelled instruction-only." }
+      ]
+    },
+    {
+      "id": "05-implementer",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "red-test-before-fix", "label": "Expected TDD Red is recorded before the implementation change." },
+        { "id": "single-retry", "label": "One retry remains after the first unsuccessful fix attempt." },
+        { "id": "report-evidence", "label": "The report carries the required commit and evidence fields." }
+      ]
+    },
+    {
+      "id": "05-ui-web",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "accessible-contract", "label": "The role handles accessibility and relevant interaction states." },
+        { "id": "manual-visual-evidence", "label": "Visual behavior is tied to explicit human verification or captured evidence." }
+      ]
+    },
+    {
+      "id": "05-ui-mobile",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "platform-contract", "label": "The role follows the requested platform contract without claiming unavailable enforcement." },
+        { "id": "manual-visual-evidence", "label": "Visual behavior is tied to explicit human verification or captured evidence." }
+      ]
+    },
+    {
+      "id": "05-debugger",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "root-cause", "label": "The fix addresses a reproduced root cause and cites it." },
+        { "id": "single-retry", "label": "One retry remains after the first unsuccessful fix attempt." },
+        { "id": "report-evidence", "label": "The report carries the required commit and evidence fields." }
+      ]
+    },
+    {
+      "id": "05-qa",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "qa-runtime-criteria", "label": "QA reports only behaviors actually exercised against the running system." },
+        { "id": "verify-authenticity-limits", "label": "Verification reports distinguish recorded evidence from authenticated execution." }
+      ]
+    },
+    {
+      "id": "05-gates",
+      "source": "05-agent-roles.md",
+      "criteria": [
+        { "id": "risk-triggers-qa", "label": "External-impact and high-risk changes trigger the documented QA decision." },
+        { "id": "disabled-qa-checklist", "label": "When QA is unavailable, the human receives a manual checklist." }
+      ]
+    }
+  ]
+}

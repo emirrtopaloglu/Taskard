@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "harnesses": {
+    "claude-code": {
+      "support": "tested",
+      "installScope": ["user", "project"],
+      "capabilities": {
+        "subagents": "native",
+        "permissionProfiles": "native",
+        "modelInheritance": "provider-default"
+      },
+      "readOnlyRoles": ["reviewer", "explorer"],
+      "models": {
+        "source": "role-config-or-provider-default",
+        "aliases": {
+          "sonnet": "sonnet",
+          "opus": "opus",
+          "haiku": "haiku"
+        }
+      },
+      "readOnly": {
+        "nativeField": "tools",
+        "allow": ["Read", "Grep", "Glob", "WebFetch", "WebSearch"]
+      }
+    },
+    "opencode": {
+      "support": "tested",
+      "installScope": ["user", "project"],
+      "capabilities": {
+        "subagents": "native",
+        "permissionProfiles": "native",
+        "modelInheritance": "provider-default"
+      },
+      "readOnlyRoles": ["reviewer", "explorer"],
+      "agentFrontmatter": {
+        "mode": "subagent"
+      },
+      "models": {
+        "configTable": "harness_preferences.models.opencode",
+        "source": "selected-provider",
+        "aliases": {}
+      },
+      "readOnly": {
+        "nativeField": "permission",
+        "rules": {
+          "*": "deny",
+          "read": "allow",
+          "grep": "allow",
+          "glob": "allow",
+          "list": "allow",
+          "webfetch": "allow",
+          "websearch": "allow"
+        }
+      }
+    },
+    "codex": {
+      "support": "partial",
+      "installScope": ["user", "project"],
+      "capabilities": {
+        "subagents": "recipe",
+        "permissionProfiles": "recipe",
+        "modelInheritance": "provider-default"
+      },
+      "models": {
+        "source": "session-or-provider-default",
+        "aliases": {}
+      },
+      "readOnly": {
+        "mode": "instruction-only"
+      }
+    },
+    "antigravity": {
+      "support": "recipe",
+      "installScope": ["project"],
+      "capabilities": {
+        "subagents": "recipe",
+        "permissionProfiles": "recipe",
+        "modelInheritance": "provider-default"
+      },
+      "models": {
+        "source": "provider-default",
+        "aliases": {}
+      },
+      "readOnly": {
+        "mode": "instruction-only"
+      }
+    },
+    "cursor": {
+      "support": "recipe",
+      "installScope": ["project"],
+      "capabilities": {
+        "subagents": "recipe",
+        "permissionProfiles": "recipe",
+        "modelInheritance": "provider-default"
+      },
+      "models": {
+        "source": "provider-default",
+        "aliases": {}
+      },
+      "readOnly": {
+        "mode": "instruction-only"
+      }
+    }
+  }
+}

@@ -6,7 +6,10 @@ Thumbs.db
 
 # Taskard Runtime & Local Scratchpad
 .taskard/
-.scratch/
+.scratch/*
+!.scratch/taskard/
+.scratch/taskard/*
+!.scratch/taskard/map.md
 .opencode/
 
 # Node & Dependencies

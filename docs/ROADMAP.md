@@ -1,29 +1,28 @@
 # Taskard Roadmap
 
-Benchmark Evidence: Multi-step full-stack A/B benchmark (2026-08-24) — Taskard $12.62 vs Baseline $32.39 (-61% cost), delivered faster with zero context rot.
+## v0.1.3 — Current Published Version
 
----
+The package version in `package.json` is **0.1.3**. This release contains the zero-dependency initializer and CLI, seven named role definitions, Fast/Pro/Max convention, templates, and local validation suite. The conventions are read by agents; Taskard does not run a runtime orchestrator.
 
-## 🚀 v0.1.0 (Initial Public Release — Current)
+No reproducible raw benchmark runs are published. Earlier savings figures have been removed because the baseline, run artifacts, and methodology were not available for verification.
 
-- [x] **Zero-Runtime Core Doctrine:** Pure convention package with 3-Speed Gear transmission (⚡ Fast / 🚀 Pro / 🏛️ Max), point-to-range brief standards, and 2-Strike Circuit Breaker.
-- [x] **7-Role Roster:** Explicitly named agent definitions (`planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`) with strict YAML frontmatter and model tiering.
-- [x] **Zero-Dependency CLI & Single-Line Install:** `npx taskard init` zero-dependency initializer, diagnostic & management tools (`doctor`, `config`, `lanes`, `clean`) + `install.sh` remote curl execution fallback.
-- [x] **CI/CD & Automated Verification:** Multi-OS and Node (18/20/22) GitHub Actions CI, role contract validators, and comprehensive test suite (`npm test`).
-- [x] **Evaluation Suite (`evals/`):** 5 benchmark scenarios covering micro-commits, feature lanes, adversarial premise verification, discipline routing, and role behaviors.
-- [x] **Legal & Community Foundation:** MIT License, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SECURITY.md`.
+## Unreleased Hardening Work
 
----
+The following changes are being prepared for a later release; they are not part of the published v0.1.3 package until released:
 
-## 🔮 Next: v0.2.0 (Planned)
+- Risk-first gear selection, source-aware briefs, bounded fix attempts, and consistent report metadata.
+- Capability-based harness profile data and tested/partial/recipe support labels. “Tested” means local installer/profile checks, not live agent behavior.
+- A standard-library artifact scorer for fixed scenarios. It validates supplied run metadata and evidence hashes, scores recorded checks, and reports paired metrics only after at least three repeats. It does not start paid harness runs.
+- Current benchmark status: no fresh live runs or comparable historical artifacts have been supplied.
 
-- [ ] **Cross-Harness Adapter Expansion:** Expanded automation recipes and verification for additional terminal environments (Cursor background tasks, Antigravity CLI).
-- [ ] **Automated Limit-Aware Routing:** Automatic harness fallback when token rate limits are reached (Claude -> Codex -> OpenCode).
-- [ ] **Extended Memory Distillation:** Automated rolling distillation of session handoffs into persistent workspace context.
+## Planned
 
----
+- Improve harness-specific install recipes as their formats are tested.
+- Add optional memory handoff conventions when a reproducible use case is available.
+- Expand scenario coverage as new role or workflow contracts are introduced.
 
-## 🌌 Horizon (Future Milestones)
+## Horizon
 
-- [ ] **GUI Visualizer / Observer Mode:** Lightweight visual execution DAG inspector (separate zero-dependency package).
-- [ ] **GitHub Issues / Project Board Sync:** Bi-directional sync between Taskard lane states and GitHub issue boards.
+- A separate visual execution inspector, if users request one.
+- Project-board synchronization, if users request it.
+- Automatic rate-limit fallback remains unimplemented; model and harness selection stay with the user.

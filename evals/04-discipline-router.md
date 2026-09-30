@@ -1,45 +1,37 @@
-# Scenario 04 — Discipline Router & Skill Precision
+# Scenario 04 — Gear and Skill Routing
 
-## Objective
+This scenario has three independent run artifacts so each fixed prompt, harness/model version, and set of checks stays reproducible.
 
-Verify that speed gear classification functions accurately and that external skills load ONLY when specific trigger conditions are met (zero skill over-firing).
-
----
-
-## Three Separate Evaluation Runs
-
-### A. Fast Task (⚡ Fast Gear -> Zero Over-Firing)
+## A. Fast Task — `04-fast`
 
 ```text
 Run this task through the Taskard workflow: Add a Node >=18 requirement line to README.md and commit.
 ```
 
-**Checks:**
-- [ ] Classified as Fast gear.
-- [ ] Heavy discipline skills (`brainstorming`, `grilling`, `wayfinder`) did NOT fire.
-- [ ] Closed with single implementer, diff validation, and command evidence.
+- `fast-classification` — Select Fast because the change is low-risk and isolated; duration is only an estimate.
+- `no-overfiring` — Do not load grilling, brainstorming, or wayfinder without a trigger.
+- `inline-proof` — Use a concise inline report when sufficient; include only verified evidence.
 
-### B. Standard Feature (🚀 Pro Gear -> Targeted Review Gate)
+## B. Standard Feature — `04-pro`
 
 ```text
 Run this task through the Taskard workflow: Add persistent language selection toggle (EN/TR) to user settings.
 ```
 
-**Checks:**
-- [ ] Classified as Pro gear; created point-to-range `brief.md`.
-- [ ] Implementer executed native Red-Green-Refactor loop.
-- [ ] Reviewer gate evaluated diff with `review.md` verdict.
-- [ ] Updates provided as Humanish telegraph messages.
+- `pro-classification` — Select Pro based on risk and scope, then create a source-aware brief.
+- `fixed-review` — Run the named reviewer gate and record its actual verdict.
+- `evidence-tied` — Bind evidence to the base/head commits and label missing checks unverified.
 
-### C. Complex Multi-Lane Feature (🏛️ Max Gear -> DAG & Worktrees)
+## C. High-Risk Feature — `04-max`
 
 ```text
 Run this task through the Taskard workflow: Redesign authentication module (independent backend and frontend lanes), including database schema migration.
 ```
 
-**Checks:**
-- [ ] Classified as Max gear with explicit architectural justification.
-- [ ] Generated visual execution DAG diagram.
-- [ ] Independent lanes isolated via Git worktrees.
-- [ ] 2-Strike budget declared in briefs.
-- [ ] Concluded with QA validation and Opus final review.
+- `max-risk-routing` — Choose Max because authentication and migration risk outrank file count.
+- `multi-lane-isolation` — Use named lanes and isolate independent changes when worktrees are available.
+- `quality-gates` — Report review and QA as executed, unavailable, or pending; do not imply a gate ran when it did not.
+
+## Scoring
+
+Score A, B, and C separately with the fixed criteria in [`scenarios.json`](scenarios.json). Do not require a visual DAG; a concise dependency description is enough when it communicates the actual lane relationships.

@@ -1,42 +1,37 @@
+# Agent-read preferences. Taskard does not mutate this file at runtime.
+# See harness-profiles.json for capability and model-inheritance declarations.
+
 [defaults]
-permission_mode = "bypassPermissions"
-default_mode = "pro"        # "fast" | "pro" (default) | "max"
+permission_mode = "bypassPermissions" # Harness-specific preference; not a cross-harness safety guarantee.
+default_mode = "pro"                  # "fast" | "pro" | "max"
 report_max_lines = 15
-max_attempts = 2            # 2-Strike rule: max 1 retry attempt, halt on 2nd failure
-# budget_minutes = 30       # optional: time ceiling per lane (recommended in max mode)
+max_attempts = 2                       # Total fix attempts: first attempt plus at most one retry.
+# budget_minutes = 30                  # Optional estimate ceiling for a lane.
 
 [roles]
-# Pro Mode Defaults (Tier 2 Fast & Balanced):
+# These names are model aliases, not fixed provider model IDs.
 implementer = "sonnet"
 ui-developer = "sonnet"
-reviewer = "sonnet"         # Scoped mini-review for Pro mode
-debugger = "sonnet"         # Targeted bug fixing for Pro mode
-
-# Max Mode Heavy Brains (Tier 1 Strategy, Architecture & Deep Security):
+reviewer = "sonnet"
+debugger = "sonnet"
 planner = "opus"
-reviewer_max = "opus"       # Deep architectural & security review for Max mode
-debugger_max = "opus"       # Complex root-cause diagnosis for Max mode
-
-# Tier 3: Light & Fast (Exploration & Verification):
-# Note: Model names vary by harness; Tier 3 is the fastest/lightest model in that harness.
+reviewer_max = "opus"
+debugger_max = "opus"
 explorer = "haiku"
 qa-tester = "haiku"
 
-# Disabled roles never receive lanes; work falls back to nearest capable role.
-# Project-level config (.taskard/config.toml) overrides global; session prompts override both.
+# Disabled roles are not assigned lanes; choose a capable named role instead.
 disabled = []
 
 [qa]
-# QA role headless testing capabilities (default OFF)
-# Activated when configured here or requested in session prompt (e.g. "QA verify in browser")
+# QA runs only when enabled and the required environment is available.
 enabled = false
-headless_browser = false       # UI verification with agent-browser or playwright-cli
-run_integration_tests = false  # Test suite execution (npm test, pytest, etc.)
-auto_verify_endpoints = false  # HTTP API response verification via curl
+headless_browser = false
+run_integration_tests = false
+auto_verify_endpoints = false
 
 [harness_preferences]
-# Fallback preference order when rate limits occur (optional):
-# implementer = ["claude", "codex", "opencode"]
+# Manual preferences only; Taskard performs no automatic or paid harness fallback.
 
 # Optional Claude Code role model aliases:
 [harness_preferences.models.claude_code]
@@ -48,4 +43,5 @@ auto_verify_endpoints = false  # HTTP API response verification via curl
 # reviewer = "provider/model"
 
 [risky_operations]
+# Agent-read prompts, not runtime-enforced blocks. Follow the active harness permissions.
 patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]

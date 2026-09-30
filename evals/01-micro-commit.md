@@ -1,26 +1,21 @@
-# Scenario 01 — Micro Commit (Fast Mode Evaluation)
+# Scenario 01 — Low-Risk Documentation Change
 
-## Prompt (Use Verbatim)
+## Fixed Prompt
 
 ```text
 Task: Add a Node.js version requirement (>=18) to the installation section in README.md.
 Acceptance: Single file, single commit with message: "docs: add node version requirement"
 ```
 
-## Expected Behavior
+This is a deliberately low-risk, isolated documentation task. It should select Fast based on risk and scope; the old `<2 min` target is not a guarantee or acceptance condition.
 
-1. **Fast Mode Classification:** Does NOT generate heavy `spec/` or `tasks/` documents.
-2. **Single Delegate:** Spawns a single `implementer` with a concise report.
-3. **Instant Validation:** Since scope is a single file documentation edit, the main loop validates the diff directly without a heavy review gate.
-4. **Minimal Artifact Footprint:** Zero unnecessary runtime artifacts in `.taskard/`.
+## Acceptance Checks
 
-## Evaluation Criteria
+- `risk-first-gear` — Select Fast for the low-risk one-file change and present any duration as an estimate.
+- `minimal-lane` — Use one named `implementer`; do not create planning ceremony or unnecessary `.taskard/` files.
+- `command-evidence` — Verify the diff and commit state. If a command is claimed, record its exact command and output.
+- `claims-supported` — Report only checks actually completed. An inline report is acceptable; `report.md` is optional for Fast.
 
-- [ ] Fast mode correctly classified (no `spec/` or `tasks/` boilerplate generated).
-- [ ] Subagent launched under explicit named role (`implementer`).
-- [ ] Lane ID includes a 4-character random suffix if lane directory is created (`<ts>-<slug>-<suffix>`).
-- [ ] Delegate response is a single Humanish telegraph sentence pointing to `report.md`.
-- [ ] Diff and evidence verified directly by the main loop.
-- [ ] No skill over-firing (did not trigger `grilling`, `brainstorming`, or `wayfinder` for a trivial edit).
-- [ ] Output includes no unverified claims.
-- [ ] Concludes with a clean manual verification checklist for the human.
+## Run Artifact
+
+Record this run using the schema and evidence rules in [`README.md`](README.md). The scenario digest binds the result to the prompt, fixed rubric, and source revision.

@@ -1,12 +1,11 @@
 <!-- taskard:start -->
-<!-- taskard:v2 -->
+<!-- taskard:v3 -->
 ## Taskard
-- Model routing: Pro mode uses sonnet for reviewer/debugger; Max mode uses opus; session prompts override both (~/.taskard/config.toml).
-- Subagents execute only under explicit named roles (implementer, reviewer, ui-developer, qa-tester...) — anonymous agents are forbidden.
-- Implementer operates with native TDD (Red-Green-Refactor) and command verification without external skill dependencies.
-- Point-to-range standard: never copy code blocks into briefs; specify target file paths and line ranges (file#L10-L40); delegates read only the specified lines.
-- Classify speed gear at start: 1-file fix uses Fast (<2m, zero overhead); 2-4 files use Pro (single brief + sonnet mini-review); complex work uses Max.
-- Subagents default to bypassPermissions; humans own three gates: plan approval, pre-merge verification, and risky_operations.
-- Never mutate config files at runtime; 2-Strike rule halts execution on 2nd error and presents 3 options to human.
-- Telegraph output is Humanish: full sentences, clear meaning, no raw status code dumps.
+- Select Fast, Pro, or Max by risk first; auth, security, data loss, destructive cleanup, and migrations outrank file count. Time ranges are estimates; Fast may report inline.
+- Delegate only to named roles. Reviewer and explorer receive native read-only profiles where supported; other harnesses enforce role boundaries through instructions only.
+- Treat point-to-range pointers as starting context. Check them at SOURCE_COMMIT, detect relevant changes through BASE_COMMIT, and read callers or dependencies when needed.
+- Expected TDD Red is a baseline, not a failed fix. ATTEMPT_BUDGET is 1 or 2 total fix attempts, leaving at most one retry.
+- Use the 10-field commit/evidence report contract. Report hashes bind recorded files; they do not prove commands ran. Missing freshness metadata fails verification.
+- Configuration and harness profiles are agent-read data; never mutate them at runtime. Session model overrides take precedence.
+- Do not write private dogfooding project names in docs, examples, or tests. Do not vendor external skills.
 <!-- taskard:end -->

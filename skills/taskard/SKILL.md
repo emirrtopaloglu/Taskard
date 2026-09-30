@@ -1,107 +1,99 @@
 ---
 name: taskard
-description: Multi-harness agent orchestration convention. Classifies tasks (Fast/Pro/Max), writes point-to-range briefs, delegates to named subagents, and operates quality gates.
+description: Multi-harness agent orchestration convention. Selects a risk-appropriate gear, writes source-aware briefs, delegates to named roles, and records evidence.
 ---
 
 # Taskard
 
-Execute tasks following the Taskard orchestration workflow. The main agent coordinates and judges; it never writes code directly or runs tests. Its legitimate action is to delegate work to named roles.
+Taskard is a set of agent-read conventions, templates, and install-time integrations. The selected harness runs its own agents and tools. Taskard's CLI can install files and check local package state; it does not orchestrate agents at runtime or prove that a reported command ran.
 
-## 1. Speed Gear Selection (3-Speed Transmission)
+## 1. Choose a Gear by Risk First
 
-Classify the task complexity at the start of execution. Session instructions (e.g., *"run this in fast mode"*, *"use max mode"*) take immediate precedence.
+Choose the lowest gear that still covers the task's risk, review needs, and scope. File count and estimated time help size the work, but never lower the gear required by authentication, security, data loss, destructive cleanup, or migrations. A user-requested session gear takes precedence; state any risk that the requested gear leaves uncovered and preserve required data-safety checks.
 
-| Mode | Duration | Scope & Ceremony Level |
+| Gear | Use when | Typical workflow |
 |---|---|---|
-| ⚡ **FAST** | **< 1-2 min** | **Aggressive Default / Zero Overhead:** 1 file, typo, CSS/styling, single function fix, config. Writes zero files to `.taskard/`. Spawns a single `implementer`, produces diff, main agent validates and presents immediately. No separate reviewer subagent. |
-| 🚀 **PRO** *(Default)* | **5-10 min** | **Lightweight Documentation:** 2–4 files, standard features, new components, endpoints, small refactors. No grilling or heavy specification. Single `brief.md` + single `implementer` + single `reviewer` (mini-review) gate. |
-| 🏛️ **MAX** *(Graph)* | **15-30 min** | **Full Architectural Rigor:** Complex architecture, ≥2 parallel lanes (git worktrees), database migrations, authentication. Grilling/Product decisions (`grill-with-docs`/`grill-me`) → Spec (`context/specs/`) → Tasks (`tasks/`) → Parallel Lane DAG → QA → Opus Final Review. |
+| ⚡ **Fast** | A low-risk, isolated change has a clear acceptance check. | One named `implementer`; verify the diff directly. A concise inline report is enough; no `report.md` is required. |
+| 🚀 **Pro** *(default)* | A bounded feature or fix needs a brief and focused review. | One source-aware brief, named `implementer`, and scoped `reviewer`; add QA only when impact requires it. |
+| 🏛️ **Max** | Risk, cross-boundary work, parallel dependencies, or migration needs several gates. | Record decisions, split independent named-role lanes, use worktrees where available, then review and run QA. |
 
-> **Ratchet Rule:** If scope expands during Fast or Pro (>4 files, unexpected dependencies), ratchet the workflow up to the next gear immediately.
+Duration ranges are planning estimates, not service levels or completion guarantees. If a Fast or Pro task reveals higher risk or new dependencies, reclassify it before continuing.
 
-## 2. Discipline Router (Pull-Based)
+## 2. Name Roles and Respect Their Boundaries
 
-If `using-superpowers` is present in the environment, start with its routing; otherwise, consult this table. **Do not load skills unless the specific trigger condition is met.** A missing skill does not block execution; core role contracts govern behavior.
+Every delegate uses one of the named roles in `agents/`; every role definition has `name`, `model`, `color`, and `description` frontmatter. Use `planner` for plans, `implementer` for changes, `reviewer` for read-only review, `debugger` for root-cause fixes, `ui-developer` for interface changes, `explorer` for read-only reconnaissance, and `qa-tester` for running-system checks.
 
-| Phase / Condition | Skill | Function |
+`reviewer` and `explorer` receive native read-only tool profiles where the harness supports them. Other harnesses enforce those limits only through the role instructions. `planner` can write planning artifacts, and `qa-tester` may run commands with side effects; neither has a claim of path-level read-only enforcement. Never imply that prompt wording alone is a technical permission boundary.
+
+## 3. Model and Harness Profiles
+
+`templates/harness-profiles.json` is capability data, not runtime code. Its support values mean:
+
+- **tested** — deterministic package installer or fixture checks cover the listed integration; this does not mean live agent behavior was tested.
+- **partial** — Taskard installs or translates part of the harness configuration; untested behavior is stated explicitly.
+- **recipe** — documentation explains how to use Taskard conventions with the harness; no native integration is claimed.
+
+Profiles describe model inheritance and native permissions without pinning provider model IDs. Agent defaults and configuration are fallbacks; a session instruction takes precedence. Optional OpenCode role models can be set under `[harness_preferences.models.opencode]` using the provider's full `provider/model` value. Without an override, OpenCode uses the selected provider's model. Configuration is agent-read data and is never mutated at runtime. Harness fallback is a human choice, not automatic paid routing.
+
+## 4. Source-Aware Briefs
+
+For Pro and Max, write a brief with the required metadata and acceptance criteria. A Context Files entry uses `path#Lstart-Lend` and may add a symbol anchor, for example `src/auth.ts#L10-L32 :: validateSession`. Pointers are starting context, not a ban on reading callers, imports, tests, or dependencies. Expand the scope when needed and record why.
+
+Each brief records:
+
+```text
+ROLE: <planner|implementer|reviewer|debugger|ui-developer|explorer|qa-tester>
+GEAR: FAST|PRO|MAX
+ATTEMPT_BUDGET: 1|2
+BASE_COMMIT: <40-character commit SHA>
+SOURCE_COMMIT: <40-character commit SHA used for pointers>
+BLOCKED_BY: NONE|<comma-separated lane IDs>
+REQUIRES_REVIEW: YES|NO
+REQUIRES_QA: YES|NO
+```
+
+Before using pointers, check them at `SOURCE_COMMIT`. If relevant context changed from `SOURCE_COMMIT` to `BASE_COMMIT`, reread current callers and dependencies and refresh the brief or report it as stale. Changes from `BASE_COMMIT` to `HEAD_COMMIT` are the lane's intentional work.
+
+## 5. Attempts and Verification
+
+For implementation work, run a focused failing check before the fix when the change has consequential logic. The expected TDD **Red** result is a baseline observation; it does not count as a failed fix attempt. `ATTEMPT_BUDGET` is the total number of fix attempts, from 1 to 2. After the first unsuccessful fix attempt, one retry may remain. If that retry is unsuccessful, stop the lane and report the blocker and options; do not hide the failure by changing the acceptance criterion.
+
+Implementer, debugger, and UI-developer reports use this contract, in this order, within 15 lines:
+
+```text
+STATUS: DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT
+DIFF_SUMMARY: <changed files and line counts>
+BASE_COMMIT: <40-character SHA>
+HEAD_COMMIT: <40-character SHA>
+ATTEMPTS: <integer within ATTEMPT_BUDGET>
+EVIDENCE_COMMAND: <exact command or NONE>
+EVIDENCE_EXIT_STATUS: <integer or NONE>
+EVIDENCE_FILE: <relative path or NONE>
+EVIDENCE_SHA256: <64-character SHA-256 or NONE>
+HASH: <same as HEAD_COMMIT, or N/A>
+```
+
+Fast work may provide the equivalent fields inline instead of writing a file. Review reports and verification reports are also limited to 15 lines and end with an explicit verdict or status. `taskard verify [--global|-g]` checks live lane metadata, source/commit freshness, report/evidence structure and hashes, dependencies, and declared review/QA gates. It is read-only and does not execute `EVIDENCE_COMMAND` or authenticate an agent claim. A successful empty check means no live lanes were found, not that any work ran. Legacy reports remain displayable, but missing required metadata fails verification. See [Role and Evidence Contracts](references/roles-and-evidence.md) for the exact checks.
+
+## 6. Discipline Routing
+
+Load external skills only when their trigger applies and the skill is installed. This table is guidance; it does not make a missing skill a blocker.
+
+| Phase / condition | Skill | Function |
 |---|---|---|
-| Workflow start | `using-superpowers` | Skill router (if available) |
-| Pre-spec exploration (Max) | `brainstorming` | Clarify intent and requirements |
-| Alignment & decisions (Max) | `grilling` + `domain-modeling` | Question assumptions and terms for high-risk work |
-| Product decision round | `grill-with-docs` / `grill-me` | Resolve current vs target state differences before locking spec |
-| Ambiguous multi-session scope | `wayfinder` | Multi-session scope mapping |
-| Architectural seam design | `codebase-design` | Module boundary and interface design |
-| Plan documentation (Max) | `writing-plans` | Extract actionable briefs from specifications |
-| Parallel lanes (Max) | `dispatching-parallel-agents` + `using-git-worktrees` | Isolate ≥2 independent worktree lanes |
-| Merge conflict | `resolving-merge-conflicts` | Worktree merge conflict resolution |
-| Review feedback cycle | `receiving-code-review` | Verify and apply review findings |
-| Blocker diagnosis (2nd failure) | `systematic-debugging` | Root-cause analysis (Circuit Breaker) |
-| Completion integration | `finishing-a-development-branch` | Post-green merge options |
+| Workflow start, if available | `using-superpowers` | Skill routing |
+| Max scope is unclear | `brainstorming`, `grilling`, `domain-modeling` | Resolve intent and terms before locking a spec |
+| Plan or lane briefs are needed | `writing-plans` | Produce actionable, verifiable briefs |
+| Independent worktree lanes are needed | `dispatching-parallel-agents`, `using-git-worktrees` | Coordinate isolated work |
+| Review feedback arrives | `receiving-code-review` | Verify findings before applying them |
+| Root cause is unclear | `systematic-debugging`, `diagnosing-bugs` | Trace the defect through callers |
+| Branch is ready for a human decision | `finishing-a-development-branch` | Present completion options |
 
-*(Note: TDD and verification contracts are embedded directly into the `implementer` role; external skill loading is not required.)*
-
-## 3. Core Iron Laws
-
-1. **Never mutate configuration files at runtime.**
-2. **The main agent never writes code directly.**
-3. **Anonymous subagents are forbidden** (every delegate must run under an explicit named role).
-4. **Report verifiable evidence, not assertions of success.**
-5. **2-Strike Circuit Breaker:** Maximum 1 retry attempt per lane; on the 2nd error, execution HALTS and presents 3 clear options: (1) Technical clarification, (2) Alternative path, (3) Pass control to human.
-6. **Dangerous operations require explicit human approval** (per config `risky_operations`).
-
-## 4. Self-Priming Brief & Point-to-Range Standard
-
-In Pro and Max modes, create `.taskard/lanes/<ts>-<slug>-<suffix>/brief.md` for each lane (suffix: 4 random characters, e.g., `-a3f2`).
-
-- **Verify Premises Before Writing:** Inspect assumptions with `ls` or `grep` before writing briefs. If a premise is invalid, clarify with the user.
-- **Point-to-Range Rule:**
-  1. Never paste raw code or function bodies into briefs.
-  2. Provide only target file paths and line ranges: `## Context Files: src/auth/session.ts#L40-L65`.
-  3. The delegate reads only the specified line slices on startup (`view_file` StartLine/EndLine).
-- **Brief Structure:**
-  - `## Context Files` (Mandatory): Target code line ranges and prerequisite lane report paths.
-  - `## Acceptance Criteria`: Concrete, verifiable requirements.
-  - `## Non-Goals`: Areas outside the lane scope.
-  - `## Disciplines`: `Budget: max 1 retry (2-Strike) · Native TDD & Evidence Required`.
-
-## 5. Tiered Model Matrix (Smart Tiering)
-
-| Role | Pro Mode (Default) | Max Mode (Architectural Rigor) |
-|---|:---:|:---:|
-| **`planner`** | *(Skipped)* | **`opus`** |
-| **`reviewer`** | **`sonnet`** *(Focused mini-review)* | **`opus`** *(Deep architecture & security)* |
-| **`debugger`** | **`sonnet`** *(Targeted fix)* | **`opus`** *(Complex root-cause)* |
-| **`implementer`** | **`sonnet`** | **`sonnet`** |
-| **`ui-developer`** | **`sonnet`** | **`sonnet`** |
-| **`explorer`** | **`haiku`** *(Fast scan)* | **`haiku`** |
-| **`qa-tester`** | **`haiku`** | **`haiku`** |
-
-*Precedence:* `agents/*.md` < `~/.taskard/config.toml` < `.taskard/config.toml` < Session Prompts.
-
-## 6. Quality Gates & Report Contract
-
-- **Report Gate (`report.md` - ≤15 lines):**
-  ```
-  STATUS: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-  DIFF_SUMMARY: Changed files (+X, -Y)
-  EVIDENCE: Executed test command and raw output
-  HASH: Git commit hash (if created)
-  ```
-  *If all four fields are not present in exact order, reject the report and request one formatting correction (does not count against the 2-Strike budget).*
-
-- **Review Gate:**
-  - **Fast:** No separate subagent; main orchestrator validates diff directly.
-  - **Pro:** Scoped `reviewer` (`sonnet` with ≤5 lines of findings, standards + diff).
-  - **Max:** `reviewer` (`opus`) + `qa-tester` on external impact changes + `final review`.
-
-- **Telegraph Output & Close:**
-  - Provide single-sentence Humanish progress updates at each stage (do not dump raw status codes into chat).
-  - At conclusion, present a plain-language **"Manual Verification Checklist"** for the human.
-  - The human always owns the final merge and live verification decision.
-
----
+The implementer role contains the minimum TDD and evidence rules; no external testing skill is required to follow them.
 
 ## Disclosed References
+
 - [Project Setup Guide](references/project-setup.md)
 - [Memory & Handoff Format](references/memory-and-handoff.md)
-- [Cross-Harness Headless Execution](references/cross-harness.md)
+- [Cross-Harness Support](references/cross-harness.md)
+- [Role and Evidence Contracts](references/roles-and-evidence.md)

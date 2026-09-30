@@ -1,76 +1,48 @@
 # Contributing to Taskard
 
-Thank you for your interest in contributing to **Taskard**! Taskard is a zero-runtime multi-agent orchestration convention package designed for developer CLI harnesses (Claude Code, OpenCode, Codex, Antigravity, Cursor).
+Taskard is a set of agent workflow conventions with a small install and diagnostic CLI for developer harnesses. It does not run agents in a Taskard orchestration service.
 
----
+## Project Rules
 
-## 🏛️ Core Principles & Iron Laws
+1. **Keep the core declarative.** Role contracts, skills, configuration, and harness profiles live in `skills/`, `agents/`, and `templates/`. Do not add a runtime orchestration service.
+2. **Use named roles.** Every `agents/<name>.md` frontmatter has `name`, `model`, `color`, and `description`. Model names are defaults or aliases; harness availability and session overrides take precedence.
+3. **Treat pointers as starting context.** Briefs use `path#Lstart-Lend`, record `SOURCE_COMMIT` and `BASE_COMMIT`, and do not paste source code. Delegates may read callers, imports, tests, or dependencies and should state why scope expanded. Detect relevant changes from source to base.
+4. **Do not vendor external skills.** Reference optional upstream skills in `docs/dependencies.md`; resolution is an explicit global install option, not a default test or install side effect.
+5. **Keep private project names and credentials out of docs, tests, and examples.** Use generic terms such as “test project.”
+6. **Keep documentation synchronized.** Changes to skills, roles, config, profiles, or workflow must update both `README.md` and `README.tr.md`.
+7. **Keep claims tied to evidence.** Harness support labels describe local installer/profile checks, partial integration, or a recipe. They do not imply live agent behavior. Eval fixtures are scorer self-checks, not benchmark runs.
+8. **Choose gears by risk first.** Authentication, security, data loss, destructive cleanup, and migrations outrank file count. Time ranges are estimates.
 
-Before submitting a pull request, please review and adhere to our non-negotiable architectural principles:
+## Proposing a Role
 
-1. **Zero Runtime in Core:** The core package contains **no runtime orchestration code**. Taskard is a pure convention package composed of markdown instructions, YAML frontmatter, and configuration templates (`skills/`, `agents/`, `templates/`).
-2. **Explicitly Named Roles:** Anonymous subagents are strictly forbidden. Every delegate must be an explicitly named role. When proposing or defining an agent role in `agents/<name>.md`, the frontmatter must include:
-   ```yaml
-   ---
-   name: your-role-name
-   color: blue | purple | cyan | green | yellow | red | orange
-   model: sonnet | opus | haiku
-   description: One or two sentence precise contract of what this role does and doesn't do.
-   ---
-   ```
-3. **Point-to-Range Brief Standard:** Briefs must **never** contain raw code snippets or copy-pasted function bodies. They must specify file paths with line ranges (e.g., `## Context Files: src/auth/session.ts#L40-L65`) so subagents read only the required slice.
-4. **No Vendoring External Skills:** Do not copy or vendor third-party skills into this repository. External skills are referenced dynamically in `docs/dependencies.md` and resolved at install time via `npx skills`.
-5. **No Private Project Names:** Never commit private dogfooding project names or internal credentials in documentation, tests, or examples. Use generic terms like "test project".
-6. **Keep Documentation Synchronized:** Any change to a skill, agent role, config schema, or workflow **MUST** be reflected in both `README.md` and `README.tr.md`.
-7. **Run Evals Before Proposing Changes:** If you modify doctrine or add an agent role, verify behavior against the scenarios in `evals/` (e.g., `evals/05-agent-roloji.md`).
+The standard roster has seven roles: `planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, and `qa-tester`. Before adding another role, explain why the task cannot use an existing role with an optional skill. Include its frontmatter and input/output contract, and add an eval scenario with fixed acceptance checks.
 
----
+Reviewer and explorer should use positive native read-only profiles where a harness supports them. Do not claim a role is technically read-only in harnesses that only receive prompt instructions. Planner may write planning artifacts; QA needs command execution and may cause side effects.
 
-## 🛠️ How to Contribute
+## Changing Workflow or Profiles
 
-### 1. Proposing a New Agent Role
-We keep our default role roster lean (currently 7 roles: `planner`, `implementer`, `reviewer`, `debugger`, `ui-developer`, `explorer`, `qa-tester`). If you believe a missing capability warrants a new named role:
-- Open an issue using the **🎭 New Role Proposal** template.
-- Explain why the task cannot be achieved by a skill discipline routed to an existing role (e.g., stack roles like `backend-developer` are avoided in favor of `implementer` + skill router).
-- Include the proposed YAML frontmatter and strict input/output contract (≤15 line `report.md`).
-- Add a corresponding micro-eval scenario in `evals/`.
+- Record architecture decisions in `.scratch/taskard/map.md` and keep that decision log tracked.
+- Keep `templates/harness-profiles.json` declarative. Do not pin unverified provider model IDs or add general runtime adapters.
+- Keep configuration agent-read; do not mutate TOML during runtime.
+- Preserve the expected Red versus unsuccessful fix distinction and the 1–2 total-attempt budget.
+- Follow the brief and report contracts in `skills/taskard/references/roles-and-evidence.md`.
 
-### 2. Improving Skills & Doctrine
-- Skill changes live in `skills/taskard/SKILL.md`.
-- Deep reference documents belong in `skills/taskard/references/` to preserve token efficiency via progressive disclosure.
-- Ensure all rules follow the 3-speed gear system (⚡ Fast, 🚀 Pro, 🏛️ Max).
+## CLI and Evaluation Tooling
 
-### 3. CLI & Distribution (`bin/taskard.js`, `install.sh`)
-- Taskard's CLI initializer (`bin/taskard.js`) is strictly **zero external runtime dependencies** (uses Node.js standard libraries only).
-- Test shell scripts with `bash -n install.sh`.
-- Test CLI syntax with `node --check bin/taskard.js`.
+The CLI targets Node.js 18 or newer and uses Node standard libraries. Run installation checks with an isolated home and working directory; do not install optional external skills or write to the contributor's global configuration during tests.
 
----
+The eval scorer reads only supplied artifacts and evidence files. It does not launch harnesses or paid models. Comparative claims require at least three paired repeats with the same scenario, harness/version, model, and project revision; no live benchmark results should be invented.
 
-## 🧪 Local Verification
-
-Before creating a pull request, run the following verification checks:
+## Local Verification
 
 ```bash
-# 1. Shell syntax verification
+npm test
 bash -n install.sh
-
-# 2. Node CLI syntax verification
 node --check bin/taskard.js
-
-# 3. CLI dry-run
-node bin/taskard.js --help
 node bin/taskard.js init --dry-run
+node evals/test-score.js
 ```
 
----
+## Pull Requests
 
-## 📜 Pull Request Process
-
-1. Fork the repository and create your feature branch: `git checkout -b feature/my-new-feature`.
-2. Commit your changes following conventional commit messages (`feat:`, `fix:`, `docs:`, `chore:`).
-3. Ensure both `README.md` and `README.tr.md` are updated if user-facing behavior changed.
-4. Open a Pull Request referencing any related issues.
-5. All CI checks must pass before merging.
-
-Thank you for building the future of zero-runtime multi-agent engineering! 🚀
+Use a conventional commit message (`feat:`, `fix:`, `docs:`, or `chore:`). Update both READMEs when user-facing behavior changes. Run the repository checks, link evidence to the tested source revision, and leave merge decisions to maintainers.

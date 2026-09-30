@@ -17,3 +17,5 @@
 - **Fast:** Read target file directly.
 - **Pro:** Read latest `brief.md` and `git diff`.
 - **Max:** Read `tasks/*.md` frontmatter -> latest lane reports -> `personal.md` -> newest `handoff/`.
+
+When a handoff refers to a lane, include its `BASE_COMMIT`, `SOURCE_COMMIT`, current `HEAD_COMMIT`, and the report/evidence file path if present. Distinguish a command that was run from a planned check; saved output and hashes do not authenticate execution.

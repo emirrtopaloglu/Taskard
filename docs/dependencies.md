@@ -1,67 +1,48 @@
-# External Skill Dependencies
+# External Skills and Harness Support
 
-Taskard **does not vendor** external skills into the repository. It references skills installed on your system. Default installs leave optional upstream skills unchanged. An explicit global install can resolve the two workflow-entry skills (`using-superpowers` and `grilling`) through the external `npx skills` CLI.
+Taskard does not vendor external skills. `docs/dependencies.md` records optional upstream skill sources and the role triggers that may use them. The default installer leaves external skills unchanged. Explicit global skill resolution may use `npx skills`; external skills remain independently maintained and can change outside Taskard releases.
 
-Upstream Sources: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills)
+Upstream sources: [obra/superpowers](https://github.com/obra/superpowers) · [mattpocock/skills](https://github.com/mattpocock/skills).
 
-*(Note: `test-driven-development` and `verification-before-completion` contracts are embedded natively into the `implementer` role; they do not require external skill loading.)*
+## Skill Routing
 
----
-
-## Discipline Routing Table
-
-| Skill | Upstream Source | Trigger Condition | Fallback (If Absent) |
+| Skill | Source | Trigger | Fallback when absent |
 |---|---|---|---|
-| `using-superpowers` | superpowers | Workflow entry point | Consult SKILL.md router table |
-| `brainstorming` | superpowers | Creative/feature addition | Proceed with compact specification |
-| `grilling` | mattpocock | High-risk alignment | Question assumptions directly |
-| `grill-with-docs` | mattpocock | Product decisions (project-context; CONTEXT.md/ADR -> `.taskard/context/`) | Fall back to `grilling` |
-| `grill-me` | mattpocock | Product decisions (conceptual / repo-external) | Fall back to `grilling` |
-| `domain-modeling` | mattpocock | Terminology / ADR capture during grilling | Manually record terms in CONTEXT.md |
-| `wayfinder` | mattpocock | Multi-session task with ambiguous scope | Decompose task into standard gears |
-| `writing-plans` | superpowers | Standard plan generation | Decompose spec directly into briefs |
-| `codebase-design` | mattpocock | Interface seam discussions | Write modularity principles into brief |
-| `subagent-driven-development` | superpowers | Standard delegate execution loop | Taskard native lane/gate flow suffices |
-| `executing-plans` | superpowers | Inline plan execution | Execute lanes sequentially |
-| `dispatching-parallel-agents` | superpowers | ≥2 independent lanes (Full mode) | Sequential lane execution |
-| `using-git-worktrees` | superpowers | Worktree lane isolation | Single checkout execution |
-| `resolving-merge-conflicts` | superpowers | Worktree merge conflicts | Escalate conflict to human |
-| `requesting-code-review` | superpowers | Review calibration (reviewer agent) | Embedded review criteria |
-| `receiving-code-review` | superpowers | Applying review findings | Verify-then-apply rule in SKILL.md |
-| `systematic-debugging` | superpowers | 2nd failure diagnosis (Circuit Breaker) | Prompt root-cause questions |
-| `finishing-a-development-branch` | superpowers | Post-green merge menu | Escalate merge decision to human |
-| `improve-codebase-architecture` | mattpocock | Periodic codebase maintenance | Manual request |
+| `using-superpowers` | superpowers | Workflow entry, when installed | Use the Taskard workflow table |
+| `brainstorming` | superpowers | Unclear product scope or creative work | Write a compact specification |
+| `grilling` | mattpocock | High-risk assumptions need alignment | Ask focused questions and record decisions |
+| `domain-modeling` | mattpocock | Terminology or domain boundaries are unclear | Record terms in the spec |
+| `writing-plans` | superpowers | Max plan or lane breakdown | Write concise actionable briefs |
+| `codebase-design` | mattpocock | A real architectural seam must be decided | Record the seam and constraints |
+| `dispatching-parallel-agents` | superpowers | Two or more independent lanes | Run lanes sequentially |
+| `using-git-worktrees` | superpowers | Independent work needs isolation | Use the repository's available isolation |
+| `receiving-code-review` | superpowers | Review feedback arrives | Verify each finding before changing code |
+| `systematic-debugging` | superpowers | Root cause remains unclear | Trace callers and reproduce the defect |
+| `finishing-a-development-branch` | superpowers | Work is complete and a human must choose next steps | Present the available choices |
 
----
+Role-specific optional skills are selected only when their documented trigger applies. A missing optional skill does not prevent a task from following the native TDD, evidence, review, or QA contracts in `agents/`.
 
-## Role-Specific Additional Skills
+## Harness Compatibility
 
-The following skills are referenced in **agent role contracts**. If installed, delegates utilize them dynamically:
-
-| Skill | Associated Role | Source |
+| Harness | Status | Boundary |
 |---|---|---|
-| `web-design-guidelines` | `reviewer` (UI diff), `ui-developer` (self-check) | Vercel Skill Collection |
-| `security-review` | `reviewer` (security-sensitive diffs) | Anthropic Skill Collection |
-| `diagnosing-bugs` | `debugger` | obra/superpowers |
-| `find-docs` | `explorer` | Local installation |
-| `webapp-testing` · `agent-browser` | `qa-tester` (web runtime verification) | Local installation |
-| `frontend-design` | `ui-developer` (web) | Anthropic Claude Code plugin |
-| `expo-*` (`native-ui`, `router`, `data-fetching`, `ui`, `tailwind-setup`) | `ui-developer` (mobile) | Expo OSS Collection |
+| Claude Code | **tested** | Package checks cover installer/profile output, including native reviewer/explorer allowlists. Live agent behavior is untested. |
+| OpenCode | **tested** | Package checks cover role export, `mode: subagent`, and read-only permission output. Live agent behavior is untested. |
+| Codex | **partial** | Shared skill/project instructions are available; native role export and read-only setup are not covered. |
+| Antigravity | **recipe** | Use the conventions through project instructions; no native installer integration is claimed. |
+| Cursor | **recipe** | Use the conventions through project instructions; no native installer integration is claimed. |
 
----
+The complete model and permission profile data is in [`templates/harness-profiles.json`](../templates/harness-profiles.json); support semantics and caveats are in [`cross-harness.md`](../skills/taskard/references/cross-harness.md). “Tested” refers to deterministic local installer or fixture checks only. It does not mean live agent tests, verified model availability, or a comparative benchmark.
 
-## Installation
+## Install Optional Skills
 
-Opt-in global installation:
 ```bash
-./install.sh --install-skills
-# or: npx taskard init --global --install-skills
+./install.sh --global --install-skills
 ```
 
-This option uses non-interactive global installs with a 30-second timeout per missing package. Taskard checks that each expected user skill directory appears. If resolution fails or the result cannot be verified, it reports the partial result and continues the core install. It makes no network request during a default install or a dry run. Project installs reject `--install-skills` because that option writes to user-level skill directories.
+The install script requires Git only when it must clone the repository from a remote source. By default it installs Taskard without touching optional external skills. The explicit `--install-skills` flag may use the network and writes to global skill directories. Resolution is non-interactive, has a 30-second timeout per package, and checks for the expected user skill paths. A resolution failure is reported as a partial result while the core install completes; default installs and dry runs make no optional-skill network request. Project installs reject this flag because it writes to user-level directories. To install upstream skill collections manually:
 
-Manual installation:
 ```bash
-npx -y skills add obra/superpowers --skill using-superpowers -g -y
-npx -y skills add mattpocock/skills --skill grilling -g -y
+npx skills add obra/superpowers --global
+npx skills add mattpocock/skills --global
 ```

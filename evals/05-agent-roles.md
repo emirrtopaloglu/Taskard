@@ -1,82 +1,79 @@
-# Scenario 05 — Agent Roles & Behavioral Contracts (7 Roles × Micro-Scenarios)
+# Scenario 05 — Named Role Contracts
 
-## Objective
+Each role prompt is a separate run artifact. Record the role, harness, model and version for each run; role defaults may resolve to different models.
 
-Verify that all 7 agent role contracts behave accurately in isolation: skill contracts trigger on demand, gate behaviors enforce boundaries, and reports conform to the ≤15-line contract. Each micro-scenario runs in an isolated session.
+## `05-planner`
 
----
-
-## Common Verification Checks (Applied to Every Role)
-
-- [ ] Subagent launched under explicit named role (no anonymous agents).
-- [ ] Conforms to report contract (status code + command evidence + ≤15 lines).
-- [ ] Completion response is a single Humanish telegraph pointer.
-- [ ] Discipline skills invoked according to role contract.
-
----
-
-## Micro-Scenarios
-
-### 1. `planner`
 ```text
 Taskard workflow: Plan a small feature allowing users to export their notes as a plain .txt file. Generate specification and lane tasks.
 ```
-- [ ] Briefs contain verifiable acceptance criteria (*"Export button generates .txt payload"*, not vague statements).
-- [ ] `brainstorming` / `writing-plans` skill contract applied.
-- [ ] Never modified production code (writes only to `.taskard/`).
 
-### 2. `explorer`
+- `acceptance-concrete` — Briefs use observable criteria such as generating a `.txt` payload.
+- `planner-write-boundary` — Planner may write planning artifacts but does not modify production code.
+
+## `05-explorer`
+
 ```text
 Taskard workflow: Investigate error-handling patterns in this repository before lane creation.
 ```
-- [ ] Operated strictly read-only (zero file modifications).
-- [ ] Every finding carries an exact `file:line` citation.
-- [ ] Map output ≤20 lines with Structure, Conventions, and Risks sections.
 
-### 3. `implementer`
+- `explorer-readonly` — Explorer makes no file changes and cites relevant source ranges.
+- `read-only-enforcement` — Claude Code and OpenCode use native read-only profiles; other harnesses are reported as instruction-only.
+
+## `05-implementer`
+
 ```text
 Taskard workflow: Add hour:minute formatting support to formatDate in utils/date.ts.
 ```
-- [ ] Wrote a failing test first (native TDD Red-Green-Refactor loop).
-- [ ] Included raw command and pass/fail evidence in `report.md`.
-- [ ] Refrained from opportunistic refactoring outside target lines.
 
-### 4. `ui-developer` (Web)
+- `red-test-before-fix` — Run and record an expected failing check before the fix when the logic is consequential.
+- `single-retry` — Count failed fix attempts separately from expected Red; allow at most one retry.
+- `report-evidence` — Include commit references, actual command/exit status, evidence file/hash, and attempt count.
+
+## `05-ui-web`
+
 ```text
 Taskard workflow: Add a dark mode toggle button to the settings page.
 ```
-- [ ] `frontend-design` contract applied.
-- [ ] Handled interaction states (`loading`, `empty`, `error`, `active`).
-- [ ] Documented manual visual verification items in `report.md`.
 
-### 5. `ui-developer` (Mobile / Expo)
+- `accessible-contract` — Include accessible interaction and the states relevant to the feature.
+- `manual-visual-evidence` — Record exact manual visual checks when automation cannot verify the UI.
+
+## `05-ui-mobile`
+
 ```text
 Taskard workflow: Add a logout action button to the profile screen in an Expo app.
 ```
-- [ ] Selected platform Expo skills (`expo-native-ui` / `expo-router`).
-- [ ] Adhered to Apple HIG / Android Material conventions.
 
-### 6. `debugger`
+- `platform-contract` — Apply platform conventions only when the target is confirmed; label unavailable native enforcement.
+- `manual-visual-evidence` — Record exact manual visual checks when automation cannot verify the UI.
+
+## `05-debugger`
+
 ```text
 Taskard workflow: Investigate flaky test <test-name> in the test suite and isolate the root cause.
 ```
-- [ ] Reproduced the defect with a minimal test case or command.
-- [ ] Identified root cause with a single concise sentence and `file:line` citation.
-- [ ] Applied minimal targeted intervention without breaking adjacent logic.
-- [ ] Applied `systematic-debugging` / `diagnosing-bugs` discipline.
 
-### 7. `qa-tester`
+- `root-cause` — Reproduce the issue and cite the shared root cause, not just a caller symptom.
+- `single-retry` — Count failed fix attempts separately from expected Red; allow at most one retry.
+- `report-evidence` — Include commit references, actual command/exit status, evidence file/hash, and attempt count.
+
+## `05-qa`
+
 ```text
 Taskard workflow: An external-impact lane (auth/database migration) passed review gate; run runtime verification.
 ```
-- [ ] Evaluated the running system directly rather than reading code diffs.
-- [ ] `verification.md` contains verified behaviors and identified gaps.
-- [ ] Did not write code; reported defects as new actionable brief items.
 
----
+- `qa-runtime-criteria` — Check the running system and report commands actually executed; source review alone is not runtime verification.
+- `verify-authenticity-limits` — Distinguish recorded output and hashes from authenticated execution.
 
-## Gate Integration Checks
+## `05-gates`
 
-- [ ] `qa-tester` gate triggers on external-impact tasks (API, schema migration, auth).
-- [ ] Internal-only tasks skip heavy QA runtime gates.
-- [ ] If `qa-tester` is disabled in `config.toml`, manual verification checklist is presented to the human.
+```text
+Taskard workflow: Decide whether QA should run for an API, schema migration, authentication change, and an internal-only change.
+```
+
+- `risk-triggers-qa` — Trigger QA based on external impact and risk, not file count alone.
+- `disabled-qa-checklist` — If QA is disabled or unavailable, give the human a manual verification checklist.
+
+Role reports and reviews have a shared 15-line ceiling. These scenarios evaluate convention adherence; the recorded results do not prove behavior for all prompts or models.
