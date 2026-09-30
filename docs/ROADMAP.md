@@ -1,14 +1,12 @@
 # Taskard Roadmap
 
-## v0.1.3 — Current Published Version
+## v0.2.0 — Current Published Version (2026-10-01)
 
-The package version in `package.json` is **0.1.3**. This release contains the zero-dependency initializer and CLI, seven named role definitions, Fast/Pro/Max convention, templates, and local validation suite. The conventions are read by agents; Taskard does not run a runtime orchestrator.
+The package version in `package.json` is **0.2.0**. This release lands the hardening work and the orchestration layer on top of the zero-dependency initializer and CLI, seven named role definitions, Fast/Pro/Max convention, templates, and local validation suite. The conventions are read by agents; Taskard does not run a runtime orchestrator.
 
 No reproducible raw benchmark runs are published. Earlier savings figures have been removed because the baseline, run artifacts, and methodology were not available for verification.
 
-## Unreleased Hardening Work
-
-The following changes are being prepared for a later release; they are not part of the published v0.1.3 package until released:
+Included in v0.2.0:
 
 - Risk-first gear selection, source-aware briefs, bounded fix attempts, and consistent report metadata.
 - An orchestration layer for parallel Max lanes: optional worktree/branch/scope/wave/reviewer metadata on briefs, a serial user-owned merge order, and incremental `verify` coverage for shared worktrees, same-wave scope overlaps, and missing declared worktrees.

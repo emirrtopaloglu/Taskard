@@ -12,7 +12,7 @@
 ### Zero-Dependency Agent Workflow Conventions for Developer CLIs
 
 [![CI](https://github.com/emirrtopaloglu/Taskard/actions/workflows/ci.yml/badge.svg)](https://github.com/emirrtopaloglu/Taskard/actions)
-[![Version](https://img.shields.io/badge/version-v0.1.3-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-v0.2.0-blue.svg)](package.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 [![Zero Dependencies](https://img.shields.io/badge/Node%20Dependencies-Zero-success.svg)](#)
 [![Harness Profiles](https://img.shields.io/badge/Profiles-Claude%20%7C%20OpenCode%20%7C%20Codex%20%7C%20Antigravity%20%7C%20Cursor-orange.svg)](#-harness-support)
