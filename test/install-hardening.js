@@ -200,6 +200,51 @@ try {
   mustFail(brokenConfigOutput, 'broken config symlink');
   assert.match(brokenConfigOutput.stderr, /broken symbolic link/i);
 
+  const trailingComma = fixture('trailing-comma-array');
+  fs.mkdirSync(path.join(trailingComma.cwd, '.taskard'), { recursive: true });
+  fs.writeFileSync(path.join(trailingComma.cwd, '.taskard', 'config.toml'), '[risky_operations]\npatterns = ["deploy", "migration",]\n');
+  const trailingCommaConfig = cli(['config'], trailingComma);
+  mustSucceed(trailingCommaConfig, 'valid trailing-comma TOML array');
+  assert.match(trailingCommaConfig.stdout, /Patterns\s+: deploy, migration/);
+
+  const forceProject = fixture('force-project-config');
+  fs.mkdirSync(path.join(forceProject.cwd, '.taskard'), { recursive: true });
+  const forceProjectConfig = path.join(forceProject.cwd, '.taskard', 'config.toml');
+  fs.writeFileSync(forceProjectConfig, '[defaults]\ndefault_mode = "not-a-mode"\n');
+  mustSucceed(cli(['init', '--force'], forceProject), 'force resets invalid selected project config');
+  assert.match(fs.readFileSync(forceProjectConfig, 'utf8'), /default_mode = "pro"/);
+  assert.doesNotMatch(fs.readFileSync(forceProjectConfig, 'utf8'), /not-a-mode/);
+
+  const forceGlobal = fixture('force-global-config');
+  fs.mkdirSync(path.join(forceGlobal.home, '.taskard'), { recursive: true });
+  const forceGlobalConfig = path.join(forceGlobal.home, '.taskard', 'config.toml');
+  fs.writeFileSync(forceGlobalConfig, '[qa]\nenabled = "not-a-bool"\n');
+  mustSucceed(cli(['init', '--global', '--force'], forceGlobal), 'force resets invalid selected global config');
+  assert.match(fs.readFileSync(forceGlobalConfig, 'utf8'), /default_mode = "pro"/);
+  assert.doesNotMatch(fs.readFileSync(forceGlobalConfig, 'utf8'), /not-a-bool/);
+
+  const invalidOtherScope = fixture('force-invalid-other-scope');
+  fs.mkdirSync(path.join(invalidOtherScope.home, '.taskard'), { recursive: true });
+  fs.mkdirSync(path.join(invalidOtherScope.cwd, '.taskard'), { recursive: true });
+  const invalidGlobalBytes = '[defaults]\ndefault_mode = "not-a-mode"\n';
+  const validProjectBytes = '# keep the selected project config unchanged when its global layer is invalid\n';
+  fs.writeFileSync(path.join(invalidOtherScope.home, '.taskard', 'config.toml'), invalidGlobalBytes);
+  const invalidOtherProjectPath = path.join(invalidOtherScope.cwd, '.taskard', 'config.toml');
+  fs.writeFileSync(invalidOtherProjectPath, validProjectBytes);
+  mustFail(cli(['init', '--force'], invalidOtherScope), 'project force must not ignore invalid global config');
+  assert.equal(fs.readFileSync(path.join(invalidOtherScope.home, '.taskard', 'config.toml'), 'utf8'), invalidGlobalBytes);
+  assert.equal(fs.readFileSync(invalidOtherProjectPath, 'utf8'), validProjectBytes);
+
+  const orphanVersion = fixture('orphan-version-marker');
+  const orphanManifest = path.join(orphanVersion.cwd, 'CLAUDE.md');
+  const orphanManifestBytes = 'User instructions\n\n<!-- taskard:v2 -->\n\nKeep this file intact.\n';
+  fs.writeFileSync(orphanManifest, orphanManifestBytes);
+  mustFail(cli(['init'], orphanVersion), 'init rejects orphan Taskard version marker');
+  assert.equal(fs.readFileSync(orphanManifest, 'utf8'), orphanManifestBytes, 'orphan marker manifest bytes must remain unchanged');
+  const orphanDoctor = cli(['doctor'], orphanVersion);
+  mustFail(orphanDoctor, 'doctor rejects orphan Taskard version marker');
+  assert.match(orphanDoctor.stdout, /directive|version|unhealthy/i);
+
   const precedence = fixture('precedence');
   fs.mkdirSync(path.join(precedence.home, '.taskard'), { recursive: true });
   fs.mkdirSync(path.join(precedence.cwd, '.taskard'), { recursive: true });

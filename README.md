@@ -93,7 +93,7 @@ npx taskard init -i
 npx taskard init --global
 ```
 
-Project installs do not write to your home directory. Global installs use user-level directories; existing regular harness files are preserved. `--force` replaces Taskard-managed links and profiles and restores the default config, while leaving regular harness-owned files intact.
+Project installs do not write to your home directory. Global installs use user-level directories; existing regular harness files are preserved. `--force` replaces Taskard-managed links and profiles and resets the selected scope's config. A project force still validates the global config and leaves it untouched. The installer rejects orphan or malformed Taskard directive markers before changing a manifest.
 
 ### Option 2: Single-Line Shell Installer
 
@@ -226,6 +226,8 @@ patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
 OpenCode model overrides require a complete `provider/model` identifier. Claude Code can use the documented aliases (`sonnet`, `opus`, `haiku`). With no explicit harness-specific mapping, model selection stays with the harness or its selected provider. These are install-time profile preferences; they do not trigger automatic or paid harness fallback.
+
+The CLI accepts its documented TOML subset, including single-line string arrays with valid trailing commas. It rejects malformed values, unsupported settings, wrong types, and out-of-range numbers instead of coercing them.
 
 **Precedence hierarchy:**
 `agents/*.md` (Defaults) < `~/.taskard/config.toml` (Global) < `.taskard/config.toml` (Project) < Session Prompts (Overrides all).

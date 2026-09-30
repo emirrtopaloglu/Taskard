@@ -93,7 +93,7 @@ npx taskard init -i
 npx taskard init --global
 ```
 
-Proje kurulumu home dizinine yazmaz. Global kurulum kullanıcı dizinlerini kullanır; mevcut normal harness dosyalarını korur. `--force`, Taskard'ın yönettiği link ve profilleri yeniler ve varsayılan konfigürasyonu geri yükler; normal harness dosyalarını değiştirmez.
+Proje kurulumu home dizinine yazmaz. Global kurulum kullanıcı dizinlerini kullanır; mevcut normal harness dosyalarını korur. `--force`, Taskard'ın yönettiği link ve profilleri yeniler ve yalnızca seçili kapsamın konfigürasyonunu sıfırlar. Proje kapsamındaki force, global konfigürasyonu da doğrular ve ona dokunmaz. Kurucu, manifesti değiştirmeden önce sahipsiz veya bozuk Taskard direktif işaretlerini reddeder.
 
 ### Seçenek 2: Tek Satırlık Shell Kurulumu
 
@@ -224,6 +224,8 @@ patterns = ["migration", "deploy", "rm -rf", "drop table", "git push --force"]
 ```
 
 OpenCode model geçersiz kılmaları tam `provider/model` kimliği kullanmalıdır. Claude Code belgelenen takma adları (`sonnet`, `opus`, `haiku`) kullanabilir. Harness'a özel eşleme yoksa model seçimini harness veya seçili provider yapar. Bu değerler kurulum profili tercihidir; otomatik veya ücretli harness yedeklemesi başlatmaz.
+
+CLI, geçerli sondaki virgüller içerebilen tek satırlı string dizileri dahil, belgelenmiş TOML alt kümesini kabul eder. Hatalı değerleri, desteklenmeyen ayarları, yanlış türleri ve aralık dışı sayıları dönüştürmek yerine reddeder.
 
 **Öncelik sırası:**
 `agents/*.md` < `~/.taskard/config.toml` (Global) < `.taskard/config.toml` (Proje) < Oturum Sözü (Hepsini ezer).

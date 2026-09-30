@@ -150,7 +150,6 @@ function splitTomlArray(value) {
   if (quote) throw new Error('unterminated string in array');
   const last = value.slice(start).trim();
   if (last) parts.push(last);
-  else if (parts.length && value.trim().endsWith(',')) parts.pop();
   return parts;
 }
 
@@ -479,14 +478,21 @@ function copyDirRecursive(src, dest, options) {
 function parseTaskardBlock(content, label) {
   const start = '<!-- taskard:start -->';
   const end = '<!-- taskard:end -->';
+  const markers = [...content.matchAll(/<!--\s*taskard:[^>]*-->/g)];
   const starts = [...content.matchAll(/<!-- taskard:start -->/g)];
   const ends = [...content.matchAll(/<!-- taskard:end -->/g)];
+  const allVersions = [...content.matchAll(/<!-- taskard:v(\d+) -->/g)];
+  if (markers.length !== starts.length + ends.length + allVersions.length) {
+    throw new Error(`${label}: contains an unsupported Taskard marker`);
+  }
   if (starts.length !== 1 || ends.length !== 1 || starts[0].index > ends[0].index) {
     throw new Error(`${label}: expected exactly one paired Taskard start/end marker`);
   }
   const block = content.slice(starts[0].index, ends[0].index + end.length);
   const versions = [...block.matchAll(/<!-- taskard:v(\d+) -->/g)];
-  if (versions.length !== 1) throw new Error(`${label}: expected exactly one versioned Taskard marker`);
+  if (versions.length !== 1 || allVersions.length !== 1 || allVersions[0].index < starts[0].index || allVersions[0].index >= ends[0].index) {
+    throw new Error(`${label}: expected exactly one versioned Taskard marker inside the paired block`);
+  }
   return { block, version: versions[0][1], start: starts[0].index, end: ends[0].index + end.length };
 }
 
@@ -504,7 +510,7 @@ function syncDirectiveBlock(targetFile, directiveSourcePath, { base, dryRun = fa
     try {
       oldBlock = parseTaskardBlock(existing, targetFile);
     } catch (error) {
-      if (existing.includes('<!-- taskard:start -->') || existing.includes('<!-- taskard:end -->')) throw error;
+      if (/<!--\s*taskard:[^>]*-->/.test(existing)) throw error;
       replacement = `${existing.replace(/\s*$/, '')}\n\n${sourceContent.trim()}\n`;
     }
     if (oldBlock) {
@@ -662,9 +668,17 @@ function runInit(args, customConfig = null) {
 
   if (installSkills && !isGlobal) throw new Error('--install-skills requires --global because upstream skills are installed in user scope');
   if (!isGlobal && CWD === HOME) throw new Error(`Refusing to initialize inside HOME without --global: ${HOME}`);
-  let config = loadEffectiveConfig({ includeProject: !isGlobal }).config;
+  const defaultConfigPath = path.join(PKG_ROOT, 'templates', 'config.toml');
+  let config;
+  if (force) {
+    // Local force replaces the project layer but still honors valid global defaults.
+    config = isGlobal
+      ? validateConfig(parseSimpleToml(fs.readFileSync(defaultConfigPath, 'utf8')), 'templates/config.toml')
+      : loadEffectiveConfig({ includeProject: false }).config;
+  } else {
+    config = loadEffectiveConfig({ includeProject: !isGlobal }).config;
+  }
   const profiles = readHarnessProfiles();
-  if (force && !customConfig) config = validateConfig(parseSimpleToml(fs.readFileSync(path.join(PKG_ROOT, 'templates', 'config.toml'), 'utf8')), 'templates/config.toml');
   if (customConfig) {
     config.defaults ||= {};
     config.harness_preferences ||= {};
@@ -739,9 +753,9 @@ function runInit(args, customConfig = null) {
   }
   let configContent;
   if (customConfig) {
-    configContent = existingConfigStat
+    configContent = existingConfigStat && !force
       ? fs.readFileSync(configPath, 'utf8')
-      : (isGlobal ? fs.readFileSync(configTplPath, 'utf8') : '# Project overrides for ~/.taskard/config.toml.\n');
+      : (isGlobal || force ? fs.readFileSync(configTplPath, 'utf8') : '# Project overrides for ~/.taskard/config.toml.\n');
     configContent = applyCustomConfig(configContent, customConfig);
   } else if (existingConfigStat && !force) {
     configContent = fs.readFileSync(configPath, 'utf8');
