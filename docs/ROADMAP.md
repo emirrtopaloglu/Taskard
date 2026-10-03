@@ -1,8 +1,12 @@
 # Taskard Roadmap
 
-## v0.2.0 — Current Published Version (2026-10-01)
+## v0.2.1 — Current Published Version (2026-10-03)
 
-The package version in `package.json` is **0.2.0**. This release lands the hardening work and the orchestration layer on top of the zero-dependency initializer and CLI, seven named role definitions, Fast/Pro/Max convention, templates, and local validation suite. The conventions are read by agents; Taskard does not run a runtime orchestrator.
+The package version in `package.json` is **0.2.1**. This patch sets `effort: high` on all seven role definitions.
+
+## v0.2.0 (2026-10-01)
+
+This release lands the hardening work and the orchestration layer on top of the zero-dependency initializer and CLI, seven named role definitions, Fast/Pro/Max convention, templates, and local validation suite. The conventions are read by agents; Taskard does not run a runtime orchestrator.
 
 No reproducible raw benchmark runs are published. Earlier savings figures have been removed because the baseline, run artifacts, and methodology were not available for verification.
 

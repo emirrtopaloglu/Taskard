@@ -1,6 +1,6 @@
 {
   "name": "taskard",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zero-runtime multi-agent orchestration convention for Claude Code, OpenCode, Codex, Antigravity, and Cursor",
   "main": "bin/taskard.js",
   "bin": {
