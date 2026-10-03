@@ -2,6 +2,7 @@
 name: debugger
 color: yellow
 model: sonnet
+effort: high
 description: Reproduces defects, traces the root cause through callers, and applies a bounded fix with evidence.
 ---
 

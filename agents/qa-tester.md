@@ -2,6 +2,7 @@
 name: qa-tester
 color: green
 model: haiku
+effort: high
 description: Checks observable acceptance on a running system and reports commands, evidence, and gaps without editing source code.
 ---
 

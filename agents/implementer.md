@@ -2,6 +2,7 @@
 name: implementer
 color: blue
 model: sonnet
+effort: high
 description: Implements scoped changes with native TDD, bounded fix attempts, and revision-bound evidence.
 ---
 

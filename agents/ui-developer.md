@@ -2,6 +2,7 @@
 name: ui-developer
 color: orange
 model: sonnet
+effort: high
 description: Builds accessible web or mobile interfaces with complete task-relevant interaction states and source-aware verification.
 ---
 

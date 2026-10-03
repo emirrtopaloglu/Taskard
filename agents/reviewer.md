@@ -2,6 +2,7 @@
 name: reviewer
 color: red
 model: sonnet
+effort: high
 description: Read-only reviewer for scoped changes, with cited findings and a clear verdict.
 tools:
   - Read

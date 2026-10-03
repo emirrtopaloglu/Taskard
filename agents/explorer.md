@@ -2,6 +2,7 @@
 name: explorer
 color: cyan
 model: haiku
+effort: high
 description: Read-only reconnaissance that maps relevant structure, conventions, and risks with source citations.
 tools:
   - Read

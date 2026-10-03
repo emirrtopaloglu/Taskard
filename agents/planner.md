@@ -2,6 +2,7 @@
 name: planner
 color: purple
 model: opus
+effort: high
 description: Produces risk-aware specifications and source-aware lane briefs with verifiable acceptance criteria.
 ---
 
